@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: cassitrack
+
+  # ── PostgreSQL ────────────────────────────────────────────────
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cassitrack}
+    username: ${SPRING_DATASOURCE_USERNAME:cassitrack}
+    password: ${SPRING_DATASOURCE_PASSWORD:cassitrack_dev}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Flyway manages schema, NOT Hibernate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # ── Flyway (DB schema migrations) ────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ── Redis ─────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:cassitrack_dev}
+
+  # ── WebSocket ─────────────────────────────────────────────────
+  websocket:
+    stomp:
+      endpoint: /ws/vehicles
+
+# ── Server ───────────────────────────────────────────────────────
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# ── InfluxDB ──────────────────────────────────────────────────────
+influx:
+  url: ${INFLUX_URL:http://localhost:8086}
+  token: ${INFLUX_TOKEN:cassitrack-dev-token-change-in-production}
+  org: ${INFLUX_ORG:unicas}
+  bucket: ${INFLUX_BUCKET:vehicle_telemetry}
+
+# ── MQTT Broker ───────────────────────────────────────────────────
+mqtt:
+  broker:
+    url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+    client-id: cassitrack-backend
+  topics:
+    position: cassitrack/+/position    # + is a wildcard matching any vehicle_id
+    ble: cassitrack/+/ble
+
+# ── JWT ───────────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET:cassitrack-jwt-secret-change-in-production-must-be-long}
+  expiration-ms: 86400000    # 24 hours
+
+# ── OpenAPI / Swagger UI ──────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api/docs
+  swagger-ui:
+    path: /api/swagger-ui
+    operationsSorter: method
+  info:
+    title: CASSITRACK API
+    description: Real-time bus fleet monitoring — Cassino MAGNI Autoservizi
+    version: v1
+
+# ── Logging ───────────────────────────────────────────────────────
+logging:
+  level:
+    it.unicas.cassitrack: DEBUG
+    org.springframework.integration.mqtt: INFO
+    org.hibernate.SQL: WARN

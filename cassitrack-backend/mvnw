@@ -1,0 +1,16 @@
+#!/bin/sh
+# Maven Wrapper Script
+
+set -e
+
+MAVEN_PROJECTBASEDIR="${MAVEN_PROJECTBASEDIR:-.}"
+WRAPPER_JAR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.jar"
+
+if [ -r "$WRAPPER_JAR" ]; then
+    # Use wrapper if available
+    exec java -jar "$WRAPPER_JAR" "$@"
+else
+    # Use system Maven
+    exec mvn "$@"
+fi
+

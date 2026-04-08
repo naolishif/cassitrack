@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CASSITRACK — Live Bus Map</title>
+
+  <!-- Leaflet.js — the map library, loaded from the internet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* ── Fonts ─────────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap');
+
+    /* ── Reset & Base ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0e1a;
+      --panel:     #111827;
+      --border:    #1e2d45;
+      --accent:    #3b82f6;
+      --accent2:   #06b6d4;
+      --green:     #22c55e;
+      --amber:     #f59e0b;
+      --red:       #ef4444;
+      --grey:      #6b7280;
+      --text:      #f1f5f9;
+      --text-dim:  #64748b;
+      --font-ui:   'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      overflow: hidden;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-rows: 56px 1fr;
+      grid-template-columns: 1fr 320px;
+      height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(59,130,246,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(59,130,246,0.3);
+      letter-spacing: 1px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .status-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .refresh-info {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* ── Map ────────────────────────────────────────────────── */
+    #map {
+      grid-row: 2;
+      grid-column: 1;
+      width: 100%;
+      height: 100%;
+      background: #0d1117;
+    }
+
+    /* ── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      grid-row: 2;
+      grid-column: 2;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ── Stats row ──────────────────────────────────────────── */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── Vehicle cards ──────────────────────────────────────── */
+    #vehicle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .vehicle-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vehicle-card:hover {
+      border-color: var(--accent);
+      background: rgba(59,130,246,0.05);
+    }
+
+    .vehicle-card.selected {
+      border-color: var(--accent);
+      background: rgba(59,130,246,0.08);
+    }
+
+    /* coloured left bar based on status */
+    .vehicle-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--green);
+      border-radius: 8px 0 0 8px;
+    }
+
+    .vehicle-card.late::before  { background: var(--amber); }
+    .vehicle-card.offline::before { background: var(--grey); }
+
+    .vehicle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .vehicle-id {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.3px;
+    }
+
+    .vehicle-status {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(34,197,94,0.15);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+
+    .vehicle-status.late {
+      background: rgba(245,158,11,0.15);
+      color: var(--amber);
+      border-color: rgba(245,158,11,0.3);
+    }
+
+    .vehicle-status.offline {
+      background: rgba(107,114,128,0.15);
+      color: var(--grey);
+      border-color: rgba(107,114,128,0.3);
+    }
+
+    .vehicle-data {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .data-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .data-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .data-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    /* crowding bar */
+    .crowding-bar {
+      margin-top: 8px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .crowding-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--green);
+      transition: width 0.5s ease;
+    }
+
+    .crowding-fill.medium { background: var(--amber); }
+    .crowding-fill.high   { background: var(--red); }
+
+    /* ── Empty state ─────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-dim);
+    }
+
+    .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+    .empty-state p {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ── Leaflet custom bus icon ─────────────────────────────── */
+    .bus-icon-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .bus-marker {
+      width: 36px;
+      height: 36px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      font-size: 16px;
+    }
+
+    .bus-marker-inner {
+      transform: rotate(45deg);
+    }
+
+    /* ── Scrollbar styling ───────────────────────────────────── */
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Loading overlay ─────────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 9999;
+      transition: opacity 0.5s;
+    }
+
+    #loading.hidden { opacity: 0; pointer-events: none; }
+
+    .loading-logo {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .loading-logo span { color: var(--accent); }
+
+    .loading-bar {
+      width: 200px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 1px;
+      animation: load 1.5s ease forwards;
+    }
+
+    @keyframes load {
+      from { width: 0; }
+      to   { width: 100%; }
+    }
+
+    .loading-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- Loading Screen -->
+<div id="loading">
+  <div class="loading-logo">CASSI<span>TRACK</span></div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  <div class="loading-text">Connecting to fleet...</div>
+</div>
+
+<!-- Main App -->
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">CASSI<span>TRACK</span></div>
+    <div class="badge">LIVE</div>
+    <div class="badge" style="color:var(--accent2);border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.1)">
+      MAGNI AUTOSERVIZI
+    </div>
+    <div class="header-right">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">Connecting...</span>
+      <span class="refresh-info" id="refresh-info">—</span>
+    </div>
+  </header>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <!-- Stats -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Fleet Overview</div>
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-active">—</div>
+          <div class="stat-label">Active buses</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total" style="color:var(--text-dim)">—</div>
+          <div class="stat-label">Total tracked</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicle list -->
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-label">Live Vehicles</div>
+      <div id="vehicle-list">
+        <div class="empty-state">
+          <div class="icon">🚌</div>
+          <p>No buses detected yet.<br/>Make sure the GPS simulator<br/>is running.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      UNICAS — Distributed Programming 2025/2026<br/>
+      CASSITRACK v0.1 — Linea 16 Cassino<br/>
+      API: localhost:8080/api/v1/vehicles
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// CASSITRACK Live Map
+// University of Cassino — 2025/2026
+//
+// What this code does:
+//   1. Creates a Leaflet map centred on Cassino
+//   2. Every 15 seconds, calls the CASSITRACK API
+//   3. For each bus, places/updates a marker on the map
+//   4. Updates the sidebar with live vehicle data
+// ─────────────────────────────────────────────────────────────
+
+const API_URL       = 'http://localhost:8080/api/v1/vehicles';
+const REFRESH_MS    = 15000;   // refresh every 15 seconds
+const CASSINO_LAT   = 41.4917;
+const CASSINO_LON   = 13.8314;
+
+// Colour for each bus marker (cycles through this list)
+const BUS_COLOURS = ['#3b82f6', '#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899'];
+
+// ── Map setup ────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [CASSINO_LAT, CASSINO_LON],
+  zoom: 14,
+  zoomControl: true
+});
+
+// Dark map tiles from CartoDB — matches our dark UI theme
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap contributors © CARTO',
+  maxZoom: 19
+}).addTo(map);
+
+// ── State ────────────────────────────────────────────────────
+// markers: { vehicleId → Leaflet marker }
+const markers = {};
+// vehicle data: { vehicleId → latest data from API }
+const vehicleData = {};
+let selectedVehicle = null;
+let lastUpdate = null;
+
+// ── Bus stop markers ─────────────────────────────────────────
+// Show the known Bus 16 stops on the map
+const stops = [
+  { name: 'Cassino Stazione FS',      lat: 41.4892, lon: 13.8282 },
+  { name: 'Cassino Centro',            lat: 41.4917, lon: 13.8314 },
+  { name: 'Ospedale Santa Scolastica', lat: 41.4955, lon: 13.8330 },
+  { name: 'Via Folcara',               lat: 41.5020, lon: 13.8200 },
+  { name: 'Campus UNICAS Folcara',     lat: 41.5041, lon: 13.8189 },
+];
+
+stops.forEach(stop => {
+  // Small grey circle for each stop
+  L.circleMarker([stop.lat, stop.lon], {
+    radius: 6,
+    fillColor: '#1e2d45',
+    color: '#3b82f6',
+    weight: 2,
+    opacity: 1,
+    fillOpacity: 1
+  })
+  .addTo(map)
+  .bindPopup(`
+    <div style="font-family:'DM Mono',monospace;font-size:12px;color:#f1f5f9;background:#111827;padding:8px;border-radius:6px">
+      <strong style="color:#3b82f6">🚏 ${stop.name}</strong><br/>
+      <span style="color:#64748b">Linea 16 — Magni Autoservizi</span>
+    </div>
+  `, { className: 'custom-popup' });
+});
+
+// ── Draw the route line ──────────────────────────────────────
+const routeCoords = stops.map(s => [s.lat, s.lon]);
+L.polyline(routeCoords, {
+  color: '#1e3a5f',
+  weight: 4,
+  opacity: 0.7,
+  dashArray: '8, 8'
+}).addTo(map);
+
+// ── Create a custom bus icon ─────────────────────────────────
+function createBusIcon(colour, vehicleId) {
+  const shortId = vehicleId.replace('MAGNI-', '');
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+      ">
+        <div style="
+          width:38px;height:38px;
+          border-radius:50% 50% 50% 0;
+          transform:rotate(-45deg);
+          background:${colour};
+          border:2.5px solid white;
+          box-shadow:0 3px 12px rgba(0,0,0,0.6);
+          display:flex;align-items:center;justify-content:center;
+        ">
+          <span style="transform:rotate(45deg);font-size:16px">🚌</span>
+        </div>
+        <div style="
+          margin-top:4px;
+          background:${colour};
+          color:white;
+          font-family:'DM Mono',monospace;
+          font-size:9px;
+          font-weight:500;
+          padding:2px 5px;
+          border-radius:3px;
+          box-shadow:0 2px 6px rgba(0,0,0,0.4);
+          white-space:nowrap;
+        ">${vehicleId}</div>
+      </div>
+    `,
+    iconSize: [60, 60],
+    iconAnchor: [19, 48]
+  });
+}
+
+// ── Fetch and update ─────────────────────────────────────────
+async function fetchVehicles() {
+  try {
+    const response = await fetch(API_URL);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const vehicles = await response.json();
+    lastUpdate = new Date();
+
+    updateStatus(true, vehicles.length);
+    updateMap(vehicles);
+    updateSidebar(vehicles);
+
+  } catch (error) {
+    console.error('Failed to fetch vehicles:', error);
+    updateStatus(false, 0);
+  }
+}
+
+// ── Update the map markers ───────────────────────────────────
+function updateMap(vehicles) {
+  // Track which vehicles we saw this update
+  const seenIds = new Set();
+
+  vehicles.forEach((v, index) => {
+    seenIds.add(v.vehicle_id);
+    vehicleData[v.vehicle_id] = v;
+
+    const colour = BUS_COLOURS[index % BUS_COLOURS.length];
+    const pos    = [v.lat, v.lon];
+
+    if (markers[v.vehicle_id]) {
+      // Bus already on map — update its position smoothly
+      markers[v.vehicle_id].setLatLng(pos);
+      markers[v.vehicle_id].setIcon(createBusIcon(colour, v.vehicle_id));
+    } else {
+      // New bus — create marker
+      const marker = L.marker(pos, {
+        icon: createBusIcon(colour, v.vehicle_id)
+      }).addTo(map);
+
+      // Popup when you click the bus icon
+      marker.bindPopup(buildPopupContent(v));
+
+      // Clicking the marker also selects it in the sidebar
+      marker.on('click', () => selectVehicle(v.vehicle_id));
+
+      markers[v.vehicle_id] = marker;
+    }
+
+    // Update popup content with fresh data
+    markers[v.vehicle_id].setPopupContent(buildPopupContent(v));
+  });
+}
+
+// ── Build popup HTML for a vehicle ──────────────────────────
+function buildPopupContent(v) {
+  const speed     = v.speed_kmh != null ? v.speed_kmh.toFixed(1) + ' km/h' : '—';
+  const passengers = v.estimated_passengers != null ? v.estimated_passengers : '—';
+  const crowding  = v.crowding_level || '—';
+  const status    = v.schedule_status || 'UNKNOWN';
+
+  return `
+    <div style="
+      font-family:'DM Mono',monospace;
+      font-size:12px;
+      color:#f1f5f9;
+      background:#111827;
+      padding:12px;
+      border-radius:8px;
+      min-width:180px;
+      border:1px solid #1e2d45;
+    ">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:8px;color:#3b82f6">
+        🚌 ${v.vehicle_id}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div>
+          <div style="color:#64748b;font-size:9px">SPEED</div>
+          <div>${speed}</div>
+        </div>
+        <div>
+          <div style="color:#64748b;font-size:9px">STATUS</div>
+          <div style="color:${status === 'ON_TIME' ? '#22c55e' : '#f59e0b'}">${status}</div>
+        </div>
+        <div>
+          <div style="color:#64748b;font-size:9px">LAT</div>
+          <div>${v.lat.toFixed(5)}</div>
+        </div>
+        <div>
+          <div style="color:#64748b;font-size:9px">LON</div>
+          <div>${v.lon.toFixed(5)}</div>
+        </div>
+        <div>
+          <div style="color:#64748b;font-size:9px">PASSENGERS ~</div>
+          <div>${passengers}</div>
+        </div>
+        <div>
+          <div style="color:#64748b;font-size:9px">CROWDING</div>
+          <div>${crowding}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Update the sidebar vehicle list ─────────────────────────
+function updateSidebar(vehicles) {
+  const list = document.getElementById('vehicle-list');
+
+  document.getElementById('stat-active').textContent = vehicles.length;
+  document.getElementById('stat-total').textContent  = Object.keys(markers).length;
+
+  if (vehicles.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🚌</div>
+        <p>No active buses.<br/>Start the GPS simulator.</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+
+  vehicles.forEach((v, index) => {
+    const colour     = BUS_COLOURS[index % BUS_COLOURS.length];
+    const speed      = v.speed_kmh != null ? v.speed_kmh.toFixed(1) : '0.0';
+    const passengers = v.estimated_passengers != null ? '~' + v.estimated_passengers : '—';
+    const crowding   = v.crowding_level || 'UNKNOWN';
+    const isLate     = v.schedule_status === 'SIGNIFICANTLY_LATE' || v.schedule_status === 'SLIGHTLY_LATE';
+    const crowdPct   = crowdingPercent(crowding);
+    const crowdClass = crowdPct > 70 ? 'high' : crowdPct > 40 ? 'medium' : '';
+
+    const card = document.createElement('div');
+    card.className = `vehicle-card${isLate ? ' late' : ''}${selectedVehicle === v.vehicle_id ? ' selected' : ''}`;
+    card.style.setProperty('--card-colour', colour);
+    card.innerHTML = `
+      <div class="vehicle-header">
+        <div class="vehicle-id" style="color:${colour}">${v.vehicle_id}</div>
+        <div class="vehicle-status${isLate ? ' late' : ''}">
+          ${v.schedule_status || 'LIVE'}
+        </div>
+      </div>
+      <div class="vehicle-data">
+        <div class="data-item">
+          <div class="data-label">Speed</div>
+          <div class="data-value">${speed} km/h</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">Passengers ~</div>
+          <div class="data-value">${passengers}</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">Lat</div>
+          <div class="data-value">${v.lat.toFixed(4)}</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">Lon</div>
+          <div class="data-value">${v.lon.toFixed(4)}</div>
+        </div>
+      </div>
+      <div class="crowding-bar">
+        <div class="crowding-fill ${crowdClass}" style="width:${crowdPct}%"></div>
+      </div>
+    `;
+
+    // Click card → fly map to that bus
+    card.addEventListener('click', () => selectVehicle(v.vehicle_id));
+    list.appendChild(card);
+  });
+}
+
+// ── Select a vehicle (focus map + highlight card) ────────────
+function selectVehicle(vehicleId) {
+  selectedVehicle = vehicleId;
+  const v = vehicleData[vehicleId];
+  if (v) {
+    map.flyTo([v.lat, v.lon], 16, { duration: 1 });
+    markers[vehicleId]?.openPopup();
+  }
+  // Re-render sidebar to show selection
+  updateSidebar(Object.values(vehicleData));
+}
+
+// ── Update header status ─────────────────────────────────────
+function updateStatus(online, count) {
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  const info = document.getElementById('refresh-info');
+
+  if (online) {
+    dot.className  = 'status-dot';
+    text.textContent = count > 0
+      ? `${count} bus${count > 1 ? 'es' : ''} active`
+      : 'Connected — no buses';
+  } else {
+    dot.className  = 'status-dot offline';
+    text.textContent = 'Backend offline';
+  }
+
+  if (lastUpdate) {
+    info.textContent = 'Updated ' + lastUpdate.toLocaleTimeString();
+  }
+}
+
+// ── Helper: convert crowding label to percentage ─────────────
+function crowdingPercent(level) {
+  switch (level) {
+    case 'LOW':       return 20;
+    case 'MEDIUM':    return 50;
+    case 'HIGH':      return 75;
+    case 'VERY_HIGH': return 95;
+    default:          return 0;
+  }
+}
+
+// ── Start ────────────────────────────────────────────────────
+// Hide loading screen after 1.5s (matches the loading bar animation)
+setTimeout(() => {
+  document.getElementById('loading').classList.add('hidden');
+}, 1500);
+
+// First fetch immediately
+fetchVehicles();
+
+// Then refresh every 15 seconds automatically
+setInterval(fetchVehicles, REFRESH_MS);
+
+// Show countdown to next refresh in header
+setInterval(() => {
+  if (lastUpdate) {
+    const secondsAgo = Math.round((Date.now() - lastUpdate.getTime()) / 1000);
+    const nextIn     = Math.max(0, Math.round(REFRESH_MS / 1000) - secondsAgo);
+    document.getElementById('refresh-info').textContent =
+      `Updated ${lastUpdate.toLocaleTimeString()} · next in ${nextIn}s`;
+  }
+}, 1000);
+</script>
+
+</body>
+</html>

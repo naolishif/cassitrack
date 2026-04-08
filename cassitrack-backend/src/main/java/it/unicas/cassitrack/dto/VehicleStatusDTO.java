@@ -1,0 +1,96 @@
+package it.unicas.cassitrack.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import it.unicas.cassitrack.model.VehiclePosition.ScheduleStatus;
+import lombok.Builder;
+import lombok.Data;
+
+import java.time.Instant;
+
+/**
+ * The data returned by GET /api/v1/vehicles and GET /api/v1/vehicles/{id}.
+ *
+ * This is what OMNIMOVE and the fleet dashboard will receive.
+ * It combines the latest GPS position with derived information
+ * (schedule status, ETA, crowding estimate).
+ */
+@Data
+@Builder
+public class VehicleStatusDTO {
+
+    /** Bus identifier (e.g. "MAGNI-001") */
+    @JsonProperty("vehicle_id")
+    private String vehicleId;
+
+    /** Current latitude */
+    private Double lat;
+
+    /** Current longitude */
+    private Double lon;
+
+    /** Current speed in km/h */
+    @JsonProperty("speed_kmh")
+    private Double speedKmh;
+
+    /** Heading in degrees (0=N, 90=E, 180=S, 270=W) */
+    @JsonProperty("heading_deg")
+    private Double headingDeg;
+
+    /** Route this bus is currently operating (e.g. "LINEA-16") */
+    @JsonProperty("route_id")
+    private String routeId;
+
+    /** Human-readable route name */
+    @JsonProperty("route_name")
+    private String routeName;
+
+    /** Schedule adherence status */
+    @JsonProperty("schedule_status")
+    private ScheduleStatus scheduleStatus;
+
+    /**
+     * Minutes late (positive = late, negative = early, 0 = on time).
+     * Null if status is UNKNOWN.
+     */
+    @JsonProperty("delay_minutes")
+    private Integer delayMinutes;
+
+    /** ID of the next stop this bus will reach */
+    @JsonProperty("next_stop_id")
+    private String nextStopId;
+
+    /** Name of the next stop */
+    @JsonProperty("next_stop_name")
+    private String nextStopName;
+
+    /** Estimated seconds until the bus reaches the next stop */
+    @JsonProperty("eta_seconds")
+    private Integer etaSeconds;
+
+    /**
+     * Estimated number of passengers on board.
+     * Derived from BLE device count using calibration model.
+     * Null if BLE scanning is not available on this unit.
+     */
+    @JsonProperty("estimated_passengers")
+    private Integer estimatedPassengers;
+
+    /**
+     * Crowding level: LOW, MEDIUM, HIGH, VERY_HIGH.
+     * Null if passenger estimate is not available.
+     */
+    @JsonProperty("crowding_level")
+    private String crowdingLevel;
+
+    /** When this position was recorded on the bus */
+    @JsonProperty("timestamp")
+    private Instant timestamp;
+
+    /** When the server last received data from this bus */
+    @JsonProperty("last_seen")
+    private Instant lastSeen;
+
+    /** Whether this bus is currently considered active */
+    @JsonProperty("is_active")
+    private Boolean isActive;
+}

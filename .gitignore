@@ -1,0 +1,29 @@
+﻿# Java compiled files
+target/
+*.class
+*.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment / secrets
+.env
+*.env
+
+# Docker volumes
+mosquitto/data/
+mosquitto/log/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
