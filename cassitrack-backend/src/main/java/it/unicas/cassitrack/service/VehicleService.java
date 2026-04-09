@@ -33,9 +33,10 @@ public class VehicleService {
      * Used by: GET /api/v1/vehicles
      */
     public List<VehicleStatusDTO> getAllActiveVehicles() {
-        return vehicleStateCache.getActive().stream()
-            .map(this::toStatusDTO)
-            .toList();
+        List<VehicleStatusDTO> list = vehicleStateCache.getActive().stream()
+                .map(this::toStatusDTO)
+                .toList();
+        return list;
     }
 
     /**
@@ -53,36 +54,47 @@ public class VehicleService {
      * computation once those services are built.
      */
     private VehicleStatusDTO toStatusDTO(VehiclePosition pos) {
-        boolean active = vehicleStateCache.isActive(pos.getVehicleId());
+        boolean active = vehicleStateCache.isActive(
+                pos.getVehicleId()
+        );
 
-        // Crowd estimation: rough heuristic until calibration model is built
         Integer estimatedPassengers = null;
-        String crowdingLevel = null;
+        String  crowdingLevel       = null;
         if (pos.getBleDeviceCount() != null) {
-            // Very rough estimate: assume ~60% of BLE devices are passengers
-            estimatedPassengers = (int) (pos.getBleDeviceCount() * 0.6);
-            crowdingLevel = estimateCrowdingLevel(estimatedPassengers);
+            estimatedPassengers =
+                    (int)(pos.getBleDeviceCount() * 0.6);
+            crowdingLevel =
+                    estimateCrowdingLevel(estimatedPassengers);
         }
 
+        // Schedule status is now computed by
+        // ScheduleAdherenceService every 30 seconds
+        // and stored directly on the VehiclePosition object
+        VehiclePosition.ScheduleStatus status =
+                pos.getScheduleStatus() != null
+                        ? pos.getScheduleStatus()
+                        : VehiclePosition.ScheduleStatus.UNKNOWN;
+
         return VehicleStatusDTO.builder()
-            .vehicleId(pos.getVehicleId())
-            .lat(pos.getLat())
-            .lon(pos.getLon())
-            .speedKmh(pos.getSpeedKmh())
-            .headingDeg(pos.getHeadingDeg())
-            .routeId(pos.getMatchedRouteId())
-            .routeName(resolveRouteName(pos.getMatchedRouteId()))
-            .scheduleStatus(pos.getScheduleStatus())
-            .delayMinutes(null)         // TODO: ScheduleAdherenceService
-            .nextStopId(null)           // TODO: ETAService
-            .nextStopName(null)         // TODO: ETAService
-            .etaSeconds(null)           // TODO: ETAService
-            .estimatedPassengers(estimatedPassengers)
-            .crowdingLevel(crowdingLevel)
-            .timestamp(pos.getTimestamp())
-            .lastSeen(pos.getReceivedAt())
-            .isActive(active)
-            .build();
+                .vehicleId(pos.getVehicleId())
+                .lat(pos.getLat())
+                .lon(pos.getLon())
+                .speedKmh(pos.getSpeedKmh())
+                .headingDeg(pos.getHeadingDeg())
+                .routeId(pos.getMatchedRouteId() != null
+                        ? pos.getMatchedRouteId() : "LINEA-16")
+                .routeName("Linea 16 — Campus Folcara")
+                .scheduleStatus(status)
+                .delayMinutes(null)   // TODO: ScheduleAdherenceService
+                .nextStopId(null)
+                .nextStopName(null)
+                .etaSeconds(null)
+                .estimatedPassengers(estimatedPassengers)
+                .crowdingLevel(crowdingLevel)
+                .timestamp(pos.getTimestamp())
+                .lastSeen(pos.getReceivedAt())
+                .isActive(active)
+                .build();
     }
 
     /**
