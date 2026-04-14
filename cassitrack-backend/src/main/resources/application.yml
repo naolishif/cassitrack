@@ -81,3 +81,11 @@ logging:
     it.unicas.cassitrack: DEBUG
     org.springframework.integration.mqtt: INFO
     org.hibernate.SQL: WARN
+
+# ── Anthropic Claude API ──────────────────────────────────────
+anthropic:
+  api:
+    key: ${ANTHROPIC_API_KEY:}
+    url: https://api.anthropic.com/v1/messages
+    model: ${ANTHROPIC_API_MODEL:claude-3-5-haiku-latest}
+    version: ${ANTHROPIC_API_VERSION:2023-06-01}

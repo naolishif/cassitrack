@@ -62,6 +62,7 @@ public class SecurityConfig {
                     "/api/v1/vehicles/{id}",
                     "/api/v1/stops/{stopId}/arrivals",
                     "/api/v1/feed/gtfs-rt",
+                    "/api/v1/ai/**",
                     "/api/docs/**",
                     "/api/swagger-ui/**",
                     "/api/swagger-ui.html",
