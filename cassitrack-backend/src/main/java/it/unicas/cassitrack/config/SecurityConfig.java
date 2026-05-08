@@ -95,7 +95,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",   // React dev server (OMNIMOVE PWA)
             "http://localhost:5173",    // Vite dev server (alternative)
-                "null"
+                "null",
+                "http://10.52.5.254:3000"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

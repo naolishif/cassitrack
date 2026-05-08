@@ -374,10 +374,10 @@ public class JourneyPlannerService {
                 .greenIndex(gi)
                 .co2Grams(co2)
                 .etaMinutes(durationMin)
-                .summary("Elerent e-scooter "
-                        + formatDistance(distanceMetres)
-                        + " — " + durationMin + " min"
-                        + " (~€" + String.format("%.2f", cost) + ")")
+                .summary("🛴 Have a car free day! E-scooter "
+                         + formatDistance(distanceMetres)
+                         + " — " + durationMin + " min"
+                         + " (~€" + String.format("%.2f", cost) + ")")
                 .legs(List.of(JourneyLeg.builder()
                         .mode("SCOOTER")
                         .from(req.getOriginName() != null

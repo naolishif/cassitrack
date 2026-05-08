@@ -1,0 +1,40 @@
+{
+  "name": "CASSITRACK — Cassino Bus",
+  "short_name": "CASSITRACK",
+  "description": "Real-time bus tracking for Cassino — Linea 16 Magni Autoservizi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07090F",
+  "theme_color": "#3B82F6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "navigation", "utilities"],
+  "lang": "en",
+  "shortcuts": [
+    {
+      "name": "Live Map",
+      "short_name": "Map",
+      "url": "./index.html#map",
+      "description": "See live bus positions"
+    },
+    {
+      "name": "Plan Journey",
+      "short_name": "Journey",
+      "url": "./index.html#journey",
+      "description": "Plan your trip"
+    }
+  ]
+}

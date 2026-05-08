@@ -85,7 +85,7 @@ logging:
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:
   api:
-    key: ${ANTHROPIC_API_KEY:}
+    key: ${ANTHROPIC_API_KEY:your-api-key-here}
     url: https://api.anthropic.com/v1/messages
-    model: ${ANTHROPIC_API_MODEL:claude-3-5-haiku-latest}
+    model: ${ANTHROPIC_API_MODEL:claude-haiku-4-5-20251001} #claude-3-5-haiku-latest
     version: ${ANTHROPIC_API_VERSION:2023-06-01}

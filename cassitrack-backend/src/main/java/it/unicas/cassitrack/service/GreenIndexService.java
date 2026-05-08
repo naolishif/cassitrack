@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
  *   Walking:     0    gCO₂/km
  *   Cycling:     0    gCO₂/km
  *   Urban bus:   68   gCO₂/passenger-km
- *   E-scooter:   35   gCO₂/km (lifecycle)
+ *   E-scooter:   0    gCO₂/km (zero-emission, fully green)
  *   Private car: 170  gCO₂/km (average EU)
  *
  * Formula:
@@ -29,12 +29,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class GreenIndexService {
 
-    // EEA emission factors in gCO₂ per passenger-km
-    private static final double CO2_WALK     = 0.0;
-    private static final double CO2_BIKE     = 0.0;
-    private static final double CO2_BUS      = 68.0;
-    private static final double CO2_SCOOTER  = 35.0;
-    private static final double CO2_CAR      = 170.0;
+     // EEA emission factors in gCO₂ per passenger-km
+     private static final double CO2_WALK     = 0.0;
+     private static final double CO2_BIKE     = 0.0;
+     private static final double CO2_BUS      = 68.0;
+     private static final double CO2_SCOOTER  = 0.0;
+     private static final double CO2_CAR      = 170.0;
 
     /**
      * Compute Green Index for a journey.
