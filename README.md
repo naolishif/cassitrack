@@ -6,6 +6,7 @@
 ---
 
 ## What Is This?
+Two interconnected systems built for Cassino's **Bus 16** (MAGNI Autoservizi),
 
 CASSITRACK is a real-time bus fleet monitoring system built for **MAGNI Autoservizi Linea 16** 
 — the bus that connects Cassino city centre to the UNICAS Campus via Via Folcara.
@@ -21,6 +22,13 @@ CASSITRACK is the backend of the OMNIMOVE smart mobility platform.
 It receives GPS positions from buses (via MQTT), stores them, and  
 exposes a REST API so OMNIMOVE and the fleet dashboard can show live bus locations and estimated arrival times.
 ---
+
+| System | What it does | Port |
+|---|---|---|
+| **CASSITRACK** | Real-time fleet monitoring — live bus positions, ETA, schedule adherence | `8080` |
+| **OMNIMOVE** | Multimodal journey planner — bus, walk, bike, scooter with Green Index CO₂ scoring | `8081` |
+
+
 
 ## System Architecture
 
@@ -67,20 +75,39 @@ REST API (OpenAPI 3.0 documented)
 
 ## Prerequisites
 
-| Tool | Version | Download |
-|---|---|---|
-| Docker Desktop | Latest | https://www.docker.com/products/docker-desktop |
-| Java JDK 17 | 17 LTS | https://adoptium.net |
-| IntelliJ IDEA | Any | JetBrains student license |
-| Python 3 | 3.9+ | https://python.org |
+Make sure you have these installed before starting:
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (must be running)
+- [Java 21 JDK](https://adoptium.net/) (not 17, not 25 — exactly **21**)
+- [Python 3.x](https://www.python.org/downloads/) (install with "Add to PATH" checked)
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/) (Community or Ultimate)
+- Git
 
 ---
+## Project Structure
+
+```
+cassitrack-complete-v2/
+├── cassitrack-backend/        # Spring Boot — fleet monitoring API (port 8080)
+├── omnimove-backend/          # Spring Boot — journey planner API (port 8081)
+├── cassitrack-pwa/            # PWA for mobile (served on port 3000)
+├── mosquitto/                 # MQTT broker config
+├── gps_simulator.py           # Python GPS simulator for Bus 16
+├── cassitrack-map-v4.html     # Main fleet map (open in browser)
+├── omnimove-login.html        # OMNIMOVE login page
+└── docker-compose.yml         # All infrastructure in one file
+```
+
 
 ## How to Run — Step by Step
 
 ### ⚠️ Always follow this exact order
+Clone the repository
 
----
+```bash
+git clone https://github.com/naolishif/cassitrack.git
+cd cassitrack
+```
 
 ### Step 1 — Start Docker Infrastructure
 
@@ -118,37 +145,38 @@ cassitrack-mosquitto   running (healthy)
 
 The AI chatbot requires an Anthropic API key. Never put it in a file — always set it as an environment variable inside IntelliJ.
 
-1. Go to **Run → Edit Configurations**
-2. Select **CassitrackApplication**
+1. Open IntelliJ → Run → **Edit Configurations**
+2. Select **OmnimoveApplication**
 3. Click **Modify options → Environment variables**
-4. Click **+** and add:
-   ```
+4. Add: `ANTHROPIC_API_KEY=your_key_here`
+5. Click OK
+
+ ```
    Name:  ANTHROPIC_API_KEY
    Value: sk-ant-api03-your-key-here
    ```
-5. Click **OK → Apply → OK**
 
-Get a key from: https://console.anthropic.com
+> Get a free API key at [console.anthropic.com](https://console.anthropic.com)
+
 
 ---
 
 ### Step 3 — Run the Backend in IntelliJ
 
-1. Open IntelliJ IDEA
-2. **File → Open** → select the `cassitrack-backend` folder
-3. Wait for Maven to download dependencies
-4. Run `CassitrackApplication.java` (green ▶ button)
-
-On first startup, Flyway automatically creates all database tables and seeds the Bus 16 route, stops, and timetable data.
-
-Verify it is running:
-```
-http://localhost:8080/api/swagger-ui
-```
-
-You should see the full Swagger UI with all documented endpoints.
+1. File → Open → select the `cassitrack-complete-v2` folder
+2. Wait for Maven to download dependencies (first time takes a few minutes)
+3. Make sure the **Project SDK is set to Java 21**: File → Project Structure → Project → SDK
 
 ---
+
+In IntelliJ, run both applications (in this order):
+
+1. Run **CassitrackApplication** (port 8080)
+2. Run **OmnimoveApplication** (port 8081)
+
+Verify they started:
+- CASSITRACK Swagger: http://localhost:8080/swagger-ui.html
+- OMNIMOVE Swagger: http://localhost:8081/swagger-ui.html
 
 ### Step 4 — Run the GPS Simulator
 
@@ -176,15 +204,33 @@ Leave this window open while developing.
 
 ---
 
-### Step 5 — Open the Map
+### Step 5 — Open the frontend
 
-**Desktop browser:**
-Open `cassitrack-map-v4.html` directly in Chrome. You should see:
-- 🟢 Green dot in header — backend connected
-- Bus icons on the Cassino map moving in real time
-- 4 tabs: Fleet, Journey Planner, ETA, AI Chat
+Serve the HTML files with a local HTTP server (required — do not open directly as `file://`):
+
+```powershell
+python -m http.server 3000
+```
+
+Then open in browser:
+- **CASSITRACK map**: http://localhost:3000/cassitrack-map-v4.html
+- **OMNIMOVE**: http://localhost:3000/omnimove-login.html
 
 ---
+
+## Startup Order (Important)
+
+Always start in this exact order:
+
+```
+1. Docker Desktop
+2. docker compose up -d
+3. IntelliJ → CassitrackApplication
+4. IntelliJ → OmnimoveApplication
+5. python gps_simulator.py
+6. python -m http.server 3000
+7. Open browser
+```
 
 ### Step 6 — Run the Mobile PWA (Optional)
 
@@ -224,7 +270,52 @@ To install: **Share button → Add to Home Screen → Add**
 
 ---
 
+## Common Issues
+
+| Problem | Fix |
+|---|---|
+| Spring Boot crashes on start | Docker must be running first — PostgreSQL is inside Docker |
+| Map shows "Backend offline" | Check that CassitrackApplication is running on port 8080 |
+| AI chat says "Sorry, I could not process your request" | Check ANTHROPIC_API_KEY is set in IntelliJ Run Configurations |
+| Java compile error `Unexpected token 'class'` | You are using Java 25. Switch to Java 21 in Project Structure |
+| No buses on map | Run `python gps_simulator.py` |
+| Phone can't access the app on LAN | Run `ipconfig` in PowerShell, get your laptop IP, update `API` variable in `cassitrack-map-v4.html` and `CASSITRACK_API` in `cassitrack-pwa/app.js` |
+| `ANTHROPIC_API_KEY` not found | Environment variables set in PowerShell are invisible to IntelliJ — set them in Run Configurations instead |
+
+---
+
+## Tech Stack
+
+**Backend**
+- Java 21 + Spring Boot 3.2.5
+- PostgreSQL + PostGIS (spatial queries)
+- InfluxDB (GPS time-series data)
+- Redis (real-time cache)
+- Eclipse Mosquitto (MQTT broker)
+- Flyway (database migrations)
+
+**Frontend**
+- Leaflet.js (interactive maps)
+- Progressive Web App (PWA) with service worker
+- Vanilla HTML/CSS/JavaScript
+
+**Data Standards**
+- GTFS Realtime (Protocol Buffers)
+- MQTT for GPS telemetry ingestion
+
+**APIs**
+- Anthropic Claude API (AI assistant)
+- Open-Meteo (weather)
+- Elerent (bike/scooter availability)
+
+---
+
 ## API Endpoints
+Both backends expose Swagger UI for interactive API exploration:
+
+- CASSITRACK: http://localhost:8080/swagger-ui.html
+- OMNIMOVE: http://localhost:8081/swagger-ui.html
+
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -408,7 +499,6 @@ curl http://localhost:8080/api/v1/feed/gtfs-rt/debug
 - Real ESP32 hardware installed on MAGNI buses
 - Elerent real API integration (live vehicle locations)
 - Driver Android app (voluntary GPS tracking)
-- Weather-aware journey suggestions
 - SIRI Vehicle Monitoring for Lazio RAP
 - React PWA upgrade with TypeScript
 - Contact Magni Autoservizi for official GTFS data
