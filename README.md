@@ -8,7 +8,7 @@
 ## What Is This?
 
 CASSITRACK is a real-time bus fleet monitoring system built for **MAGNI Autoservizi Linea 16** 
-— the bus that connects Cassino city centre to the UNICAS Engineering Campus via Via Folcara.
+— the bus that connects Cassino city centre to the UNICAS Campus via Via Folcara.
 
 **OMNIMOVE** is the multimodal journey planning layer built on top of CASSITRACK, 
 allowing passengers to compare Bus, Bike, Scooter, and Walking options with real-time data, 

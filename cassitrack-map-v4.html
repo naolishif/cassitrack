@@ -165,6 +165,9 @@
     <div class="chip chip-blue">LIVE</div>
     <div class="chip chip-cyan">MAGNI AUTOSERVIZI</div>
     <div class="chip chip-green">OMNIMOVE</div>
+      <a href="cassitrack-analytics.html" style="font-family:var(--mono);font-size:10px;color:var(--dim);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:4px;margin-left:4px" title="Fleet Analytics">📊 Analytics</a>
+      <a href="driver-app.html" style="font-family:var(--mono);font-size:10px;color:var(--dim);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:4px" title="Driver App">🚌 Driver</a>
+      <a href="omnimove-login.html" style="font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;padding:3px 8px;border:1px solid rgba(59,130,246,.3);border-radius:4px;background:rgba(59,130,246,.08)" title="Login">👤 Login</a>
     <div class="header-right">
       <div class="dot dot-green" id="hDot"></div>
       <span class="htext" id="hStatus">Connecting...</span>
@@ -293,8 +296,11 @@
   </div>
 </div>
 
+
 <script>
-const API = 'http://localhost:8080/api/v1';
+// const API = 'http://localhost:8080/api/v1';
+const API          = 'http://localhost:8080/api/v1';  // CASSITRACK — fleet, ETA
+const OMNIMOVE_API = 'http://localhost:8081/api/v1';  // OMNIMOVE — journey, AI
 const REFRESH = 15000;
 const SC = {
   ON_TIME:'#22C55E',SLIGHTLY_LATE:'#F59E0B',
@@ -447,7 +453,7 @@ async function searchJourney(){
   btn.disabled=true;btn.textContent='Searching...';
 
   try{
-    const r=await fetch(`${API}/journeys/search`,{
+    const r=await fetch(`${OMNIMOVE_API}/journeys/search`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -465,7 +471,17 @@ async function searchJourney(){
       return;
     }
 
-    results.innerHTML=`<div style="font-family:var(--mono);font-size:10px;color:var(--dim);padding:0 0 8px 0">${data.origin} → ${data.destination} · ${data.totalOptions} options${data.realtimeAvailable?' · 🟢 Live data':''}</div>`;
+    results.innerHTML='';
+    if(data.weather_summary){
+      const wb=document.createElement('div');
+      wb.style.cssText='background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-family:var(--mono);font-size:11px;color:var(--text);display:flex;align-items:center;gap:8px';
+      wb.innerHTML=data.weather_summary+(data.temperature_celsius?` <span style="color:var(--dim);margin-left:auto">${data.temperature_celsius.toFixed(1)}°C</span>`:'');
+      results.appendChild(wb);
+    }
+    const hdr=document.createElement('div');
+    hdr.style.cssText='font-family:var(--mono);font-size:10px;color:var(--dim);padding:0 0 8px 0';
+    hdr.textContent=`${data.origin} → ${data.destination} · ${data.totalOptions} options${data.realtimeAvailable?' · 🟢 Live data':''}`;
+    results.appendChild(hdr);
 
     data.options.forEach((opt,i)=>{
       const mc=MODE_COL[opt.mode]||'#3B82F6';
@@ -518,6 +534,8 @@ async function searchJourney(){
             </div>
             <div class="green-label" style="color:${giCol}">Green ${gi}/100 · ${giLabel}</div>
           </div>
+          ${opt.mode==='WALK'?`<div style="font-family:var(--mono);font-size:10px;color:var(--green);margin-top:5px;font-style:italic">🌿 Have a car free day!</div>`:''}
+          ${opt.weather_warning?`<div style="font-family:var(--mono);font-size:10px;color:var(--amber);margin-top:5px;padding:5px 8px;background:rgba(245,158,11,0.1);border-radius:5px;border:1px solid rgba(245,158,11,0.3)">${opt.weather_warning}</div>`:''}
           ${legsHtml}
         </div>`;
       results.appendChild(card);
@@ -559,7 +577,7 @@ async function sendMsg(){
   isThinking=true;btn.disabled=true;
   const thinkDiv=appendMsg('ai','',true);
   try{
-    const r=await fetch(`${API}/ai/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,language:currentLang})});
+    const r=await fetch(`${OMNIMOVE_API}/ai/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,language:currentLang})});
     const data=await r.json();
     thinkDiv.remove();
     appendMsg('ai',data.answer||'Sorry, could not process that.');

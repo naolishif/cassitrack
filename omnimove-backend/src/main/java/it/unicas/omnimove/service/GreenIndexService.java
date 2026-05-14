@@ -1,0 +1,91 @@
+package it.unicas.omnimove.service;
+
+import org.springframework.stereotype.Service;
+
+/**
+ * Computes the Green Index for each journey option.
+ *
+ * Green Index = 0 to 100
+ *   100 = zero emissions (walking, cycling)
+ *   0   = maximum emissions (private car solo)
+ *
+ * Based on CO₂ emission factors from the
+ * European Environment Agency (EEA):
+ *
+ *   Walking:     0    gCO₂/km
+ *   Cycling:     0    gCO₂/km
+ *   Urban bus:   68   gCO₂/passenger-km
+ *   E-scooter:   0    gCO₂/km (zero-emission, fully green)
+ *   Private car: 170  gCO₂/km (average EU)
+ *
+ * Formula:
+ *   CO₂ = emission_factor × distance_km
+ *   Green Index = 100 - (CO₂ / MAX_CO2 × 100)
+ *   where MAX_CO2 = private car over same distance
+ *
+ * Required by CINI challenge specification
+ * FR-OM-002 and the competition evaluation criteria.
+ */
+@Service
+public class GreenIndexService {
+
+     // EEA emission factors in gCO₂ per passenger-km
+     private static final double CO2_WALK     = 0.0;
+     private static final double CO2_BIKE     = 0.0;
+     private static final double CO2_BUS      = 68.0;
+     private static final double CO2_SCOOTER  = 0.0;
+     private static final double CO2_CAR      = 170.0;
+
+    /**
+     * Compute Green Index for a journey.
+     *
+     * @param mode          Transport mode (BUS, WALK, etc.)
+     * @param distanceKm    Journey distance in kilometres
+     * @return              Green Index 0-100
+     */
+    public int computeGreenIndex(
+            String mode, double distanceKm) {
+
+        double co2 = computeCo2Grams(mode, distanceKm);
+        double maxCo2 = CO2_CAR * distanceKm;
+
+        if (maxCo2 == 0) return 100;
+
+        // Invert: lower CO₂ = higher Green Index
+        double index = 100.0 - (co2 / maxCo2 * 100.0);
+        return (int) Math.max(0, Math.min(100, index));
+    }
+
+    /**
+     * Compute actual CO₂ emissions in grams.
+     *
+     * @param mode          Transport mode
+     * @param distanceKm    Distance in kilometres
+     * @return              CO₂ in grams
+     */
+    public double computeCo2Grams(
+            String mode, double distanceKm) {
+
+        double factor = switch (mode.toUpperCase()) {
+            case "WALK"    -> CO2_WALK;
+            case "BIKE"    -> CO2_BIKE;
+            case "BUS"     -> CO2_BUS;
+            case "SCOOTER" -> CO2_SCOOTER;
+            case "CAR"     -> CO2_CAR;
+            default        -> CO2_BUS;
+        };
+
+        return factor * distanceKm;
+    }
+
+    /**
+     * Get a human readable label for the Green Index.
+     */
+    public String getGreenLabel(int index) {
+        if (index >= 90) return "Excellent ♻️";
+        if (index >= 70) return "Good 🌿";
+        if (index >= 50) return "Moderate 🌱";
+        if (index >= 30) return "Poor ⚠️";
+        return "Very Poor 🔴";
+    }
+}

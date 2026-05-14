@@ -62,6 +62,8 @@ public class SecurityConfig {
                     "/api/v1/vehicles/{id}",
                     "/api/v1/stops/{stopId}/arrivals",
                         "/api/v1/feed/**",
+                    "/api/v1/analytics/**",
+                    "/api/v1/driver/**",
                     "/api/v1/feed/gtfs-rt",
                     "/api/v1/ai/**",
                         "/api/v1/journeys/**",
@@ -96,7 +98,7 @@ public class SecurityConfig {
             "http://localhost:3000",   // React dev server (OMNIMOVE PWA)
             "http://localhost:5173",    // Vite dev server (alternative)
                 "null",
-                "http://10.52.5.254:3000"
+                "http://172.20.10.6:3000"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

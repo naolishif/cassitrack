@@ -1,31 +1,34 @@
 package it.unicas.cassitrack.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
 
 /**
- * The full response from the journey planner.
- * Contains multiple ranked options for the user
- * to choose from.
+ * Full response from the journey planner.
+ * Contains multiple ranked options plus weather information.
  */
 @Data
 @Builder
 public class JourneyResponse {
 
-    /** All journey options, sorted by duration */
     private List<JourneyOption> options;
-
-    /** Origin name for display */
     private String origin;
-
-    /** Destination name for display */
     private String destination;
 
-    /** Total options found */
+    @JsonProperty("total_options")
     private Integer totalOptions;
 
-    /** True if real-time bus data was available */
+    @JsonProperty("realtime_available")
     private boolean realtimeAvailable;
+
+    /** Overall weather summary shown at top of results. */
+    @JsonProperty("weather_summary")
+    private String weatherSummary;
+
+    /** Current temperature in Cassino. */
+    @JsonProperty("temperature_celsius")
+    private Double temperatureCelsius;
 }

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CASSITRACK — Driver App</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#07090F;--panel:#0F1623;--panel2:#141E2E;--border:#1A2744;
+      --accent:#3B82F6;--green:#22C55E;--amber:#F59E0B;--red:#EF4444;
+      --text:#E2E8F0;--dim:#4B5563;
+      --mono:'DM Mono',monospace;--display:'Syne',sans-serif;
+    }
+    body{background:var(--bg);color:var(--text);font-family:var(--display);
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      justify-content:flex-start;padding:24px 16px}
+
+    .logo{font-size:22px;font-weight:800;text-align:center;margin-bottom:6px}
+    .logo span{color:var(--accent)}
+    .subtitle{font-family:var(--mono);font-size:11px;color:var(--dim);
+      text-align:center;margin-bottom:28px}
+
+    .card{background:var(--panel);border:1px solid var(--border);
+      border-radius:12px;padding:22px;width:100%;max-width:420px;
+      margin-bottom:16px}
+    .card-title{font-size:15px;font-weight:700;margin-bottom:14px}
+
+    .label{font-family:var(--mono);font-size:10px;color:var(--dim);
+      text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+    .select, .input{width:100%;padding:10px 12px;background:var(--panel2);
+      color:var(--text);border:1px solid var(--border);border-radius:8px;
+      font-family:var(--mono);font-size:13px;outline:none;margin-bottom:14px}
+    .select:focus,.input:focus{border-color:var(--accent)}
+
+    .start-btn{width:100%;padding:14px;border-radius:10px;border:none;
+      font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;
+      transition:all .2s;letter-spacing:1px}
+    .start-btn.idle{background:var(--accent);color:white}
+    .start-btn.active{background:var(--red);color:white}
+    .start-btn:disabled{opacity:.5;cursor:not-allowed}
+
+    /* Status panel */
+    .status-panel{background:var(--panel);border:1px solid var(--border);
+      border-radius:12px;padding:20px;width:100%;max-width:420px;
+      display:none}
+    .status-panel.visible{display:block}
+
+    .status-row{display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:12px}
+    .status-label{font-family:var(--mono);font-size:10px;color:var(--dim);
+      text-transform:uppercase;letter-spacing:1px}
+    .status-value{font-family:var(--mono);font-size:14px;font-weight:500}
+
+    /* GPS accuracy bar */
+    .accuracy-wrap{margin:10px 0}
+    .accuracy-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+    .accuracy-fill{height:100%;border-radius:2px;transition:width .5s,background .5s}
+
+    /* Pulse animation when active */
+    .pulse-dot{width:12px;height:12px;border-radius:50%;
+      background:var(--green);box-shadow:0 0 8px var(--green);
+      animation:pulse 1.5s infinite;flex-shrink:0}
+    .inactive-dot{width:12px;height:12px;border-radius:50%;
+      background:var(--dim);flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}
+      50%{opacity:.5;transform:scale(.8)}}
+
+    .log{margin-top:12px;background:var(--panel2);border:1px solid var(--border);
+      border-radius:8px;padding:10px;max-height:180px;overflow-y:auto}
+    .log-entry{font-family:var(--mono);font-size:10px;color:var(--dim);
+      line-height:1.8;border-bottom:1px solid rgba(26,39,68,.4);
+      padding-bottom:4px;margin-bottom:4px}
+    .log-entry:last-child{border-bottom:none;margin-bottom:0}
+    .log-entry.ok{color:var(--green)}
+    .log-entry.err{color:var(--red)}
+
+    .consent{font-family:var(--mono);font-size:10px;color:var(--dim);
+      text-align:center;line-height:1.7;margin-top:8px}
+
+    .footer{font-family:var(--mono);font-size:10px;color:var(--dim);
+      text-align:center;margin-top:24px;line-height:1.8}
+  </style>
+</head>
+<body>
+
+<div class="logo">CASSI<span>TRACK</span></div>
+<div class="subtitle">Driver GPS Tracking — Web App</div>
+
+<!-- Setup Card -->
+<div class="card">
+  <div class="card-title">🚌 Start Your Trip</div>
+
+  <div class="label">Select Your Bus</div>
+  <select class="select" id="vehicleSelect">
+    <option value="">— Select bus ID —</option>
+    <option value="MAGNI-001">MAGNI-001</option>
+    <option value="MAGNI-002">MAGNI-002</option>
+    <option value="MAGNI-003">MAGNI-003</option>
+    <option value="MAGNI-004">MAGNI-004</option>
+    <option value="MAGNI-005">MAGNI-005</option>
+  </select>
+
+  <div class="label">Backend URL</div>
+  <input class="input" id="apiUrl"
+    value="http://localhost:8080/api/v1"
+    placeholder="http://YOUR-IP:8080/api/v1"/>
+
+  <button class="start-btn idle" id="startBtn" onclick="toggleTracking()">
+    📍 Start GPS Tracking
+  </button>
+
+  <div class="consent">
+    By starting, you consent to sharing your location<br>
+    with the CASSITRACK fleet management system.<br>
+    Data is used only for real-time bus tracking.
+  </div>
+</div>
+
+<!-- Live Status Panel -->
+<div class="status-panel" id="statusPanel">
+  <div class="card-title" style="display:flex;align-items:center;gap:10px">
+    <div class="pulse-dot" id="liveDot"></div>
+    Live Tracking
+  </div>
+
+  <div class="status-row">
+    <span class="status-label">Bus</span>
+    <span class="status-value" id="dispBus" style="color:var(--accent)">—</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Latitude</span>
+    <span class="status-value" id="dispLat">—</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Longitude</span>
+    <span class="status-value" id="dispLon">—</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Speed</span>
+    <span class="status-value" id="dispSpeed">—</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">GPS Accuracy</span>
+    <span class="status-value" id="dispAcc">—</span>
+  </div>
+
+  <div class="accuracy-wrap">
+    <div class="accuracy-track">
+      <div class="accuracy-fill" id="accBar" style="width:0%;background:var(--green)"></div>
+    </div>
+  </div>
+
+  <div class="status-row">
+    <span class="status-label">Updates sent</span>
+    <span class="status-value" id="dispCount" style="color:var(--green)">0</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Last sent</span>
+    <span class="status-value" id="dispLast">—</span>
+  </div>
+
+  <div class="label" style="margin-top:10px">Activity Log</div>
+  <div class="log" id="log"></div>
+</div>
+
+<div class="footer">
+  CASSITRACK · UNICAS 2025/2026<br>
+  Driver app replaces ESP32 for demo<br>
+  Updates sent every 15 seconds
+</div>
+
+<script>
+let watchId = null;
+let intervalId = null;
+let sendCount = 0;
+let lastPosition = null;
+let isTracking = false;
+
+const UPDATE_INTERVAL = 15000; // 15 seconds
+
+function toggleTracking() {
+  if (!isTracking) {
+    startTracking();
+  } else {
+    stopTracking();
+  }
+}
+
+function startTracking() {
+  const vehicleId = document.getElementById('vehicleSelect').value;
+  if (!vehicleId) {
+    alert('Please select your bus ID first.');
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert('GPS is not supported by this browser.');
+    return;
+  }
+
+  isTracking = true;
+  document.getElementById('startBtn').textContent = '🛑 Stop Tracking';
+  document.getElementById('startBtn').className = 'start-btn active';
+  document.getElementById('statusPanel').className = 'status-panel visible';
+  document.getElementById('dispBus').textContent = vehicleId;
+
+  addLog('Starting GPS tracking for ' + vehicleId, 'ok');
+
+  // Watch GPS position
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      lastPosition = pos;
+      updateDisplay(pos);
+    },
+    err => addLog('GPS error: ' + err.message, 'err'),
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+  );
+
+  // Send to backend every 15 seconds
+  sendPosition(); // send immediately
+  intervalId = setInterval(sendPosition, UPDATE_INTERVAL);
+}
+
+function stopTracking() {
+  isTracking = false;
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+  document.getElementById('startBtn').textContent = '📍 Start GPS Tracking';
+  document.getElementById('startBtn').className = 'start-btn idle';
+  document.getElementById('liveDot').className = 'inactive-dot';
+  addLog('Tracking stopped.', 'err');
+}
+
+function updateDisplay(pos) {
+  const { latitude, longitude, speed, accuracy } = pos.coords;
+  document.getElementById('dispLat').textContent = latitude.toFixed(6);
+  document.getElementById('dispLon').textContent = longitude.toFixed(6);
+  document.getElementById('dispSpeed').textContent =
+    speed != null ? (speed * 3.6).toFixed(1) + ' km/h' : '0.0 km/h';
+  document.getElementById('dispAcc').textContent =
+    accuracy != null ? '±' + Math.round(accuracy) + 'm' : '—';
+
+  // Accuracy bar (lower = better, max 100m considered worst)
+  const accPct = Math.max(0, 100 - Math.min(accuracy || 100, 100));
+  const accCol = accPct > 70 ? '#22C55E' : accPct > 40 ? '#F59E0B' : '#EF4444';
+  document.getElementById('accBar').style.width = accPct + '%';
+  document.getElementById('accBar').style.background = accCol;
+}
+
+async function sendPosition() {
+  if (!lastPosition || !isTracking) return;
+
+  const vehicleId = document.getElementById('vehicleSelect').value;
+  const apiUrl = document.getElementById('apiUrl').value.replace(/\/$/, '');
+  const { latitude, longitude, speed, heading } = lastPosition.coords;
+
+  try {
+    const r = await fetch(`${apiUrl}/driver/location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vehicle_id: vehicleId,
+        lat: latitude,
+        lon: longitude,
+        speed_kmh: speed != null ? speed * 3.6 : 0,
+        heading_deg: heading || 0
+      })
+    });
+
+    if (r.ok) {
+      sendCount++;
+      document.getElementById('dispCount').textContent = sendCount;
+      document.getElementById('dispLast').textContent =
+        new Date().toLocaleTimeString('it-IT');
+      addLog(`✓ Sent: [${latitude.toFixed(5)}, ${longitude.toFixed(5)}]`, 'ok');
+    } else {
+      addLog(`✗ Server error: ${r.status}`, 'err');
+    }
+  } catch(e) {
+    addLog(`✗ Cannot reach backend: ${e.message}`, 'err');
+  }
+}
+
+function addLog(msg, type = '') {
+  const log = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  const time = new Date().toLocaleTimeString('it-IT');
+  entry.textContent = `[${time}] ${msg}`;
+  log.insertBefore(entry, log.firstChild);
+  // Keep only 20 entries
+  while (log.children.length > 20) {
+    log.removeChild(log.lastChild);
+  }
+}
+</script>
+</body>
+</html>

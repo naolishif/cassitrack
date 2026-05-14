@@ -1,0 +1,20 @@
+package it.unicas.omnimove.dto;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
+import lombok.Data;
+import java.util.List;
+@Data @Builder
+public class JourneyOption {
+    private String mode;
+    @JsonProperty("mode_label") private String modeLabel;
+    @JsonProperty("duration_minutes") private Integer durationMinutes;
+    @JsonProperty("distance_metres") private Double distanceMetres;
+    @JsonProperty("cost_euros") private Double costEuros;
+    @JsonProperty("green_index") private Integer greenIndex;
+    @JsonProperty("co2_grams") private Double co2Grams;
+    @JsonProperty("eta_minutes") private Integer etaMinutes;
+    private String summary;
+    @JsonProperty("weather_warning") private String weatherWarning;
+    @JsonProperty("weather_suggestion") private String weatherSuggestion;
+    private List<JourneyLeg> legs;
+}

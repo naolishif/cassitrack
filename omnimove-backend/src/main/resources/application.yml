@@ -1,0 +1,75 @@
+# ── OMNIMOVE Server ───────────────────────────────────────────
+# Multimodal Journey Planner — port 8081
+# Communicates with CASSITRACK (port 8080) via REST API ONLY
+
+spring:
+  application:
+    name: omnimove
+  datasource:
+    url: jdbc:h2:mem:omnimovedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: omnimove
+    password: omnimove
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
+
+server:
+  port: 8081
+
+# ── CASSITRACK API Connection ─────────────────────────────────
+# OMNIMOVE calls CASSITRACK for live bus data
+cassitrack:
+  api:
+    base-url: ${CASSITRACK_URL:http://localhost:8080/api/v1}
+
+# ── Anthropic Claude API ──────────────────────────────────────
+anthropic:
+  api:
+    key: ${ANTHROPIC_API_KEY:${ANTHROPIC_API_KEY}
+    url: https://api.anthropic.com/v1/messages
+    model: claude-sonnet-4-20250514    # claude-haiku-4-5-20251001
+
+# ── Weather Service ───────────────────────────────────────────
+weather:
+  api:
+    key: ${WEATHER_API_KEY:a50cdb6508e8300b5af885e88e9dcb3a}
+    url: https://api.openweathermap.org/data/2.5/weather
+    city: Cassino
+    country: IT
+
+# ── Elerent Shared Mobility Pricing ──────────────────────────
+elerent:
+  bike:
+    unlock: 0.50
+    per-minute: 0.15
+  scooter:
+    unlock: 1.00
+    per-minute: 0.25
+
+# ── OpenAPI ───────────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api/docs
+  swagger-ui:
+    path: /api/swagger-ui
+
+# ── Logging ───────────────────────────────────────────────────
+logging:
+  level:
+    it.unicas.omnimove: DEBUG
+
+# ── H2 Embedded Database (for user management) ────────────────
+# No Docker needed — H2 is embedded in the JAR
+
+# ── JWT ───────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET:omnimove-jwt-secret-change-in-production-must-be-long}
+  expiration-ms: 86400000

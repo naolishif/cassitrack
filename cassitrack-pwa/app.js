@@ -9,7 +9,7 @@
  */
 
 // ── Configuration ────────────────────────────────────────────
-const API       = 'http://10.52.5.254:8080/api/v1';
+const CASSITRACK_API = 'http://172.20.10.6:8080/api/v1';
 const REFRESH   = 15000; // milliseconds
 
 // Status colours matching the schedule service
@@ -410,7 +410,7 @@ async function searchJourney() {
   btn.textContent = 'Searching...';
 
   try {
-    const r = await fetch(`${API}/journeys/search`, {
+    const r = await fetch(`${OMNIMOVE_API}/journeys/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -434,12 +434,17 @@ async function searchJourney() {
       return;
     }
 
-    results.innerHTML = `
-      <div style="font-family:'DM Mono',monospace;
-        font-size:10px;color:#4B5563;margin-bottom:4px">
-        ${data.origin} → ${data.destination}
-        ${data.realtimeAvailable ? ' · 🟢 Live data' : ''}
-      </div>`;
+    results.innerHTML = '';
+    if (data.weather_summary) {
+      const wb = document.createElement('div');
+      wb.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text)";
+      wb.textContent = data.weather_summary + (data.temperature_celsius ? ' · ' + data.temperature_celsius.toFixed(1) + '°C' : '');
+      results.appendChild(wb);
+    }
+    const _rh = document.createElement('div');
+    _rh.style.cssText = "font-family:'DM Mono',monospace;font-size:10px;color:#4B5563;margin-bottom:4px";
+    _rh.textContent = (data.origin || '') + ' → ' + (data.destination || '') + (data.realtimeAvailable ? ' · 🟢 Live data' : '');
+    results.appendChild(_rh);
 
     data.options.forEach((opt, i) => {
       const mc  = MODE_COLOUR[opt.mode] || '#3B82F6';
@@ -497,6 +502,8 @@ async function searchJourney() {
               ${gi}/100 · ${giL}
             </div>
           </div>
+          ${opt.mode === 'WALK' ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);margin-top:5px;font-style:italic">🌿 Have a car free day!</div>` : ''}
+          ${opt.weather_warning ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);margin-top:6px;padding:5px 8px;background:rgba(245,158,11,0.1);border-radius:5px;border:1px solid rgba(245,158,11,0.3)">${opt.weather_warning}</div>` : ''}
         </div>`;
       results.appendChild(card);
     });
@@ -578,7 +585,7 @@ async function sendChat() {
   const typingDiv = addMessage('ai', '', true);
 
   try {
-    const r = await fetch(`${API}/ai/chat`, {
+    const r = await fetch(`${OMNIMOVE_API}/ai/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
