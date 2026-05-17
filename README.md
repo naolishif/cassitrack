@@ -114,11 +114,17 @@ cd cassitrack
 Open Docker Desktop first and wait for the whale icon to appear in the taskbar. Then in PowerShell:
 
 ```bash
-cd Desktop\cassitrack-fresh
+cd cassitrack-backend
 docker compose up -d postgres influxdb redis mosquitto
 ```
 
-Verify all 4 containers are healthy:
+```bash
+cd ..
+cd omnimove-backend
+docker compose up -d omnimove-postgres omnimove-influxdb omnimove-redis
+```
+
+Verify all containers are healthy:
 
 ```bash
 docker compose ps

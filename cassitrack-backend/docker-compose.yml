@@ -86,7 +86,7 @@ services:
       - "1883:1883"   # MQTT (plain, for local dev)
       - "9001:9001"   # WebSocket (optional, for browser clients)
     volumes:
-      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ../mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     healthcheck:
