@@ -21,21 +21,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(c -> c.disable())
-            .cors(c -> c.configurationSource(corsSource()))
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(a -> a
-                // Public: auth + journey + AI + swagger
-                .requestMatchers(
-                    "/api/v1/auth/**",
-                    "/api/v1/journeys/**",
-                    "/api/v1/ai/**",
-                    "/api/docs/**",
-                    "/api/swagger-ui/**",
-                    "/api/swagger-ui.html"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(c -> c.configurationSource(corsSource()))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(a -> a
+                        // Public: auth + journey + AI + swagger + H2 CONSOLE
+                        .requestMatchers(
+                                "/h2-console/**",      // <--- AÑADIDO
+                                "/api/v1/auth/**",
+                                "/api/v1/journeys/**",
+                                "/api/v1/ai/**",
+                                "/api/docs/**",
+                                "/api/swagger-ui/**",
+                                "/api/swagger-ui.html"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+                // ESTO ES VITAL: Para que la consola de H2 no se vea en blanco
+                .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
@@ -53,7 +57,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "http://localhost:3000",
+                "http://localhost:3000",
                 "http://localhost:8000",
                 "null",
                 "http://172.20.10.6:3000"

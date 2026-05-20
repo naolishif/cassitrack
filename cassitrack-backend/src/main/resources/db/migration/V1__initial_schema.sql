@@ -120,26 +120,27 @@ ON CONFLICT DO NOTHING;
 
 
 -- ── users ─────────────────────────────────────────────────────────
--- Application users (fleet managers, admins).
+-- Application users (fleet managers, drivers).
 -- Passengers using OMNIMOVE are anonymous or registered separately.
 CREATE TABLE IF NOT EXISTS users (
-    id           BIGSERIAL    PRIMARY KEY,
-    username     VARCHAR(50)  NOT NULL UNIQUE,
-    email        VARCHAR(200) NOT NULL UNIQUE,
-    password_hash VARCHAR(200) NOT NULL,   -- bcrypt hash
-    role         VARCHAR(20)  NOT NULL DEFAULT 'FLEET_MANAGER',
-    active       BOOLEAN DEFAULT TRUE,
-    created_at   TIMESTAMPTZ DEFAULT NOW(),
-    last_login   TIMESTAMPTZ
-);
+                                     id            BIGSERIAL    PRIMARY KEY,
+                                     tax_id        VARCHAR(50)  NOT NULL UNIQUE, -- National Identity Number / Codice Fiscale
+    name          VARCHAR(100) NOT NULL,        -- First name
+    surname       VARCHAR(100) NOT NULL,        -- Last name
+    email         VARCHAR(200) NOT NULL UNIQUE, -- Login email identifier
+    password_hash VARCHAR(200) NOT NULL,        -- bcrypt hash
+    role          VARCHAR(20)  NOT NULL DEFAULT 'DRIVER' -- Can be FLEET_MANAGER or DRIVER
+    );
 
--- Seed a default admin user (password: "admin123" — CHANGE IN PRODUCTION)
--- bcrypt hash for "admin123"
-INSERT INTO users (username, email, password_hash, role)
-VALUES ('admin', 'admin@unicas.it',
-        '$2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO',
-        'ADMIN')
-ON CONFLICT (username) DO NOTHING;
+-- Seed a default fleet manager user (password: "admin123" — CHANGE IN PRODUCTION)
+-- bcrypt hash for "admin123" is: $2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO
+INSERT INTO users (tax_id, name, surname, email, password_hash, role)
+SELECT 'TAXID123456', 'AdminName', 'AdminSurname', 'admin@unicas.it',
+       '$2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO',
+       'FLEET_MANAGER'
+    WHERE NOT EXISTS (
+    SELECT 1 FROM users WHERE tax_id = 'TAXID123456' OR email = 'admin@unicas.it'
+);
 
 
 -- ── alerts ────────────────────────────────────────────────────────

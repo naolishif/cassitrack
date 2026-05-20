@@ -4,7 +4,7 @@ spring:
 
   # ── PostgreSQL ────────────────────────────────────────────────
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cassitrack}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/cassitrack}
     username: ${SPRING_DATASOURCE_USERNAME:cassitrack}
     password: ${SPRING_DATASOURCE_PASSWORD:cassitrack_dev}
     driver-class-name: org.postgresql.Driver
@@ -38,7 +38,7 @@ spring:
 
 # ── Server ───────────────────────────────────────────────────────
 server:
-  port: 8080
+  port: 8088
   servlet:
     context-path: /
 

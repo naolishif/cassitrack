@@ -44,41 +44,45 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Disable CSRF - we use JWT, not sessions
-            .csrf(csrf -> csrf.disable())
+                // Disable CSRF - we use JWT, not sessions
+                .csrf(csrf -> csrf.disable())
 
-            // Allow CORS from frontend (React dev server on localhost:3000)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Allow CORS from frontend (React dev server on localhost:3000)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // Stateless — no HTTP sessions, JWT only
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+                // Stateless — no HTTP sessions, JWT only
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
-            .authorizeHttpRequests(auth -> auth
-                // ── Public endpoints ──────────────────────────────
-                .requestMatchers(
-                    "/api/v1/vehicles",
-                    "/api/v1/vehicles/{id}",
-                    "/api/v1/stops/{stopId}/arrivals",
-                        "/api/v1/feed/**",
-                    "/api/v1/analytics/**",
-                    "/api/v1/driver/**",
-                    "/api/v1/feed/gtfs-rt",
-                    "/api/v1/ai/**",
-                        "/api/v1/journeys/**",
-                    "/api/docs/**",
-                    "/api/swagger-ui/**",
-                    "/api/swagger-ui.html",
-                    "/ws/**"
-                ).permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        // ── Public endpoints (Añadido H2 Console) ──────────
+                        .requestMatchers(
+                                "/h2-console/**",
+                                "/api/v1/vehicles",
+                                "/api/v1/vehicles/{id}",
+                                "/api/v1/stops/{stopId}/arrivals",
+                                "/api/v1/feed/**",
+                                "/api/v1/analytics/**",
+                                "/api/v1/driver/**",
+                                "/api/v1/feed/gtfs-rt",
+                                "/api/v1/ai/**",
+                                "/api/v1/journeys/**",
+                                "/api/docs/**",
+                                "/api/swagger-ui/**",
+                                "/api/swagger-ui.html",
+                                "/ws/**"
+                        ).permitAll()
 
-                // ── Auth endpoints ────────────────────────────────
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                        // ── Auth endpoints ────────────────────────────────
+                        .requestMatchers("/api/v1/auth/**").permitAll()
 
-                // ── Everything else requires authentication ───────
-                .anyRequest().authenticated()
-            );
+                        // ── Everything else requires authentication ───────
+                        .anyRequest().authenticated()
+                );
+
+        // ESTO ES NUEVO: Necesario para que la consola de H2 se vea correctamente
+        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
@@ -94,15 +98,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-            "http://localhost:3000",   // React dev server (OMNIMOVE PWA)
-            "http://localhost:5173",    // Vite dev server (alternative)
-                "null",
-                "http://172.20.10.6:3000"
-        ));
+        config.setAllowedOrigins(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -122,5 +121,14 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+    @Bean
+    public org.springframework.security.authentication.AuthenticationProvider authenticationProvider(
+            org.springframework.security.core.userdetails.UserDetailsService userDetailsService) {
+        org.springframework.security.authentication.dao.DaoAuthenticationProvider authProvider =
+                new org.springframework.security.authentication.dao.DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder()); // <-- Aquí le obligamos a usar BCrypt
+        return authProvider;
     }
 }

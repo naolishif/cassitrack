@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -15,26 +14,23 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // Internal automatic ID for the database
+
+    @Column(unique = true, nullable = false, name = "tax_id")
+    private String taxId; // National Identity Number / Codice Fiscale
+
+    @Column(nullable = false)
+    private String name; // First name
+
+    @Column(nullable = false)
+    private String surname; // Last name
 
     @Column(unique = true, nullable = false)
-    private String username;
-
-    @Column(unique = true, nullable = false)
-    private String email;
+    private String email; // Login email identifier
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    private String passwordHash; // Encrypted password
 
     @Column(nullable = false)
-    private String role;
-
-    @Column(nullable = false)
-    private Boolean active = true;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
+    private String role; // User permission level (ADMIN, DRIVER, etc.)
 }
