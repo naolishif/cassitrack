@@ -13,6 +13,11 @@ services:
       POSTGRES_PASSWORD: omnimove
     volumes:
       - omnimove_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U omnimove -d omnimovedb" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # 2. Database Temporale (InfluxDB)
   omnimove-influxdb:

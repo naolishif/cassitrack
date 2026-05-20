@@ -39,7 +39,7 @@ public class AuthController {
             .name(req.getName())
             .email(req.getEmail())
             .password(passwordEncoder.encode(req.getPassword()))
-            .role("PASSENGER")
+            .role("TRAVELLER")
             .build();
         userRepo.save(user);
 

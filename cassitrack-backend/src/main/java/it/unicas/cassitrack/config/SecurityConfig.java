@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import jakarta.servlet.DispatcherType;
 
 import java.util.List;
 
@@ -42,7 +43,7 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
                 // Disable CSRF - we use JWT, not sessions
                 .csrf(csrf -> csrf.disable())
@@ -56,7 +57,23 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // ── Public endpoints (Añadido H2 Console) ──────────
+
+                        // Allow internal forwards and error routing to pass through
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+
+                        // ── Public Frontend & Assets ──────────────────
+                        .requestMatchers(
+                                "/*.html",
+                                "/*.css",
+                                "/*.js",
+                                "/favicon.ico",
+                                "/manifest.json",
+                                "/icon-192.png",
+                                "/error",
+                                "/"
+                        ).permitAll()
+
+                        // ── Public API & Dev Endpoints ───────────────
                         .requestMatchers(
                                 "/h2-console/**",
                                 "/api/v1/vehicles",
@@ -65,7 +82,6 @@ public class SecurityConfig {
                                 "/api/v1/feed/**",
                                 "/api/v1/analytics/**",
                                 "/api/v1/driver/**",
-                                "/api/v1/feed/gtfs-rt",
                                 "/api/v1/ai/**",
                                 "/api/v1/journeys/**",
                                 "/api/docs/**",
@@ -81,10 +97,36 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 );
 
-        // ESTO ES NUEVO: Necesario para que la consola de H2 se vea correctamente
-        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+//        http.formLogin(form -> form
+//                .loginPage("/cassitrack-login.html") // Tells Spring: This is our login view
+//                .loginProcessingUrl("/api/v1/auth/login") // The endpoint your form submits to
+//                .successHandler((request, response, authentication) -> {
+//
+//                    // 1. Get the roles of the logged-in user
+//                    boolean isFleetManager = authentication.getAuthorities().stream()
+//                            .anyMatch(a -> a.getAuthority().equals("ROLE_FLEET_MANAGER")
+//                                    || a.getAuthority().equals("FLEET_MANAGER"));
+//
+//                    boolean isAdmin = authentication.getAuthorities().stream()
+//                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+//                                    || a.getAuthority().equals("ADMIN"));
+//
+//                    // 2. Redirect based on their specific role
+//                    if (isFleetManager) {
+//                        response.sendRedirect("/cassitrack-fleetmanager.html");
+//                    } else if (isAdmin) {
+//                        // Placeholder for the file your colleague is building
+//                        response.sendRedirect("/cassitrack-admin.html");
+//                    } else {
+//                        // Fallback for standard users or drivers
+//                        response.sendRedirect("/index.html");
+//                    }
+//                })
+//                .permitAll()
+//        );
 
-        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -109,11 +151,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter();
-    }
-
-    @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
@@ -122,13 +159,14 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
     @Bean
     public org.springframework.security.authentication.AuthenticationProvider authenticationProvider(
             org.springframework.security.core.userdetails.UserDetailsService userDetailsService) {
         org.springframework.security.authentication.dao.DaoAuthenticationProvider authProvider =
                 new org.springframework.security.authentication.dao.DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder()); // <-- Aquí le obligamos a usar BCrypt
+        authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 }

@@ -6,7 +6,7 @@ spring:
   application:
     name: omnimove
   datasource:
-    url: jdbc:postgresql://localhost:5433/omnimovedb
+    url: jdbc:postgresql://localhost:5432/omnimovedb
     driver-class-name: org.postgresql.Driver
     username: omnimove
     password: omnimove

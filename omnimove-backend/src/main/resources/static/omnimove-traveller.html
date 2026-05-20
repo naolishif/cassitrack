@@ -1351,6 +1351,12 @@
 </div>
 
 <script>
+    // 🛡️ FRONTEND ROUTE GUARD
+    if (!localStorage.getItem('omnimove_token')) {
+        // No token found? Kick them straight back to the login screen!
+        window.location.href = 'omnimove-login.html';
+    }
+
     // ── Map ──
     const map = L.map('map', { zoomControl: true }).setView([41.4901, 13.8303], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

@@ -347,6 +347,33 @@
 
 
 <script>
+    // ─── ROUTE GUARD: PROTECT PAGE FROM UNAUTHORIZED ACCESS ───
+    (function checkAuth() {
+        const token = localStorage.getItem('cassitrack_token');
+        const userRaw = localStorage.getItem('cassitrack_user');
+
+        // 1. If no token or user details exist, boot them to login
+        if (!token || !userRaw) {
+            window.location.href = 'cassitrack-login.html';
+            return;
+        }
+
+        try {
+            const user = JSON.parse(userRaw);
+            const role = user.role ? user.role.toUpperCase() : '';
+
+            // 2. Enforce the FLEET_MANAGER role restriction
+            if (role !== 'FLEET_MANAGER') {
+                alert('Access Denied: Fleet Managers only.');
+                window.location.href = 'cassitrack-login.html';
+            }
+        } catch (e) {
+            // If data is corrupted, clear and redirect
+            localStorage.clear();
+            window.location.href = 'cassitrack-login.html';
+        }
+    })();
+
     // const API = 'http://localhost:8080/api/v1';
     const API          = 'http://localhost:8088/api/v1';  // CASSITRACK — fleet, ETA
     const OMNIMOVE_API = 'http://localhost:8088/api/v1';  // OMNIMOVE — journey, AI

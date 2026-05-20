@@ -109,33 +109,42 @@
 </div>
 
 <script>
-    const OMNIMOVE = 'http://localhost:8081/api/v1';
+    // const OMNIMOVE = 'http://localhost:8081/api/v1';
+    const OMNIMOVE = '/api/v1';
 
     // ── Redirect destinations per role ──────────────────────────
     const REDIRECT = {
         ADMIN:  'omnimove-admin.html',
-        USER:   'omnimove-app.html',
+        TRAVELLER:   'omnimove-traveller.html',
+        PASSENGER:  'omnimove-traveller.html'
     };
 
     // ── Auto-redirect if already logged in ──────────────────────
     (function(){
         const token = localStorage.getItem('omnimove_token');
         const user  = JSON.parse(localStorage.getItem('omnimove_user') || 'null');
-        if (token && user) redirectByRole(user.role || 'USER');
+        // if (token && user) redirectByRole(user.role || 'TRAVELLER');
         // if (token && user) redirectByRole(user.role || 'ADMIN'); // use if you want to try ADMIN view for now
     })();
 
     function redirectByRole(role) {
-        const dest = REDIRECT[(role || 'USER').toUpperCase()] || 'omnimove-app.html';
+        // Read role, clean it up, and fall back to traveller if unspecified
+        const cleanRole = (role || 'TRAVELLER').toUpperCase();
+        const dest = REDIRECT[cleanRole] || 'omnimove-traveller.html';
         setTimeout(() => window.location.href = dest, 1200);
     }
 
     function saveSession(data) {
         localStorage.setItem('omnimove_token', data.token);
+        let assignedRole = data.role || (data.roles && data.roles[0]) || 'TRAVELLER';
+        if (assignedRole === 'USER') {
+            assignedRole = 'TRAVELLER';
+        }
+
         localStorage.setItem('omnimove_user', JSON.stringify({
             name:  data.name  || data.username || 'User',
             email: data.email || '',
-            role:  data.role  || (data.roles && data.roles[0]) || 'USER'
+            role:  assignedRole
         }));
     }
 
@@ -152,7 +161,10 @@
         el.textContent = text;
         el.className = 'msg ' + type;
     }
-    function hideMsg() { document.getElementById('msg').className = 'msg'; }
+
+    function hideMsg() {
+        document.getElementById('msg').className = 'msg';
+    }
 
     async function handleLogin(e) {
         e.preventDefault();
@@ -170,7 +182,7 @@
             if (r.ok && data.token) {
                 saveSession(data);
                 showMsg('Welcome back, ' + (data.name || data.username) + '! Redirecting...', 'ok');
-                redirectByRole(data.role || (data.roles && data.roles[0]) || 'USER');
+                redirectByRole(data.role || (data.roles && data.roles[0]) || 'TRAVELLER');
             } else {
                 showMsg(data.message || data.error || 'Login failed', 'err');
             }
@@ -196,9 +208,10 @@
             });
             const data = await r.json();
             if (r.ok && data.token) {
+                data.role = 'TRAVELLER'; // Force role to traveller on registration since the ADMIN role is registered from inside the app (only by other admins).
                 saveSession(data);
                 showMsg('Account created! Welcome, ' + (data.name || data.username) + '!', 'ok');
-                redirectByRole(data.role || 'USER');
+                redirectByRole(data.role || 'TRAVELLER');
             } else {
                 showMsg(data.message || data.error || 'Registration failed', 'err');
             }
@@ -211,8 +224,8 @@
 
     function continueAsGuest() {
         localStorage.removeItem('omnimove_token');
-        localStorage.setItem('omnimove_user', JSON.stringify({name:'Guest', role:'USER'}));
-        window.location.href = 'omnimove-app.html';
+        localStorage.setItem('omnimove_user', JSON.stringify({name:'Guest', role:'TRAVELLER'}));
+        window.location.href = 'omnimove-traveller.html';
     }
 </script>
 </body>

@@ -24,19 +24,25 @@ public class SecurityConfig {
                 .cors(c -> c.configurationSource(corsSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
-                        // Public: auth + journey + AI + swagger + H2 CONSOLE
                         .requestMatchers(
-                                "/h2-console/**",      // <--- AÑADIDO
+                                "/",
+                                "/*.html",
+                                "/*.css",
+                                "/*.js",
+                                "/favicon.ico"
+                        ).permitAll()
+
+                        // 2. This is your existing public API configuration:
+                        .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/api/v1/journeys/**",
-                                "/api/v1/ai/**",
+                                "/h2-console/**",
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                // ESTO ES VITAL: Para que la consola de H2 no se vea en blanco
+
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
