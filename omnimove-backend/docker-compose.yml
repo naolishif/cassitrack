@@ -6,7 +6,7 @@ services:
     image: postgres:15-alpine
     container_name: omnimove-postgres-container
     ports:
-      - "5433:5432" # Mappa la porta 5433 del PC alla 5432 del container
+      - "5432:5432" # Mappa la porta 5433 del PC alla 5432 del container
     environment:
       POSTGRES_DB: omnimovedb
       POSTGRES_USER: omnimove
