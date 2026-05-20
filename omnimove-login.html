@@ -1,195 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>OMNIMOVE — Sign In</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#07090F;--panel:#0F1623;--panel2:#141E2E;--border:#1A2744;
-      --accent:#3B82F6;--cyan:#06B6D4;--green:#22C55E;--red:#EF4444;
-      --text:#E2E8F0;--dim:#4B5563;
-      --mono:'DM Mono',monospace;--display:'Syne',sans-serif;}
-    body{background:var(--bg);color:var(--text);font-family:var(--display);
-      min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-    .container{width:100%;max-width:400px}
-    .logo{font-size:32px;font-weight:800;text-align:center;margin-bottom:6px}
-    .logo span{color:var(--accent)}
-    .tagline{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center;margin-bottom:32px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px}
-    .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:22px}
-    .tab{flex:1;padding:10px;text-align:center;font-family:var(--mono);font-size:11px;
-      letter-spacing:1px;text-transform:uppercase;cursor:pointer;
-      color:var(--dim);border-bottom:2px solid transparent;transition:all .2s}
-    .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-    .form{display:none;flex-direction:column;gap:14px}
-    .form.active{display:flex}
-    .label{font-family:var(--mono);font-size:10px;color:var(--dim);
-      text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
-    .input{width:100%;padding:11px 14px;background:var(--panel2);
-      color:var(--text);border:1px solid var(--border);border-radius:8px;
-      font-family:var(--mono);font-size:13px;outline:none}
-    .input:focus{border-color:var(--accent)}
-    .btn{width:100%;padding:13px;background:var(--accent);color:white;
-      border:none;border-radius:8px;font-family:var(--mono);font-size:13px;
-      font-weight:700;cursor:pointer;transition:opacity .2s;letter-spacing:.5px}
-    .btn:hover{opacity:.85}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .msg{font-family:var(--mono);font-size:11px;text-align:center;padding:8px;
-      border-radius:6px;display:none}
-    .msg.ok{background:rgba(34,197,94,.1);color:var(--green);display:block}
-    .msg.err{background:rgba(239,68,68,.1);color:var(--red);display:block}
-    .or-divider{text-align:center;font-family:var(--mono);font-size:10px;
-      color:var(--dim);margin:6px 0}
-    .guest-btn{width:100%;padding:11px;background:rgba(59,130,246,.08);
-      color:var(--accent);border:1px solid rgba(59,130,246,.3);
-      border-radius:8px;font-family:var(--mono);font-size:12px;
-      cursor:pointer;transition:background .2s}
-    .guest-btn:hover{background:rgba(59,130,246,.15)}
-    .links{text-align:center;font-family:var(--mono);font-size:11px;
-      color:var(--dim);margin-top:16px}
-    .links a{color:var(--accent);text-decoration:none}
-  </style>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>OMNIMOVE — Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        :root{--bg:#07090F;--panel:#0F1623;--panel2:#141E2E;--border:#1A2744;
+            --accent:#3B82F6;--cyan:#06B6D4;--green:#22C55E;--red:#EF4444;
+            --text:#E2E8F0;--dim:#4B5563;
+            --mono:'DM Mono',monospace;--display:'Syne',sans-serif;}
+        body{background:var(--bg);color:var(--text);font-family:var(--display);
+            min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .container{width:100%;max-width:400px}
+        .logo{font-size:32px;font-weight:800;text-align:center;margin-bottom:6px}
+        .logo span{color:var(--accent)}
+        .tagline{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center;margin-bottom:32px}
+        .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px}
+        .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:22px}
+        .tab{flex:1;padding:10px;text-align:center;font-family:var(--mono);font-size:11px;
+            letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+            color:var(--dim);border-bottom:2px solid transparent;transition:all .2s}
+        .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+        .form{display:none;flex-direction:column;gap:14px}
+        .form.active{display:flex}
+        .label{font-family:var(--mono);font-size:10px;color:var(--dim);
+            text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+        .input{width:100%;padding:11px 14px;background:var(--panel2);
+            color:var(--text);border:1px solid var(--border);border-radius:8px;
+            font-family:var(--mono);font-size:13px;outline:none}
+        .input:focus{border-color:var(--accent)}
+        .btn{width:100%;padding:13px;background:var(--accent);color:white;
+            border:none;border-radius:8px;font-family:var(--mono);font-size:13px;
+            font-weight:700;cursor:pointer;transition:opacity .2s;letter-spacing:.5px}
+        .btn:hover{opacity:.85}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        .msg{font-family:var(--mono);font-size:11px;text-align:center;padding:8px;
+            border-radius:6px;display:none}
+        .msg.ok{background:rgba(34,197,94,.1);color:var(--green);display:block}
+        .msg.err{background:rgba(239,68,68,.1);color:var(--red);display:block}
+        .or-divider{text-align:center;font-family:var(--mono);font-size:10px;
+            color:var(--dim);margin:6px 0}
+        .guest-btn{width:100%;padding:11px;background:rgba(59,130,246,.08);
+            color:var(--accent);border:1px solid rgba(59,130,246,.3);
+            border-radius:8px;font-family:var(--mono);font-size:12px;
+            cursor:pointer;transition:background .2s}
+        .guest-btn:hover{background:rgba(59,130,246,.15)}
+        .links{text-align:center;font-family:var(--mono);font-size:11px;
+            color:var(--dim);margin-top:16px}
+        .links a{color:var(--accent);text-decoration:none}
+    </style>
 </head>
 <body>
 <div class="container">
-  <div class="logo">OMNI<span>MOVE</span></div>
-  <div class="tagline">Smart mobility for Cassino — UNICAS 2025/2026</div>
+    <div class="logo">OMNI<span>MOVE</span></div>
+    <div class="tagline">Smart mobility for Cassino — UNICAS 2025/2026</div>
 
-  <div class="card">
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('login')">Sign In</div>
-      <div class="tab" onclick="switchTab('register')">Register</div>
+    <div class="card">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('login')">Sign In</div>
+            <div class="tab" onclick="switchTab('register')">Register</div>
+        </div>
+
+        <div id="msg" class="msg"></div>
+
+        <!-- Login Form -->
+        <form class="form active" id="loginForm" onsubmit="handleLogin(event)">
+            <div>
+                <div class="label">Email</div>
+                <input class="input" type="email" id="loginEmail" placeholder="your@email.com" required/>
+            </div>
+            <div>
+                <div class="label">Password</div>
+                <input class="input" type="password" id="loginPassword" placeholder="••••••••" required/>
+            </div>
+            <button class="btn" type="submit" id="loginBtn">Sign In</button>
+        </form>
+
+        <!-- Register Form -->
+        <form class="form" id="registerForm" onsubmit="handleRegister(event)">
+            <div>
+                <div class="label">Full Name</div>
+                <input class="input" type="text" id="regName" placeholder="Nawaye Shiferaw" required/>
+            </div>
+            <div>
+                <div class="label">Email</div>
+                <input class="input" type="email" id="regEmail" placeholder="your@email.com" required/>
+            </div>
+            <div>
+                <div class="label">Password</div>
+                <input class="input" type="password" id="regPassword" placeholder="Min 8 characters" required/>
+            </div>
+            <button class="btn" type="submit" id="regBtn">Create Account</button>
+        </form>
+
+        <div class="or-divider">— or —</div>
+        <button class="guest-btn" onclick="continueAsGuest()">
+            Continue as Guest (no login)
+        </button>
     </div>
 
-    <div id="msg" class="msg"></div>
-
-    <!-- Login Form -->
-    <form class="form active" id="loginForm" onsubmit="handleLogin(event)">
-      <div>
-        <div class="label">Email</div>
-        <input class="input" type="email" id="loginEmail" placeholder="your@email.com" required/>
-      </div>
-      <div>
-        <div class="label">Password</div>
-        <input class="input" type="password" id="loginPassword" placeholder="••••••••" required/>
-      </div>
-      <button class="btn" type="submit" id="loginBtn">Sign In</button>
-    </form>
-
-    <!-- Register Form -->
-    <form class="form" id="registerForm" onsubmit="handleRegister(event)">
-      <div>
-        <div class="label">Full Name</div>
-        <input class="input" type="text" id="regName" placeholder="Nawaye Shiferaw" required/>
-      </div>
-      <div>
-        <div class="label">Email</div>
-        <input class="input" type="email" id="regEmail" placeholder="your@email.com" required/>
-      </div>
-      <div>
-        <div class="label">Password</div>
-        <input class="input" type="password" id="regPassword" placeholder="Min 8 characters" required/>
-      </div>
-      <button class="btn" type="submit" id="regBtn">Create Account</button>
-    </form>
-
-    <div class="or-divider">— or —</div>
-    <button class="guest-btn" onclick="continueAsGuest()">
-      Continue as Guest (no login)
-    </button>
-  </div>
-
-  <div class="links">
-    <a href="cassitrack-map-v4.html">← Back to Fleet Map</a>
-    &nbsp;·&nbsp;
-    <a href="cassitrack-analytics.html">Analytics Dashboard</a>
-  </div>
+<!--    <div class="links">-->
+<!--        <a href="cassitrack-map-v4.html">← Back to Fleet Map</a>-->
+<!--        &nbsp;·&nbsp;-->
+<!--        <a href="omnimove-admin.html">Admin Dashboard</a>-->
+<!--    </div>-->
 </div>
 
 <script>
-const OMNIMOVE = 'http://localhost:8081/api/v1';
+    const OMNIMOVE = 'http://localhost:8081/api/v1';
 
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i)=>
-    t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
-  document.getElementById('loginForm').className = 'form'+(tab==='login'?' active':'');
-  document.getElementById('registerForm').className = 'form'+(tab==='register'?' active':'');
-  hideMsg();
-}
+    // ── Redirect destinations per role ──────────────────────────
+    const REDIRECT = {
+        ADMIN:  'omnimove-admin.html',
+        USER:   'omnimove-app.html',
+    };
 
-function showMsg(text, type) {
-  const el = document.getElementById('msg');
-  el.textContent = text;
-  el.className = 'msg ' + type;
-}
-function hideMsg() {
-  document.getElementById('msg').className = 'msg';
-}
+    // ── Auto-redirect if already logged in ──────────────────────
+    (function(){
+        const token = localStorage.getItem('omnimove_token');
+        const user  = JSON.parse(localStorage.getItem('omnimove_user') || 'null');
+        if (token && user) redirectByRole(user.role || 'USER');
+        // if (token && user) redirectByRole(user.role || 'ADMIN'); // use if you want to try ADMIN view for now
+    })();
 
-async function handleLogin(e) {
-  e.preventDefault();
-  const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Signing in...';
-  try {
-    const r = await fetch(`${OMNIMOVE}/auth/login`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        email: document.getElementById('loginEmail').value,
-        password: document.getElementById('loginPassword').value
-      })
-    });
-    const data = await r.json();
-    if (r.ok && data.token) {
-      localStorage.setItem('omnimove_token', data.token);
-      localStorage.setItem('omnimove_user', JSON.stringify({name:data.name,email:data.email}));
-      showMsg('Welcome back, ' + data.name + '! Redirecting...', 'ok');
-      setTimeout(()=>window.location.href='cassitrack-map-v4.html', 1200);
-    } else {
-      showMsg(data.message || 'Login failed', 'err');
+    function redirectByRole(role) {
+        const dest = REDIRECT[(role || 'USER').toUpperCase()] || 'omnimove-app.html';
+        setTimeout(() => window.location.href = dest, 1200);
     }
-  } catch(e) {
-    showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
-  } finally {
-    btn.disabled=false; btn.textContent='Sign In';
-  }
-}
 
-async function handleRegister(e) {
-  e.preventDefault();
-  const btn = document.getElementById('regBtn');
-  btn.disabled=true; btn.textContent='Creating account...';
-  try {
-    const r = await fetch(`${OMNIMOVE}/auth/register`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        name: document.getElementById('regName').value,
-        email: document.getElementById('regEmail').value,
-        password: document.getElementById('regPassword').value
-      })
-    });
-    const data = await r.json();
-    if (r.ok && data.token) {
-      localStorage.setItem('omnimove_token', data.token);
-      localStorage.setItem('omnimove_user', JSON.stringify({name:data.name,email:data.email}));
-      showMsg('Account created! Welcome, ' + data.name + '!', 'ok');
-      setTimeout(()=>window.location.href='cassitrack-map-v4.html', 1200);
-    } else {
-      showMsg(data.message || 'Registration failed', 'err');
+    function saveSession(data) {
+        localStorage.setItem('omnimove_token', data.token);
+        localStorage.setItem('omnimove_user', JSON.stringify({
+            name:  data.name  || data.username || 'User',
+            email: data.email || '',
+            role:  data.role  || (data.roles && data.roles[0]) || 'USER'
+        }));
     }
-  } catch(e) {
-    showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
-  } finally {
-    btn.disabled=false; btn.textContent='Create Account';
-  }
-}
 
-function continueAsGuest() {
-  localStorage.removeItem('omnimove_token');
-  localStorage.removeItem('omnimove_user');
-  window.location.href = 'cassitrack-map-v4.html';
-}
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach((t,i) =>
+            t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+        document.getElementById('loginForm').className    = 'form'+(tab==='login'   ?' active':'');
+        document.getElementById('registerForm').className = 'form'+(tab==='register'?' active':'');
+        hideMsg();
+    }
+
+    function showMsg(text, type) {
+        const el = document.getElementById('msg');
+        el.textContent = text;
+        el.className = 'msg ' + type;
+    }
+    function hideMsg() { document.getElementById('msg').className = 'msg'; }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true; btn.textContent = 'Signing in...';
+        try {
+            const r = await fetch(`${OMNIMOVE}/auth/login`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    email:    document.getElementById('loginEmail').value,
+                    password: document.getElementById('loginPassword').value
+                })
+            });
+            const data = await r.json();
+            if (r.ok && data.token) {
+                saveSession(data);
+                showMsg('Welcome back, ' + (data.name || data.username) + '! Redirecting...', 'ok');
+                redirectByRole(data.role || (data.roles && data.roles[0]) || 'USER');
+            } else {
+                showMsg(data.message || data.error || 'Login failed', 'err');
+            }
+        } catch(e) {
+            showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Sign In';
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        const btn = document.getElementById('regBtn');
+        btn.disabled = true; btn.textContent = 'Creating account...';
+        try {
+            const r = await fetch(`${OMNIMOVE}/auth/register`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    name:     document.getElementById('regName').value,
+                    email:    document.getElementById('regEmail').value,
+                    password: document.getElementById('regPassword').value
+                })
+            });
+            const data = await r.json();
+            if (r.ok && data.token) {
+                saveSession(data);
+                showMsg('Account created! Welcome, ' + (data.name || data.username) + '!', 'ok');
+                redirectByRole(data.role || 'USER');
+            } else {
+                showMsg(data.message || data.error || 'Registration failed', 'err');
+            }
+        } catch(e) {
+            showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Create Account';
+        }
+    }
+
+    function continueAsGuest() {
+        localStorage.removeItem('omnimove_token');
+        localStorage.setItem('omnimove_user', JSON.stringify({name:'Guest', role:'USER'}));
+        window.location.href = 'omnimove-app.html';
+    }
 </script>
 </body>
 </html>
