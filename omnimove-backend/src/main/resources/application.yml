@@ -19,7 +19,8 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   h2:
     console:
-      enabled: false
+      enabled: true
+      path: /h2-console
 
 server:
   port: 8081
