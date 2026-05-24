@@ -134,7 +134,7 @@ public class TelemetrySyncService {
     }
 
     // Il metodo di scrittura rimane praticamente identico a ieri, allineato ai campi del simulatore
-    private void saveToInfluxDB(List<BusTelemetryDTO> telemetryList) {
+    public void saveToInfluxDB(List<BusTelemetryDTO> telemetryList) {
         InfluxDBClient client = InfluxDBClientFactory.create(influxUrl, token.toCharArray(), influxOrg, bucket);
         WriteApiBlocking writeApi = client.getWriteApiBlocking();
 

@@ -16,7 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 
 @SpringBootApplication
-@EnableScheduling   // Userful? Right now deprecated for telemetry
+@EnableScheduling   // Userful? Right now deprecated for telemetry --> YES! Needed for SIRI!
 public class OmnimoveApplication {
     public static void main(String[] args) {
         SpringApplication.run(OmnimoveApplication.class, args);

@@ -67,6 +67,12 @@
             <artifactId>spring-boot-starter-integration</artifactId>
         </dependency>
 
+        <!-- ── Dependecies for SIRI & NeTex standars ── -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+        </dependency>
+
         <!-- ── WebSocket (push positions to fleet dashboard) ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

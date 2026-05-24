@@ -1,10 +1,11 @@
 package it.unicas.omnimove.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import java.time.Instant;
 
 @Data
-//N.B.: no builder needed! Omimove deve solo andare a leggere i dati
+@Builder
 public class BusTelemetryDTO {
     private String busId;
     private float latitude;
