@@ -93,6 +93,9 @@ public class SecurityConfig {
                         // ── Auth endpoints ────────────────────────────────
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
+                        // ── Users endpoints ───────────────────────────────
+                        .requestMatchers("/api/v1/users/**").permitAll()
+
                         // ── Everything else requires authentication ───────
                         .anyRequest().authenticated()
                 );
