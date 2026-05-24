@@ -74,3 +74,10 @@ logging:
 jwt:
   secret: ${JWT_SECRET:omnimove-jwt-secret-change-in-production-must-be-long}
   expiration-ms: 86400000
+
+# ── InfluxDB Omnimove ─────────────────────────────────────────────
+influx:
+  url: ${INFLUX_URL:http://localhost:8087}
+  token: ${INFLUX_TOKEN:S6MxPh7-smP1Xp0-aQ9PyDswDWFS3gu-CeqiXuXp6speJZHsT2BdTr1C0CM5NduQOD8U-zR22nNeFoj2YbEVdw==}
+  org: omnimove_org
+  bucket: omnimove_bucket

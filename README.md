@@ -497,6 +497,7 @@ curl http://localhost:8080/api/v1/feed/gtfs-rt/debug
 | No buses on map | Simulator not running | Run `python gps_simulator.py --buses 2` |
 | Phone cannot reach backend | CORS not configured | Add your IP to `SecurityConfig.java` allowed origins |
 | Container name conflict | Old containers still registered | Run `docker compose down` then `docker compose up -d` |
+ | Tomcat error on startup | Database miss-match | Run 'docker compose down -v' to reset all data, then start again. If necessary, in application.yml change ddl-auto:update to create-drop |
 
 ---
 

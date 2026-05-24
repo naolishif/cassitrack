@@ -79,6 +79,7 @@ public class SecurityConfig {
                                 "/api/v1/vehicles",
                                 "/api/v1/vehicles/{id}",
                                 "/api/v1/stops/{stopId}/arrivals",
+                                "/api/v1/telemetry/**",
                                 "/api/v1/feed/**",
                                 "/api/v1/analytics/**",
                                 "/api/v1/driver/**",
