@@ -10,7 +10,12 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: omnimove
     password: omnimove
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:database/init_data.sql
   jpa:
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
     show-sql: false

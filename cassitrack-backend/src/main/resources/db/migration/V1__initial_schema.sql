@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- bcrypt hash for "admin123" is: $2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO
 INSERT INTO users (tax_id, name, surname, email, password_hash, role)
 SELECT 'TAXID123456', 'AdminName', 'AdminSurname', 'admin@unicas.it',
-       '$2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO',
+       '$2a$12$iz8/gXXFLC6mDX.mA61mzO4x1YvjvYIuwsWRjYoPlFVJsgl/enpCe',
        'FLEET_MANAGER'
     WHERE NOT EXISTS (
     SELECT 1 FROM users WHERE tax_id = 'TAXID123456' OR email = 'admin@unicas.it'

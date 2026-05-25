@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.*;
 import java.util.List;
+import jakarta.servlet.DispatcherType;
 
 @Configuration @EnableWebSecurity @RequiredArgsConstructor
 public class SecurityConfig {
@@ -24,25 +25,17 @@ public class SecurityConfig {
                 .cors(c -> c.configurationSource(corsSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
-                        .requestMatchers(
-                                "/",
-                                "/*.html",
-                                "/*.css",
-                                "/*.js",
-                                "/favicon.ico"
-                        ).permitAll()
+                        // 1. Public UI and Auth APIs
+                        .requestMatchers("/", "/error", "/omnimove-login.html", "/api/v1/auth/**").permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 
-                        // 2. This is your existing public API configuration:
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/h2-console/**",
-                                "/api/docs/**",
-                                "/api/swagger-ui/**",
-                                "/api/swagger-ui.html"
-                        ).permitAll()
+                        // 2. Protected Role-Based HTML Files
+                        .requestMatchers("/omnimove-traveller.html").hasAnyAuthority("TRAVELLER", "ROLE_TRAVELLER")
+                        .requestMatchers("/omnimove-admin.html").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+
+                        // 3. Everything else requires authentication
                         .anyRequest().authenticated()
                 )
-
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
