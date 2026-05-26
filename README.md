@@ -498,6 +498,7 @@ curl http://localhost:8080/api/v1/feed/gtfs-rt/debug
 | Phone cannot reach backend | CORS not configured | Add your IP to `SecurityConfig.java` allowed origins |
 | Container name conflict | Old containers still registered | Run `docker compose down` then `docker compose up -d` |
  | Tomcat error on startup | Database miss-match | Run 'docker compose down -v' to reset all data, then start again. If necessary, in application.yml change ddl-auto:update to create-drop |
+| Omnimove cannot recieve Influx data from Cassitrack | Create and use you own token | From InfluxDB UI in port 8087, go in Load Data, clone the token and copy-paste it in the application.yml of omnimove (found in the lower section of the file) |
 
 ---
 

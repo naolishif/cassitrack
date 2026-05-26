@@ -78,6 +78,6 @@ jwt:
 # ── InfluxDB Omnimove ─────────────────────────────────────────────
 influx:
   url: ${INFLUX_URL:http://localhost:8087}
-  token: ${INFLUX_TOKEN:S6MxPh7-smP1Xp0-aQ9PyDswDWFS3gu-CeqiXuXp6speJZHsT2BdTr1C0CM5NduQOD8U-zR22nNeFoj2YbEVdw==}
+  token: ${INFLUX_TOKEN:Vt0M3coM4PeQiPIL-Gb642xPfFFmsMVCt6_KOl5maH7LtyEenvdfO-rW0AB2UIAv_TJDGA-gt2oALr-tZISsiw==}
   org: omnimove_org
   bucket: omnimove_bucket
