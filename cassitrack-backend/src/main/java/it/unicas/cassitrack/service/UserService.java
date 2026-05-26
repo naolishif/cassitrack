@@ -1,13 +1,16 @@
 package it.unicas.cassitrack.service;
 
+import it.unicas.cassitrack.dto.RegisterRequest;
 import it.unicas.cassitrack.model.User;
 import it.unicas.cassitrack.repository.UserRepository;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 public class UserService {
 
@@ -27,55 +30,79 @@ public class UserService {
     // ─────────────────────────────
 
     public List<User> getAllUsers() {
-
+        log.info("Fetching all users");
         return userRepository.findAll();
     }
 
     // ─────────────────────────────
-    // CREATE USER
+    // REGISTER USER (Auth flow)
+    // ─────────────────────────────
+
+    public User registerUser(RegisterRequest req) {
+
+        if (req.getEmail() == null || req.getPassword() == null ||
+                req.getName() == null || req.getSurname() == null ||
+                req.getTaxId() == null) {
+            throw new IllegalArgumentException(
+                    "Tax ID, Name, Surname, Email and Password are required."
+            );
+        }
+
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalArgumentException("Email already registered.");
+        }
+
+        if (req.getTelephone() != null &&
+                userRepository.existsByTelephone(req.getTelephone())) {
+            throw new IllegalArgumentException("Telephone already registered.");
+        }
+
+        if (userRepository.existsByTaxId(req.getTaxId())) {
+            throw new IllegalArgumentException("Tax ID already registered.");
+        }
+
+        User user = User.builder()
+                .taxId(req.getTaxId())
+                .name(req.getName())
+                .surname(req.getSurname())
+                .email(req.getEmail())
+                .passwordHash(passwordEncoder.encode(req.getPassword()))
+                .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
+                .telephone(req.getTelephone())
+                .build();
+
+        User saved = userRepository.save(user);
+        log.info("User registered: {}", saved.getEmail());
+        return saved;
+    }
+
+    // ─────────────────────────────
+    // CREATE USER (Admin flow)
     // ─────────────────────────────
 
     public User createUser(User user) {
 
-        if (
-                user.getPasswordHash() == null ||
-                        user.getPasswordHash().isBlank()
-        ) {
-
-            throw new IllegalArgumentException(
-                    "Password is required"
-            );
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
         }
 
-        // EMAIL
         if (userRepository.existsByEmail(user.getEmail())) {
-
-            throw new IllegalArgumentException(
-                    "Email already exists"
-            );
+            throw new IllegalArgumentException("Email already exists");
         }
 
-        // TELEPHONE
         if (userRepository.existsByTelephone(user.getTelephone())) {
-
-            throw new IllegalArgumentException(
-                    "Telephone already exists"
-            );
+            throw new IllegalArgumentException("Telephone already exists");
         }
 
-        // TAX ID
         if (userRepository.existsByTaxId(user.getTaxId())) {
-
-            throw new IllegalArgumentException(
-                    "Tax ID already exists"
-            );
+            throw new IllegalArgumentException("Tax ID already exists");
         }
 
-        user.setPasswordHash(
-                passwordEncoder.encode(user.getPasswordHash())
-        );
+        user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        log.info("User created: {}", saved.getEmail());
+        return saved;
     }
 
     // ─────────────────────────────
@@ -85,46 +112,23 @@ public class UserService {
     public User updateUser(Long id, User updatedUser) {
 
         User user = userRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "User not found"
-                        )
-                );
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // EMAIL
-        if (
-                !user.getEmail().equals(updatedUser.getEmail()) &&
-                        userRepository.existsByEmail(updatedUser.getEmail())
-        ) {
-
-            throw new IllegalArgumentException(
-                    "Email already exists"
-            );
+        if (!user.getEmail().equals(updatedUser.getEmail()) &&
+                userRepository.existsByEmail(updatedUser.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
         }
 
-        // TELEPHONE
-        if (
-                !user.getTelephone().equals(updatedUser.getTelephone()) &&
-                        userRepository.existsByTelephone(updatedUser.getTelephone())
-        ) {
-
-            throw new IllegalArgumentException(
-                    "Telephone already exists"
-            );
+        if (!user.getTelephone().equals(updatedUser.getTelephone()) &&
+                userRepository.existsByTelephone(updatedUser.getTelephone())) {
+            throw new IllegalArgumentException("Telephone already exists");
         }
 
-        // TAX ID
-        if (
-                !user.getTaxId().equals(updatedUser.getTaxId()) &&
-                        userRepository.existsByTaxId(updatedUser.getTaxId())
-        ) {
-
-            throw new IllegalArgumentException(
-                    "Tax ID already exists"
-            );
+        if (!user.getTaxId().equals(updatedUser.getTaxId()) &&
+                userRepository.existsByTaxId(updatedUser.getTaxId())) {
+            throw new IllegalArgumentException("Tax ID already exists");
         }
 
-        // UPDATE FIELDS
         user.setTaxId(updatedUser.getTaxId());
         user.setName(updatedUser.getName());
         user.setSurname(updatedUser.getSurname());
@@ -132,20 +136,16 @@ public class UserService {
         user.setTelephone(updatedUser.getTelephone());
         user.setRole(updatedUser.getRole());
 
-        // PASSWORD
-        if (
-                updatedUser.getPasswordHash() != null &&
-                        !updatedUser.getPasswordHash().isBlank()
-        ) {
-
+        if (updatedUser.getPasswordHash() != null &&
+                !updatedUser.getPasswordHash().isBlank()) {
             user.setPasswordHash(
-                    passwordEncoder.encode(
-                            updatedUser.getPasswordHash()
-                    )
+                    passwordEncoder.encode(updatedUser.getPasswordHash())
             );
         }
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        log.info("User updated: {}", saved.getEmail());
+        return saved;
     }
 
     // ─────────────────────────────
@@ -153,7 +153,19 @@ public class UserService {
     // ─────────────────────────────
 
     public void deleteUser(Long id) {
-
+        if (!userRepository.existsById(id)) {
+            throw new IllegalArgumentException("User not found");
+        }
         userRepository.deleteById(id);
+        log.info("User deleted: id={}", id);
+    }
+
+    // ─────────────────────────────
+    // GET USER BY EMAIL
+    // ─────────────────────────────
+
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 }

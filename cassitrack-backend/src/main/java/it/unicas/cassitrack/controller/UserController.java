@@ -1,15 +1,19 @@
 package it.unicas.cassitrack.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import it.unicas.cassitrack.model.User;
 import it.unicas.cassitrack.service.UserService;
 
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 @CrossOrigin
@@ -17,9 +21,7 @@ public class UserController {
 
     private final UserService userService;
 
-    public UserController(
-            UserService userService
-    ) {
+    public UserController(UserService userService) {
         this.userService = userService;
     }
 
@@ -28,9 +30,9 @@ public class UserController {
     // ─────────────────────────────
 
     @GetMapping
-    public List<User> getAllUsers() {
-
-        return userService.getAllUsers();
+    @Operation(summary = "Get all users")
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
     // ─────────────────────────────
@@ -38,11 +40,13 @@ public class UserController {
     // ─────────────────────────────
 
     @PostMapping
-    public User createUser(
-            @RequestBody User user
+    @Operation(summary = "Create a new user")
+    public ResponseEntity<User> createUser(
+            @Valid @RequestBody User user
     ) {
-
-        return userService.createUser(user);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(userService.createUser(user));
     }
 
     // ─────────────────────────────
@@ -50,12 +54,12 @@ public class UserController {
     // ─────────────────────────────
 
     @PutMapping("/{id}")
-    public User updateUser(
+    @Operation(summary = "Update an existing user")
+    public ResponseEntity<User> updateUser(
             @PathVariable Long id,
             @Valid @RequestBody User updatedUser
     ) {
-
-        return userService.updateUser(id, updatedUser);
+        return ResponseEntity.ok(userService.updateUser(id, updatedUser));
     }
 
     // ─────────────────────────────
@@ -63,11 +67,12 @@ public class UserController {
     // ─────────────────────────────
 
     @DeleteMapping("/{id}")
-    public void deleteUser(
+    @Operation(summary = "Delete a user")
+    public ResponseEntity<Void> deleteUser(
             @PathVariable Long id
     ) {
-
         userService.deleteUser(id);
+        return ResponseEntity.noContent().build(); // 204
     }
 
     // ─────────────────────────────
@@ -75,11 +80,12 @@ public class UserController {
     // ─────────────────────────────
 
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public String handleIllegalArgument(
+    public ResponseEntity<String> handleIllegalArgument(
             IllegalArgumentException ex
     ) {
-
-        return ex.getMessage();
+        log.warn("Bad request: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ex.getMessage());
     }
 }
