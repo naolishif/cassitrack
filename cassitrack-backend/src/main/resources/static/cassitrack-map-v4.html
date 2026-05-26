@@ -298,9 +298,10 @@
 
 
 <script>
-// const API = 'http://localhost:8080/api/v1';
-const API          = 'http://localhost:8088/api/v1';  // CASSITRACK — fleet, ETA
-const OMNIMOVE_API = 'http://localhost:8088/api/v1';  // OMNIMOVE — journey, AI
+// Usa URL relativi se la pagina è servita da Spring Boot (porta 8080),
+// oppure URL assoluti se aperta come file locale o da un'altra porta.
+const API          = '/api/v1';               // CASSITRACK — veicoli, ETA  (porta 8080)
+const OMNIMOVE_API = 'http://localhost:8081/api/v1';  // OMNIMOVE — journey planner, AI (porta 8081)
 const REFRESH = 15000;
 const SC = {
   ON_TIME:'#22C55E',SLIGHTLY_LATE:'#F59E0B',

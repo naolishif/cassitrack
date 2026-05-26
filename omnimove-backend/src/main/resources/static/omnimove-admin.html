@@ -719,7 +719,7 @@
 
         <!-- Download bar -->
         <div class="dl-bar">
-            <div class="label">Export anonymised analytics report: <strong>OMNIMOVE — FR-OM-009 Dashboard — May 2026</strong></div>
+            <div class="label">Export anonymised analytics report: <strong id="exportLabel">OMNIMOVE — FR-OM-009 Dashboard — May 2026</strong></div>
             <div class="dl-btns">
                 <span class="gdpr-badge">GDPR</span>
                 <button class="btn btn-ghost" onclick="toast('CSV export queued…')">⬇ CSV</button>
@@ -737,23 +737,23 @@
         <div class="grid-4">
             <div class="stat-pill">
                 <div class="label">Total Users</div>
-                <div class="value">1 247</div>
-                <div class="sub up">▲ +34 this week</div>
+                <div class="value" id="statTotal">—</div>
+                <div class="sub up" id="statTotalSub">loading...</div>
             </div>
             <div class="stat-pill">
                 <div class="label">Active Sessions</div>
-                <div class="value">312</div>
-                <div class="sub">right now</div>
+                <div class="value">—</div>
+                <div class="sub">not available</div>
             </div>
             <div class="stat-pill">
                 <div class="label">Admins</div>
-                <div class="value">6</div>
+                <div class="value" id="statAdmins">—</div>
                 <div class="sub">system operators</div>
             </div>
             <div class="stat-pill">
-                <div class="label">Suspended</div>
-                <div class="value">11</div>
-                <div class="sub down">▲ +2 this month</div>
+                <div class="label">Travellers</div>
+                <div class="value" id="statTravellers">—</div>
+                <div class="sub">registered users</div>
             </div>
         </div>
 
@@ -766,12 +766,11 @@
             <div class="sep" style="margin:14px 0"></div>
 
             <div class="search-row">
-                <input class="search-input" type="text" placeholder="Search by name, email or ID…" oninput="filterTable(this.value)">
-                <select style="background:var(--bg-deep);border:1px solid var(--border-bright);border-radius:3px;color:var(--text-primary);font-family:var(--font-main);font-size:13px;padding:8px 10px;outline:none;">
-                    <option>All roles</option>
-                    <option>Admin</option>
-                    <option>User</option>
-                    <option>Suspended</option>
+                <input class="search-input" id="searchInput" type="text" placeholder="Search by name, email or ID…" oninput="filterTable(this.value)">
+                <select id="roleFilter" oninput="filterTable(document.getElementById('searchInput').value)" style="background:var(--bg-deep);border:1px solid var(--border-bright);border-radius:3px;color:var(--text-primary);font-family:var(--font-main);font-size:13px;padding:8px 10px;outline:none;">
+                    <option value="">All roles</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="TRAVELLER">Traveller</option>
                 </select>
                 <button class="btn btn-ghost">EXPORT CSV</button>
             </div>
@@ -845,13 +844,54 @@
 <div class="toast" id="toastEl"></div>
 
 <script>
+    // ── Route guard: solo ADMIN può accedere ──────────────────────────────
+    (function checkAdminAuth() {
+        const token   = localStorage.getItem('omnimove_token');
+        const userRaw = localStorage.getItem('omnimove_user');
+        if (!token || !userRaw) {
+            window.location.href = 'omnimove-login.html';
+            return;
+        }
+        try {
+            const user = JSON.parse(userRaw);
+            const role = (user.role || '').toUpperCase();
+            if (role !== 'ADMIN') {
+                alert('Accesso negato: solo gli amministratori possono accedere a questa pagina.');
+                window.location.href = 'omnimove-login.html';
+            }
+        } catch (e) {
+            localStorage.clear();
+            window.location.href = 'omnimove-login.html';
+        }
+    })();
+
+    // ── API helper con JWT ─────────────────────────────────────────────────
+    const API_BASE = '/api/v1';  // relativo — OMNIMOVE porta 8081
+
+    async function apiFetch(path, options = {}) {
+        const token = localStorage.getItem('omnimove_token');
+        return fetch(API_BASE + path, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+                ...(options.headers || {})
+            }
+        });
+    }
+
     // ── Clock ──
     function updateClock(){
         const n=new Date();
         document.getElementById('clock').innerHTML=
-            `<span>${n.toLocaleTimeString('en-GB')}</span> | May 16, 2026`;
+        document.getElementById('clock').innerHTML=
+            `<span>${n.toLocaleTimeString('en-GB')}</span> | ${n.toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'})}`;
     }
     setInterval(updateClock,1000); updateClock();
+
+    const _now = new Date();
+    const _month = _now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    document.getElementById('exportLabel').textContent = `OMNIMOVE — FR-OM-009 Dashboard — ${_month}`;
 
     // ── Tabs ──
     document.querySelectorAll('.tab').forEach(t=>{
@@ -873,46 +913,78 @@
     }
 
     // ── User data ──
-    const roles={Admin:'badge-admin',User:'badge-user',Suspended:'badge-suspended'};
-    let users=[
-        {id:'USR-001',name:'Giulia Ferretti',email:'g.ferretti@omnimove.it',role:'Admin',reg:'2025-09-01',last:'Just now'},
-        {id:'USR-003',name:'Luca Bianchi',email:'l.bianchi@student.unicas.it',role:'User',reg:'2025-11-03',last:'Yesterday'},
-        {id:'USR-004',name:'Sofia Conti',email:'s.conti@gmail.com',role:'User',reg:'2025-12-20',last:'3 days ago'},
-        {id:'USR-005',name:'Alessandro Mori',email:'a.mori@omnimove.it',role:'Admin',reg:'2026-01-08',last:'1h ago'},
-        {id:'USR-006',name:'Elena Greco',email:'e.greco@student.unicas.it',role:'User',reg:'2026-02-15',last:'5 min ago'},
-        {id:'USR-008',name:'Chiara Lombardi',email:'c.lombardi@gmail.com',role:'Suspended',reg:'2026-01-22',last:'N/A'},
-    ];
+    const roles = { ADMIN:'badge-admin', TRAVELLER:'badge-user', Suspended:'badge-suspended' };
+    let users = [];
 
-    function renderTable(data){
-        const tb=document.getElementById('userTbody');
-        tb.innerHTML=data.map(u=>`
-    <tr>
-      <td class="text-mono">${u.id}</td>
-      <td>${u.name}</td>
-      <td style="color:var(--text-secondary);font-size:12px">${u.email}</td>
-      <td><span class="badge ${roles[u.role]||'badge-user'}">${u.role}</span></td>
-      <td class="text-mono" style="font-size:11px">${u.reg}</td>
-      <td class="text-mono" style="font-size:11px">${u.last}</td>
-      <td>
-        <div class="action-btns">
-          <button class="icon-btn edit" title="Edit">✎</button>
-          <button class="icon-btn del" title="Delete" onclick="deleteUser('${u.id}')">✕</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+    async function loadUsers() {
+        try {
+            const r = await apiFetch('/admin/users');
+            if (r.status === 403) { toast('Accesso negato.', true); return; }
+            users = await r.json();
+            renderTable(users);
+        } catch(e) {
+            toast('Errore caricamento utenti.', true);
+        }
+    }
+    loadUsers();
+    function renderTable(data) {
+        const tb = document.getElementById('userTbody');
+        tb.innerHTML = data.map(u => `
+        <tr>
+          <td class="text-mono">#${u.id}</td>
+          <td>${u.name}</td>
+          <td style="color:var(--text-secondary);font-size:12px">${u.email}</td>
+          <td><span class="badge ${roles[u.role] || 'badge-user'}">${u.role}</span></td>
+          <td class="text-mono" style="font-size:11px">—</td>
+          <td class="text-mono" style="font-size:11px">—</td>
+          <td>
+            <div class="action-btns">
+              <button class="icon-btn del" title="Delete" onclick="deleteUser(${u.id})">✕</button>
+            </div>
+          </td>
+        </tr>
+    `).join('');
     }
     renderTable(users);
 
-    function filterTable(q){
-        const f=users.filter(u=>u.name.toLowerCase().includes(q.toLowerCase())||u.email.toLowerCase().includes(q.toLowerCase())||u.id.toLowerCase().includes(q.toLowerCase()));
+    async function loadStats() {
+        try {
+            const r = await apiFetch('/admin/users/stats');
+            if (!r.ok) return;
+            const data = await r.json();
+            document.getElementById('statTotal').textContent      = data.total;
+            document.getElementById('statAdmins').textContent     = data.admins;
+            document.getElementById('statTravellers').textContent = data.travellers;
+            document.getElementById('statTotalSub').textContent   = `${data.total} registered`;
+        } catch(e) {
+            console.error('Stats error:', e);
+        }
+    }
+    loadStats();
+
+    function filterTable(q) {
+        const role = document.getElementById('roleFilter').value;
+        const f = users.filter(u => {
+            const matchText = !q ||
+                u.name.toLowerCase().includes(q.toLowerCase()) ||
+                u.email.toLowerCase().includes(q.toLowerCase()) ||
+                String(u.id).includes(q);
+            const matchRole = !role || u.role === role;
+            return matchText && matchRole;
+        });
         renderTable(f);
     }
-
-    function deleteUser(id){
-        users=users.filter(u=>u.id!==id);
-        renderTable(users);
-        toast('User removed.');
+    async function deleteUser(id) {
+        if (!confirm('Eliminare questo utente?')) return;
+        try {
+            const r = await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
+            const data = await r.json();
+            if (!r.ok) { toast(data.message || 'Errore.', true); return; }
+            toast('Utente eliminato.');
+            loadUsers();
+        } catch(e) {
+            toast('Errore di connessione.', true);
+        }
     }
 
     // log out
@@ -927,20 +999,35 @@
     function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
 
     let userCounter=users.length+1;
-    function addUser(){
-        const first=document.getElementById('newFirst').value.trim();
-        const last=document.getElementById('newLast').value.trim();
-        const email=document.getElementById('newEmail').value.trim();
-        const role=document.getElementById('newRole').value;
-        if(!first||!last||!email){ toast('Please fill all required fields.',true); return; }
-        const id='USR-'+String(++userCounter).padStart(3,'0');
-        users.push({id,name:`${first} ${last}`,email,role,reg:new Date().toISOString().slice(0,10),last:'Just now'});
-        renderTable(users);
-        closeModal();
-        toast('User created successfully.');
-        ['newFirst','newLast','newEmail','newPass'].forEach(i=>document.getElementById(i).value='');
-    }
+    async function addUser() {
+        const first = document.getElementById('newFirst').value.trim();
+        const last  = document.getElementById('newLast').value.trim();
+        const email = document.getElementById('newEmail').value.trim();
+        const pass  = document.getElementById('newPass').value.trim();
+        const role  = document.getElementById('newRole').value;
 
+        if (!first || !last || !email || !pass) {
+            toast('Compila tutti i campi.', true); return;
+        }
+
+        try {
+            const r = await apiFetch('/admin/users', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: `${first} ${last}`,
+                    email, password: pass, role
+                })
+            });
+            const data = await r.json();
+            if (!r.ok) { toast(data.message || 'Errore.', true); return; }
+            closeModal();
+            toast('Utente creato.');
+            ['newFirst','newLast','newEmail','newPass'].forEach(i => document.getElementById(i).value = '');
+            loadUsers();
+        } catch(e) {
+            toast('Errore di connessione.', true);
+        }
+    }
     // ── Charts ──
     const chartDefaults={
         plugins:{legend:{labels:{color:'#7a9ab8',font:{family:'Share Tech Mono',size:10},boxWidth:10}}},

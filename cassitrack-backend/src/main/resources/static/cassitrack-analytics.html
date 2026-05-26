@@ -145,7 +145,42 @@
 </div>
 
 <script>
-const API = 'http://localhost:8080/api/v1';
+// ── Route guard: solo FLEET_MANAGER può accedere ──────────────────────
+(function checkAuth() {
+    const token   = localStorage.getItem('cassitrack_token');
+    const userRaw = localStorage.getItem('cassitrack_user');
+    if (!token || !userRaw) {
+        window.location.href = 'cassitrack-login.html';
+        return;
+    }
+    try {
+        const user = JSON.parse(userRaw);
+        const role = (user.role || '').toUpperCase();
+        if (role !== 'FLEET_MANAGER' && role !== 'ADMIN') {
+            alert('Accesso negato: solo i Fleet Manager possono visualizzare le analytics.');
+            window.location.href = 'cassitrack-login.html';
+        }
+    } catch (e) {
+        localStorage.clear();
+        window.location.href = 'cassitrack-login.html';
+    }
+})();
+
+// Usa URL relativo — la pagina è servita da Spring Boot (porta 8080)
+const API = '/api/v1';
+
+// Helper con JWT (utile se in futuro gli endpoint analytics richiedono auth)
+async function apiFetch(path, options = {}) {
+    const token = localStorage.getItem('cassitrack_token');
+    return fetch(API + path, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+            ...(options.headers || {})
+        }
+    });
+}
 
 const STATUS_COL = {
   ON_TIME:'#22C55E', SLIGHTLY_LATE:'#F59E0B',
