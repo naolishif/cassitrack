@@ -841,6 +841,58 @@
     </div>
 </div>
 
+<!-- DELETE MODAL -->
+
+<div class="modal-overlay" id="deleteModal">
+
+    <div class="modal" style="width:380px;">
+
+        <div class="modal-header">
+
+            <h2>Delete User</h2>
+
+            <button class="close-btn" onclick="closeDeleteModal()">
+                ✕
+            </button>
+
+        </div>
+
+        <div
+                style="
+                color:var(--dim);
+                font-family:var(--mono);
+                font-size:13px;
+                line-height:1.6;
+                margin-bottom:24px;
+            "
+                id="deleteMessage"
+        >
+            Are you sure?
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+
+            <button
+                    class="btn btn-secondary"
+                    onclick="closeDeleteModal()"
+            >
+                Cancel
+            </button>
+
+            <button
+                    class="btn btn-primary"
+                    style="background:var(--red);"
+                    onclick="confirmDeleteUser()"
+            >
+                Delete
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toastEl"></div>
 
@@ -909,10 +961,63 @@
         renderTable(f);
     }
 
-    function deleteUser(id){
-        users=users.filter(u=>u.id!==id);
-        renderTable(users);
-        toast('User removed.');
+    function deleteUser(){
+
+        if(!selectedUser) return;
+
+        document.getElementById('deleteMessage').innerText =
+            `Delete ${selectedUser.name} ${selectedUser.surname}?`;
+
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal(){
+
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    async function confirmDeleteUser(){
+
+        if(!selectedUser) return;
+
+        try{
+
+            const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
+
+                method:'DELETE'
+            });
+
+            if(!response.ok){
+
+                showError('Error deleting user');
+
+                return;
+            }
+
+            closeDeleteModal();
+
+            showSuccess('User deleted successfully');
+
+            setTimeout(() => {
+
+                selectedUser = null;
+                selectedRow = null;
+
+                document.getElementById('editBtn').disabled = true;
+                document.getElementById('deleteBtn').disabled = true;
+
+                loadUsers();
+
+                closeModal();
+
+            }, 1000);
+
+        }catch(error){
+
+            console.error(error);
+
+            showError('Error deleting user');
+        }
     }
 
     // log out

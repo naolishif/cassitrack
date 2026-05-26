@@ -45,7 +45,7 @@
         <form class="form" id="loginForm" onsubmit="handleLogin(event)">
             <div>
                 <div class="label">Email</div>
-                <input class="input" type="email" id="loginEmail" placeholder="admin@unicas.it" required/>
+                <input class="input" type="email" id="loginEmail" placeholder="xxxxx@gmail.com" required/>
             </div>
             <div>
                 <div class="label">Password</div>
@@ -100,12 +100,25 @@
                 const userRole = data.role ? data.role.toUpperCase() : 'USER';
                 showMsg(`Success! Verified role: ${userRole}.`, 'ok');
 
-                // Si el rol verificado es FLEET_MANAGER se redirige al panel de control
-                if (userRole === 'FLEET_MANAGER') {
-                    setTimeout(() => {
+                setTimeout(() => {
+
+                    if (userRole === 'ADMIN') {
+
+                        window.location.href = 'cassitrack-admin.html';
+
+                    }
+                    else if (userRole === 'FLEET_MANAGER') {
+
                         window.location.href = 'cassitrack-fleetmanager.html';
-                    }, 1000); // 1 segundo de retraso para mostrar el mensaje de éxito verde
-                }
+
+                    }
+                    else {
+
+                        showMsg('Unauthorized role', 'err');
+
+                    }
+
+                }, 1000);
             }
         } catch(e) {
             showMsg('Username or password incorrect', 'err');

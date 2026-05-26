@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CASSITRACK — Admin Panel</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        :root{
+            --bg:#07090F;
+            --panel:#0F1623;
+            --panel2:#141E2E;
+            --border:#1A2744;
+            --accent:#3B82F6;
+            --green:#22C55E;
+            --red:#EF4444;
+            --text:#E2E8F0;
+            --dim:#64748B;
+            --mono:'DM Mono', monospace;
+            --display:'Syne', sans-serif;
+        }
+
+        body{
+            background:var(--bg);
+            color:var(--text);
+            font-family:var(--display);
+            height:100vh;
+            overflow:hidden;
+        }
+
+        .app{
+            display:flex;
+            flex-direction:column;
+            height:100vh;
+        }
+
+        /* HEADER */
+
+        header{
+            height:72px;
+            border-bottom:1px solid var(--border);
+            background:var(--panel);
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:0 28px;
+            flex-shrink:0;
+        }
+
+        .logo{
+            font-size:28px;
+            font-weight:800;
+            letter-spacing:-1px;
+        }
+
+        .logo span{
+            color:var(--accent);
+        }
+
+        .admin-badge{
+            padding:8px 12px;
+            border-radius:8px;
+            background:rgba(59,130,246,.1);
+            border:1px solid rgba(59,130,246,.25);
+            color:var(--accent);
+            font-family:var(--mono);
+            font-size:11px;
+            letter-spacing:1px;
+        }
+
+        /* CONTENT */
+
+        .content{
+            flex:1;
+            overflow:auto;
+            padding:28px;
+        }
+
+        .panel{
+            background:var(--panel);
+            border:1px solid var(--border);
+            border-radius:18px;
+            padding:24px;
+        }
+
+        .topbar{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:18px;
+            margin-bottom:24px;
+        }
+
+        .search-box{
+            flex:1;
+            position:relative;
+        }
+
+        .search-input{
+            width:100%;
+            padding:14px 16px;
+            background:var(--panel2);
+            border:1px solid var(--border);
+            border-radius:12px;
+            color:var(--text);
+            font-family:var(--mono);
+            font-size:13px;
+            outline:none;
+            transition:border-color .2s;
+        }
+
+        .search-input:focus{
+            border-color:var(--accent);
+        }
+
+        .search-input::placeholder{
+            color:var(--dim);
+        }
+
+        .actions{
+            display:flex;
+            gap:10px;
+        }
+
+        .btn{
+            padding:13px 18px;
+            border:none;
+            border-radius:12px;
+            cursor:pointer;
+            font-family:var(--mono);
+            font-size:12px;
+            font-weight:700;
+            transition:all .2s ease;
+        }
+
+        .btn-primary{
+            background:var(--accent);
+            color:white;
+        }
+
+        .btn-primary:hover{
+            opacity:.85;
+        }
+
+        .btn-secondary{
+            background:rgba(255,255,255,.04);
+            border:1px solid var(--border);
+            color:var(--text);
+        }
+
+        .btn-secondary:hover{
+            border-color:rgba(59,130,246,.3);
+            background:rgba(59,130,246,.08);
+        }
+
+        .btn:disabled{
+            opacity:.4;
+            cursor:not-allowed;
+        }
+
+        /* TABLE */
+
+        .table-wrapper{
+            overflow:auto;
+            border:1px solid var(--border);
+            border-radius:14px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:1100px;
+        }
+
+        thead{
+            background:#0B1220;
+        }
+
+        th{
+            text-align:left;
+            padding:16px;
+            font-family:var(--mono);
+            font-size:11px;
+            letter-spacing:1px;
+            color:var(--dim);
+            border-bottom:1px solid var(--border);
+        }
+
+        td{
+            padding:16px;
+            font-family:var(--mono);
+            font-size:12px;
+            border-bottom:1px solid rgba(255,255,255,.04);
+        }
+
+        tbody tr{
+            transition:background .2s ease;
+            cursor:pointer;
+        }
+
+        tbody tr:hover{
+            background:rgba(59,130,246,.04);
+        }
+
+        tbody tr.selected{
+            background:rgba(59,130,246,.12);
+            outline:1px solid rgba(59,130,246,.3);
+        }
+
+        .role{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            padding:6px 10px;
+            border-radius:999px;
+            font-size:10px;
+            font-weight:700;
+            letter-spacing:1px;
+        }
+
+        .role.admin{
+            background:rgba(239,68,68,.12);
+            color:#EF4444;
+        }
+
+        .role.manager{
+            background:rgba(59,130,246,.12);
+            color:#3B82F6;
+        }
+
+        .role.driver{
+            background:rgba(34,197,94,.12);
+            color:#22C55E;
+        }
+
+        /* FOOTER */
+
+        .footer-actions{
+            margin-top:18px;
+            display:flex;
+            justify-content:flex-end;
+        }
+
+        /* SCROLLBAR */
+
+        ::-webkit-scrollbar{
+            width:6px;
+            height:6px;
+        }
+
+        ::-webkit-scrollbar-thumb{
+            background:var(--border);
+            border-radius:999px;
+        }
+
+
+
+/* ─────────────────────────────
+   MODAL
+───────────────────────────── */
+
+        .modal-overlay{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,.7);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            z-index:999;
+        }
+
+        .modal{
+            width:420px;
+            background:var(--panel);
+            border:1px solid var(--border);
+            border-radius:18px;
+            padding:24px;
+        }
+
+        .modal-header{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:20px;
+        }
+
+        .modal-header h2{
+            font-size:22px;
+        }
+
+        .close-btn{
+            background:none;
+            border:none;
+            color:var(--text);
+            font-size:22px;
+            cursor:pointer;
+        }
+
+        .modal-form{
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        }
+
+        .modal-input{
+            padding:14px;
+            background:var(--panel2);
+            border:1px solid var(--border);
+            border-radius:12px;
+            color:var(--text);
+            font-family:var(--mono);
+            outline:none;
+        }
+
+        .modal-input:focus{
+            border-color:var(--accent);
+        }
+
+        .form-message{
+            display:none;
+            padding:12px;
+            border-radius:10px;
+            font-family:var(--mono);
+            font-size:12px;
+            margin-top:4px;
+        }
+
+        .form-message.error{
+            display:block;
+            background:rgba(239,68,68,.12);
+            border:1px solid rgba(239,68,68,.25);
+            color:#EF4444;
+        }
+
+        .form-message.success{
+            display:block;
+            background:rgba(34,197,94,.12);
+            border:1px solid rgba(34,197,94,.25);
+            color:#22C55E;
+        }
+
+    </style>
+</head>
+
+
+
+<body>
+
+<div class="modal-overlay" id="userModal">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <h2 id="modalTitle">Add User</h2>
+
+            <button class="close-btn" onclick="closeModal()">
+                ✕
+            </button>
+
+        </div>
+
+        <div class="modal-form">
+
+            <input class="modal-input" id="modalTaxId" placeholder="Tax ID"/>
+
+            <input class="modal-input" id="modalName" placeholder="Name"/>
+
+            <input class="modal-input" id="modalSurname" placeholder="Surname"/>
+
+            <input class="modal-input" id="modalEmail" placeholder="Email"/>
+
+            <input class="modal-input" id="modalTelephone" placeholder="Telephone"/>
+
+            <input class="modal-input" id="modalPassword" type="password" placeholder="Password"/>
+
+            <select class="modal-input" id="modalRole">
+
+                <option value="ADMIN">ADMIN</option>
+                <option value="FLEET_MANAGER">FLEET_MANAGER</option>
+                <option value="DRIVER">DRIVER</option>
+
+            </select>
+
+            <div id="formMessage" class="form-message"></div>
+
+            <button class="btn btn-primary" onclick="saveUser()">
+                Save User
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- DELETE MODAL -->
+
+<div class="modal-overlay" id="deleteModal">
+
+    <div class="modal" style="width:380px;">
+
+        <div class="modal-header">
+
+            <h2>Delete User</h2>
+
+            <button class="close-btn" onclick="closeDeleteModal()">
+                ✕
+            </button>
+
+        </div>
+
+        <div style="
+            margin-bottom:24px;
+            font-family:var(--mono);
+            font-size:13px;
+            color:var(--text);
+            line-height:1.6;
+        ">
+
+            Are you sure you want to delete this user?
+
+        </div>
+
+        <div style="
+            display:flex;
+            gap:12px;
+            justify-content:flex-end;
+        ">
+
+            <button
+                    class="btn btn-secondary"
+                    onclick="closeDeleteModal()">
+                Cancel
+            </button>
+
+            <button
+                    class="btn"
+                    style="background:var(--red);color:white;"
+                    onclick="confirmDeleteUser()">
+                Delete
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="app">
+
+    <header>
+
+        <div class="logo">
+            CASSI<span>TRACK</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+
+            <div class="admin-badge">
+                ADMIN PANEL
+            </div>
+
+            <button class="btn btn-secondary" onclick="logoutUser()">
+                Log Out
+            </button>
+
+        </div>
+
+    </header>
+
+    <div class="content">
+
+        <div class="panel">
+
+            <div class="topbar">
+
+                <div class="search-box">
+
+                    <input
+                            type="text"
+                            class="search-input"
+                            placeholder="Search by name, surname, email, phone or tax ID..."
+                            id="searchInput"
+                    />
+
+                </div>
+
+                <div class="actions">
+
+                    <button
+                            class="btn btn-secondary"
+                            id="editBtn"
+                            disabled
+                            onclick="openEditModal()">
+                        Edit User
+                    </button>
+
+                    <button
+                            class="btn btn-secondary"
+                            id="deleteBtn"
+                            disabled
+                            onclick="deleteUser()">
+                        Delete User
+                    </button>
+
+                    <button class="btn btn-primary" onclick="openAddModal()">
+                        + Add User
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+
+                    <tr>
+                        <th>ID</th>
+                        <th>TAX ID</th>
+                        <th>NAME</th>
+                        <th>SURNAME</th>
+                        <th>EMAIL</th>
+                        <th>TELEPHONE</th>
+                        <th>ROLE</th>
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="usersTable"></tbody>
+
+                </table>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    let selectedRow = null;
+    let selectedUser = null;
+
+    function selectRow(row, user){
+
+        document
+            .querySelectorAll('#usersTable tr')
+            .forEach(r => r.classList.remove('selected'));
+
+        row.classList.add('selected');
+
+        selectedRow = row;
+        selectedUser = user;
+
+        document.getElementById('editBtn').disabled = false;
+        document.getElementById('deleteBtn').disabled = false;
+    }
+
+    // SEARCH FILTER
+
+    document
+        .getElementById('searchInput')
+        .addEventListener('input', function(){
+
+            const searchTerms = this.value
+                .toLowerCase()
+                .trim()
+                .split(/\s+/);
+
+            const rows = document.querySelectorAll('#usersTable tr');
+
+            rows.forEach(row => {
+
+                const rowText = row.innerText.toLowerCase();
+
+                const matches = searchTerms.every(term =>
+                    rowText.includes(term)
+                );
+
+                row.style.display = matches
+                    ? ''
+                    : 'none';
+            });
+
+        });
+
+    // ─────────────────────────────
+    // LOGOUT
+    // ─────────────────────────────
+
+    function logoutUser(){
+
+        localStorage.removeItem('cassitrack_token');
+        localStorage.removeItem('cassitrack_user');
+
+        window.location.href = 'cassitrack-login.html';
+    }
+
+    // ─────────────────────────────
+    // MODAL
+    // ─────────────────────────────
+
+    function openAddModal(){
+
+        selectedUser = null;
+
+        document.getElementById('modalTitle').innerText = 'Add User';
+
+        clearModal();
+        clearMessage();
+
+
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function openEditModal(){
+
+        if(!selectedRow) return;
+
+        clearMessage();
+
+        document.getElementById('modalTitle').innerText = 'Edit User';
+
+        document.getElementById('modalTaxId').value = selectedUser.taxId;
+        document.getElementById('modalName').value = selectedUser.name;
+        document.getElementById('modalSurname').value = selectedUser.surname;
+        document.getElementById('modalEmail').value = selectedUser.email;
+        document.getElementById('modalTelephone').value = selectedUser.telephone;
+        document.getElementById('modalRole').value = selectedUser.role;
+        document.getElementById('modalPassword').value = '';
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function closeModal(){
+
+        clearMessage();
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    function clearModal(){
+
+        document.getElementById('modalTaxId').value = '';
+        document.getElementById('modalName').value = '';
+        document.getElementById('modalSurname').value = '';
+        document.getElementById('modalEmail').value = '';
+        document.getElementById('modalTelephone').value = '';
+        document.getElementById('modalPassword').value = '';
+        document.getElementById('modalRole').value = 'DRIVER';
+    }
+
+    function showError(message){
+
+        const box = document.getElementById('formMessage');
+
+        box.className = 'form-message error';
+
+        box.innerText = message;
+    }
+
+    function showSuccess(message){
+
+        const box = document.getElementById('formMessage');
+
+        box.className = 'form-message success';
+
+        box.innerText = message;
+    }
+
+    function clearMessage(){
+
+        const box = document.getElementById('formMessage');
+
+        box.className = 'form-message';
+
+        box.innerText = '';
+    }
+
+    async function saveUser(){
+
+        const taxId = document.getElementById('modalTaxId').value.trim();
+        const name = document.getElementById('modalName').value.trim();
+        const surname = document.getElementById('modalSurname').value.trim();
+        const email = document.getElementById('modalEmail').value.trim();
+        const telephone = document.getElementById('modalTelephone').value.trim();
+        const password = document.getElementById('modalPassword').value.trim();
+        const role = document.getElementById('modalRole').value;
+
+        // ─────────────────────────────
+        // VALIDATION
+        // ─────────────────────────────
+
+        if(
+            !taxId ||
+            !name ||
+            !surname ||
+            !email ||
+            !role ||
+            !telephone
+        ){
+            showError('Please fill all fields');
+            return;
+        }
+
+        // PASSWORD REQUIRED ONLY FOR NEW USER
+        if(!selectedUser && !password){
+
+            showError('Password is required');
+
+            return;
+        }
+
+        // ─────────────────────────────
+        // USER OBJECT
+        // ─────────────────────────────
+
+        const userData = {
+
+            taxId,
+            name,
+            surname,
+            email,
+            telephone,
+            role
+        };
+
+        // ONLY SEND PASSWORD IF WRITTEN
+        if(password){
+
+            userData.passwordHash = password;
+        }
+
+        try{
+
+            // ─────────────────────────────
+            // UPDATE
+            // ─────────────────────────────
+
+            if(selectedUser){
+
+                const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
+
+                    method:'PUT',
+
+                    headers:{
+                        'Content-Type':'application/json'
+                    },
+
+                    body:JSON.stringify(userData)
+                });
+
+                if(!response.ok){
+
+                    const errorMessage = await response.text();
+
+                    showError(errorMessage);
+
+                    return;
+                }
+
+            }else{
+
+                // ─────────────────────────────
+                // CREATE
+                // ─────────────────────────────
+
+                const response = await fetch('/api/v1/users', {
+
+                    method:'POST',
+
+                    headers:{
+                        'Content-Type':'application/json'
+                    },
+
+                    body:JSON.stringify(userData)
+                });
+
+                if(!response.ok){
+
+                    const errorMessage = await response.text();
+
+                    showError(errorMessage);
+
+                    return;
+                }
+            }
+
+
+            showSuccess(
+                selectedUser
+                    ? 'User updated successfully'
+                    : 'User created successfully'
+            );
+
+            setTimeout(() => {
+
+                // RELOAD USERS
+                loadUsers();
+
+                selectedUser = null;
+                selectedRow = null;
+
+                document.getElementById('editBtn').disabled = true;
+                document.getElementById('deleteBtn').disabled = true;
+
+                // CLOSE MODAL
+                closeModal();
+
+            }, 1000);
+
+        }catch(error){
+
+            console.error(error);
+
+            showError('Error saving user');
+        }
+    }
+
+    function deleteUser(){
+
+        if(!selectedUser) return;
+
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal(){
+
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    async function confirmDeleteUser(){
+
+        if(!selectedUser) return;
+
+        try{
+
+            const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
+
+                method:'DELETE'
+            });
+
+            if(!response.ok){
+
+                showError('Error deleting user');
+
+                return;
+            }
+
+            closeDeleteModal();
+
+            selectedUser = null;
+            selectedRow = null;
+
+            document.getElementById('editBtn').disabled = true;
+            document.getElementById('deleteBtn').disabled = true;
+
+            loadUsers();
+
+        }catch(error){
+
+            console.error(error);
+
+            showError('Error deleting user');
+        }
+    }
+
+    // ─────────────────────────────
+    // LOAD USERS FROM API
+    // ─────────────────────────────
+
+    async function loadUsers(){
+
+        try{
+
+            const response = await fetch('/api/v1/users');
+
+            const users = await response.json();
+
+            const table = document.getElementById('usersTable');
+
+            table.innerHTML = '';
+
+            users.forEach(user => {
+
+                const roleClass =
+                    user.role === 'ADMIN'
+                        ? 'admin'
+                        : user.role === 'FLEET_MANAGER'
+                            ? 'manager'
+                            : 'driver';
+
+                // CREATE ROW
+                const row = document.createElement('tr');
+
+                // CLICK EVENT
+                row.onclick = () => selectRow(row, user);
+
+                // HTML
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.taxId}</td>
+                    <td>${user.name}</td>
+                    <td>${user.surname}</td>
+                    <td>${user.email}</td>
+                    <td>${user.telephone || '-'}</td>
+                    <td>
+                        <span class="role ${roleClass}">
+                            ${user.role}
+                        </span>
+                    </td>
+                `;
+
+                // ADD TO TABLE
+                table.appendChild(row);
+            });
+
+        }catch(error){
+
+            console.error('Error loading users:', error);
+
+        }
+    }
+
+    // AUTO LOAD
+    loadUsers();
+
+</script>
+
+</body>
+</html>
