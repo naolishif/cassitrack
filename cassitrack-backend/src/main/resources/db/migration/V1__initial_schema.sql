@@ -134,10 +134,11 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Seed a default fleet manager user (password: "admin123" — CHANGE IN PRODUCTION)
 -- bcrypt hash for "admin123" is: $2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO
-INSERT INTO users (tax_id, name, surname, email, password_hash, role)
+INSERT INTO users (tax_id, name, surname, email, password_hash, role, telephone)
 SELECT 'TAXID123456', 'AdminName', 'AdminSurname', 'admin@unicas.it',
-       '$2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO',
-       'FLEET_MANAGER'
+       '$2a$12$CGnvVCYJ52qUzTH7oTvt5eBeHLhZ/ZOXE6eKg3hkiBHRw8odm6XLa',
+       'FLEET_MANAGER',
+       '444444444'
     WHERE NOT EXISTS (
     SELECT 1 FROM users WHERE tax_id = 'TAXID123456' OR email = 'admin@unicas.it'
 );
