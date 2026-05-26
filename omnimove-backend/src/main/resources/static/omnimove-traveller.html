@@ -762,8 +762,8 @@
     <div class="sidebar-user">
         <div class="avatar">👤</div>
         <div class="user-info">
-            <div class="name">Alex Rivera</div>
-            <div class="email">alex.rivera@move.it</div>
+            <div class="name" id="sidebarName">—</div>
+            <div class="email" id="sidebarEmail">—</div>
         </div>
     </div>
 
@@ -1042,8 +1042,8 @@
                 <div class="profile-hero-card">
                     <div class="profile-avatar-lg">👤</div>
                     <div class="profile-hero-info">
-                        <div class="pname">Alex Rivera</div>
-                        <div class="pemail">alex.rivera@move.it</div>
+                        <div class="pname" id="profileName">—</div>
+                        <div class="pemail" id="profileEmail">—</div>
                     </div>
                     <div class="profile-stats">
                         <div class="pstat">
@@ -1245,7 +1245,7 @@
                             <div class="pay-icon" style="background:#fef9c3">📱</div>
                             <div class="route-hist-info">
                                 <div class="route-hist-name">Apple Pay</div>
-                                <div class="route-hist-sub">Linked · alex@icloud.com</div>
+                                <div class="route-hist-sub" id="paymentEmail">—</div>
                             </div>
                         </div>
                     </div>
@@ -1341,7 +1341,7 @@
             <button class="ai-close" onclick="closeAI()">×</button>
         </div>
         <div class="ai-messages" id="aiMessages">
-            <div class="ai-msg bot">👋 Hi Alex! I'm OmniAI. I can help you find the best route, check real-time delays, or suggest eco-friendly alternatives. What do you need?</div>
+            <div class="ai-msg bot" id="aiGreeting"></div>
         </div>
         <div class="ai-input-row">
             <input class="ai-input" id="aiInput" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter') sendAI()">
@@ -1357,8 +1357,35 @@
         window.location.href = 'omnimove-login.html';
     }
 
+    // Name and email
+    const _user = JSON.parse(localStorage.getItem('omnimove_user') || '{}');
+    document.getElementById('sidebarName').textContent = _user.name || _user.username || 'Utente';
+    document.getElementById('sidebarEmail').textContent = _user.email || '';
+    document.getElementById('profileName').textContent  = _user.name  || _user.username || 'Utente';
+    document.getElementById('profileEmail').textContent = _user.email || '';
+    document.getElementById('paymentEmail').textContent = _user.email || '';
+
+    const _name = _user.name || _user.username || 'there';
+    document.getElementById('aiGreeting').textContent =
+        `👋 Hi ${_name}! I'm OmniAI. I can help you find the best route, check real-time delays, or suggest eco-friendly alternatives. What do you need?`;
+
+    // ── API base URL e helper autenticato ─────────────────────────────────
+    const API_BASE = '/api/v1';  // relativo — OMNIMOVE è sulla porta 8081
+
+    async function apiFetch(path, options = {}) {
+        const token = localStorage.getItem('omnimove_token');
+        return fetch(API_BASE + path, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? {'Authorization': 'Bearer ' + token} : {}),
+                ...(options.headers || {})
+            }
+        });
+    }
+
     // ── Map ──
-    const map = L.map('map', { zoomControl: true }).setView([41.4901, 13.8303], 15);
+    const map = L.map('map', {zoomControl: true}).setView([41.4901, 13.8303], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(map);
@@ -1374,13 +1401,13 @@
     L.marker([41.4901, 13.8303], {icon: makeIcon('📍', '#ef4444')}).addTo(map).bindPopup('Via Folcara (you)');
 
     const route = [[41.4901, 13.8303], [41.492, 13.824], [41.490, 13.828], [41.487, 13.831]];
-    L.polyline(route, { color: '#3b82f6', weight: 5, opacity: 0.65, dashArray: '10, 8' }).addTo(map);
+    L.polyline(route, {color: '#3b82f6', weight: 5, opacity: 0.65, dashArray: '10, 8'}).addTo(map);
 
     // ── Sidebar nav ──
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const pane = item.dataset.pane;
-            const tab  = item.dataset.tab;
+            const tab = item.dataset.tab;
 
             document.querySelectorAll('.sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
             item.classList.add('active');
@@ -1438,6 +1465,7 @@
         document.getElementById('aiOverlay').classList.add('open');
         setTimeout(() => document.getElementById('aiInput').focus(), 100);
     }
+
     function closeAI(e) {
         if (!e || e.target === document.getElementById('aiOverlay')) {
             document.getElementById('aiOverlay').classList.remove('open');
@@ -1451,16 +1479,11 @@
         window.location.href = 'omnimove-login.html';
     }
 
-    const aiReplies = [
-        "Given current conditions, the Elerent E-Bike is your best eco option — zero CO₂ and only 7 minutes to Stazione FS! 🚲",
-        "Bus Line 16 has a 2-minute delay right now. If you leave in 5 minutes you'll still make it on time! 🚌",
-        "Your route from Via Folcara to Cassino Stazione is 2.1 km. Walking would take ~18 min but gives you 100/100 eco points! 🌱",
-        "You've saved 12.5 kg of CO₂ this month — that's equivalent to planting about 0.6 trees! Keep it up 💪",
-        "There are 3 e-scooters within 150m of you. The nearest one has 87% battery — plenty for your journey! 🛴"
-    ];
-    let aiIdx = 0;
+    // ── AI Panel — chiamata reale a OMNIMOVE /api/v1/ai/chat ──────────────
+    let aiThinking = false;
 
-    function sendAI() {
+    async function sendAI() {
+        if (aiThinking) return;
         const input = document.getElementById('aiInput');
         const msgs = document.getElementById('aiMessages');
         const text = input.value.trim();
@@ -1471,17 +1494,28 @@
         userMsg.textContent = text;
         msgs.appendChild(userMsg);
         input.value = '';
-
-        setTimeout(() => {
-            const botMsg = document.createElement('div');
-            botMsg.className = 'ai-msg bot';
-            botMsg.textContent = aiReplies[aiIdx % aiReplies.length];
-            aiIdx++;
-            msgs.appendChild(botMsg);
-            msgs.scrollTop = msgs.scrollHeight;
-        }, 600);
-
         msgs.scrollTop = msgs.scrollHeight;
+
+        aiThinking = true;
+        const waitMsg = document.createElement('div');
+        waitMsg.className = 'ai-msg bot';
+        waitMsg.textContent = '…';
+        msgs.appendChild(waitMsg);
+        msgs.scrollTop = msgs.scrollHeight;
+
+        try {
+            const r = await apiFetch('/ai/chat', {
+                method: 'POST',
+                body: JSON.stringify({message: text, language: 'it'})
+            });
+            const data = await r.json();
+            waitMsg.textContent = data.answer || 'Risposta non disponibile.';
+        } catch (e) {
+            waitMsg.textContent = 'Errore di connessione al backend. Verifica che OMNIMOVE sia avviato.';
+        } finally {
+            aiThinking = false;
+            msgs.scrollTop = msgs.scrollHeight;
+        }
     }
 </script>
 </body>

@@ -1,0 +1,172 @@
+# ─────────────────────────────────────────────────────────────
+#  CASSITRACK — Docker Stack
+#  University of Cassino and Southern Lazio — 2025/2026
+#
+#  Included services:
+#    postgres    → Relational database (users, stops, routes, schedules)
+#    influxdb    → Time-series database (GPS telemetry from buses / ESP32)
+#    redis       → Cache + session store
+#    mosquitto   → MQTT broker (receives data from buses and ESP32 devices)
+#    cassitrack  → Spring Boot backend (port 8080)
+#
+#  Internal network: cassitrack-net  (isolated from OMNIMOVE)
+#  Ports exposed to the host:
+#    5432  → PostgreSQL
+#    8086  → InfluxDB
+#    6379  → Redis
+#    1883  → MQTT
+#    9001  → MQTT over WebSocket
+#    8080  → CASSITRACK API
+#
+#  Useful commands:
+#    Start infrastructure only:   docker compose up -d postgres influxdb redis mosquitto
+#    Start everything (with API): docker compose --profile full up -d
+#    Backend logs:                docker compose logs -f cassitrack
+#    Stop everything:             docker compose down
+#    Remove volumes (reset):      docker compose down -v
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL + PostGIS ──────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: cassitrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cassitrack
+      POSTGRES_USER: cassitrack
+      POSTGRES_PASSWORD: cassitrack_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - cassitrack_postgres_data:/var/lib/postgresql/data
+    networks:
+      - cassitrack-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cassitrack -d cassitrack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── InfluxDB (time-series for telemetry GPS) ─────────────────
+  influxdb:
+    image: influxdb:2.7
+    container_name: cassitrack-influxdb
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: cassitrack
+      DOCKER_INFLUXDB_INIT_PASSWORD: cassitrack_dev
+      DOCKER_INFLUXDB_INIT_ORG: unicas
+      DOCKER_INFLUXDB_INIT_BUCKET: vehicle_telemetry
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: cassitrack-dev-token-change-in-production
+    ports:
+      - "8086:8086"
+    volumes:
+      - cassitrack_influxdb_data:/var/lib/influxdb2
+    networks:
+      - cassitrack-net
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (cache + session) ──────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: cassitrack-redis
+    restart: unless-stopped
+    command: redis-server --requirepass cassitrack_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - cassitrack_redis_data:/data
+    networks:
+      - cassitrack-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "cassitrack_dev", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Eclipse Mosquitto (MQTT broker) ──────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: cassitrack-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT plain (per ESP32 e driver app)
+      - "9001:9001"   # MQTT su WebSocket (opzionale, per browser)
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - cassitrack_mosquitto_data:/mosquitto/data
+      - cassitrack_mosquitto_log:/mosquitto/log
+    networks:
+      - cassitrack-net
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health -m ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── CASSITRACK Spring Boot Backend ───────────────────────────
+  # Attivato solo con: docker compose --profile full up -d
+
+  cassitrack:
+    build:
+      context: ./cassitrack-backend
+      dockerfile: Dockerfile
+    container_name: cassitrack-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    environment:
+      # PostgreSQL
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cassitrack
+      SPRING_DATASOURCE_USERNAME: cassitrack
+      SPRING_DATASOURCE_PASSWORD: cassitrack_dev
+      # InfluxDB
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: cassitrack-dev-token-change-in-production
+      INFLUX_ORG: unicas
+      INFLUX_BUCKET: vehicle_telemetry
+      # Redis
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: cassitrack_dev
+      # MQTT
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+      # JWT
+      JWT_SECRET: cassitrack-jwt-secret-change-in-production-must-be-long
+      # API external
+      # ANTHROPIC_API_KEY: <inserire_chiave>
+      # WEATHER_API_KEY: <inserire_chiave>
+    ports:
+      - "8080:8080"
+    networks:
+      - cassitrack-net
+    profiles:
+      - full   # avvia SOLO con: docker compose --profile full up -d
+
+# ── internal network CASSITRACK ───────────────────────────────────
+networks:
+  cassitrack-net:
+    name: cassitrack-net
+    driver: bridge
+
+# ── Volume ────────────────────────
+volumes:
+  cassitrack_postgres_data:
+  cassitrack_influxdb_data:
+  cassitrack_redis_data:
+  cassitrack_mosquitto_data:
+  cassitrack_mosquitto_log:
