@@ -88,6 +88,9 @@ logging:
     it.unicas.cassitrack: DEBUG
     org.springframework.integration.mqtt: INFO
     org.hibernate.SQL: WARN
+    org:
+      springframework:
+        security: DEBUG
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:

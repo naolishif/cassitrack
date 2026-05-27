@@ -48,7 +48,7 @@ public class SecurityConfig {
                 // Disable CSRF - we use JWT, not sessions
                 .csrf(csrf -> csrf.disable())
 
-                // Allow CORS from frontend (React dev server on localhost:3000)
+                // Allow CORS from frontend
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // Stateless — no HTTP sessions, JWT only
@@ -58,22 +58,13 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // ── 1. Public Access points (UI and Auth) ───────────────
+                        .requestMatchers("/error", "/", "/cassitrack-login.html", "/api/v1/auth/**").permitAll()
+
                         // Allow internal forwards and error routing to pass through
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 
-                        // ── Public Frontend & Assets ──────────────────
-                        .requestMatchers(
-                                "/*.html",
-                                "/*.css",
-                                "/*.js",
-                                "/favicon.ico",
-                                "/manifest.json",
-                                "/icon-192.png",
-                                "/error",
-                                "/"
-                        ).permitAll()
-
-                        // ── Public API & Dev Endpoints ───────────────
+                        // ── 2. Public APIs (GTFS, Live Tracking, Swagger) ───────────────
                         .requestMatchers(
                                 "/h2-console/**",
                                 "/api/v1/vehicles",
@@ -82,53 +73,28 @@ public class SecurityConfig {
                                 "/api/v1/telemetry/**",
                                 "/api/v1/siri/**",
                                 "/api/v1/feed/**",
-                                "/api/v1/analytics/**",
                                 "/api/v1/driver/**",
                                 "/api/v1/ai/**",
                                 "/api/v1/journeys/**",
+                                "/ws/**",
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
-                                "/api/swagger-ui.html",
-                                "/ws/**"
+                                "/api/swagger-ui.html"
                         ).permitAll()
 
-                        // ── Auth endpoints ────────────────────────────────
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // ── 3. Role-Specific Protected HTML ───────────────
+                        .requestMatchers(
+                                "/cassitrack-fleetmanager.html",
+                                "/api/v1/analytics/**"
+                        ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
 
-                        // ── Users endpoints ───────────────────────────────
-                        .requestMatchers("/api/v1/users/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/users/**"
+                        ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
-                        // ── Everything else requires authentication ───────
+                        // ── 4. Everything else requires authentication ───────
                         .anyRequest().authenticated()
                 );
-
-//        http.formLogin(form -> form
-//                .loginPage("/cassitrack-login.html") // Tells Spring: This is our login view
-//                .loginProcessingUrl("/api/v1/auth/login") // The endpoint your form submits to
-//                .successHandler((request, response, authentication) -> {
-//
-//                    // 1. Get the roles of the logged-in user
-//                    boolean isFleetManager = authentication.getAuthorities().stream()
-//                            .anyMatch(a -> a.getAuthority().equals("ROLE_FLEET_MANAGER")
-//                                    || a.getAuthority().equals("FLEET_MANAGER"));
-//
-//                    boolean isAdmin = authentication.getAuthorities().stream()
-//                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
-//                                    || a.getAuthority().equals("ADMIN"));
-//
-//                    // 2. Redirect based on their specific role
-//                    if (isFleetManager) {
-//                        response.sendRedirect("/cassitrack-fleetmanager.html");
-//                    } else if (isAdmin) {
-//                        // Placeholder for the file your colleague is building
-//                        response.sendRedirect("/cassitrack-admin.html");
-//                    } else {
-//                        // Fallback for standard users or drivers
-//                        response.sendRedirect("/index.html");
-//                    }
-//                })
-//                .permitAll()
-//        );
 
         http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
