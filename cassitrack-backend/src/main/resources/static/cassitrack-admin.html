@@ -747,6 +747,8 @@
 
         try{
 
+            const token = localStorage.getItem('cassitrack_token');
+
             // ─────────────────────────────
             // UPDATE
             // ─────────────────────────────
@@ -758,7 +760,8 @@
                     method:'PUT',
 
                     headers:{
-                        'Content-Type':'application/json'
+                        'Content-Type':'application/json',
+                        'Authorization': 'Bearer ' + token
                     },
 
                     body:JSON.stringify(userData)
@@ -784,7 +787,8 @@
                     method:'POST',
 
                     headers:{
-                        'Content-Type':'application/json'
+                        'Content-Type':'application/json',
+                        'Authorization': 'Bearer ' + token
                     },
 
                     body:JSON.stringify(userData)
@@ -849,9 +853,15 @@
 
         try{
 
+            const token = localStorage.getItem('cassitrack_token');
+
             const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
 
-                method:'DELETE'
+                method:'DELETE',
+
+                headers:{
+                    'Authorization': 'Bearer ' + token
+                }
             });
 
             if(!response.ok){
@@ -887,7 +897,14 @@
 
         try{
 
-            const response = await fetch('/api/v1/users');
+            const token = localStorage.getItem('cassitrack_token');
+
+            const response = await fetch('/api/v1/users', {
+
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
 
             const users = await response.json();
 

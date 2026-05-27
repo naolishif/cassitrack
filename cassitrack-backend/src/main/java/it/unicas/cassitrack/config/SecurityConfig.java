@@ -85,10 +85,12 @@ public class SecurityConfig {
                         // ── 3. Role-Specific Protected HTML ───────────────
                         .requestMatchers(
                                 "/cassitrack-fleetmanager.html",
-                                "/api/v1/analytics/**"
+                                "/api/v1/analytics/**",
+                                "cassitrack-analytics.html"
                         ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
 
                         .requestMatchers(
+                                "/cassitrack-admin.html",
                                 "/api/v1/users/**"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 

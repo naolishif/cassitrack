@@ -123,14 +123,15 @@ ON CONFLICT DO NOTHING;
 -- Application users (fleet managers, drivers).
 -- Passengers using OMNIMOVE are anonymous or registered separately.
 CREATE TABLE IF NOT EXISTS users (
-                                     id            BIGSERIAL    PRIMARY KEY,
-                                     tax_id        VARCHAR(50)  NOT NULL UNIQUE, -- National Identity Number / Codice Fiscale
+    id            BIGSERIAL    PRIMARY KEY,
+    tax_id        VARCHAR(50)  NOT NULL UNIQUE, -- National Identity Number / Codice Fiscale
     name          VARCHAR(100) NOT NULL,        -- First name
     surname       VARCHAR(100) NOT NULL,        -- Last name
     email         VARCHAR(200) NOT NULL UNIQUE, -- Login email identifier
     password_hash VARCHAR(200) NOT NULL,        -- bcrypt hash
-    role          VARCHAR(20)  NOT NULL DEFAULT 'DRIVER' -- Can be FLEET_MANAGER or DRIVER
-    );
+    role          VARCHAR(20)  NOT NULL DEFAULT 'DRIVER', -- Can be FLEET_MANAGER or DRIVER
+    telephone     VARCHAR(20)                    -- Contact telephone number
+);
 
 -- Seed a default fleet manager user (password: "admin123" — CHANGE IN PRODUCTION)
 -- bcrypt hash for "admin123" is: $2a$12$LQv3c1yqBwEHXMKFNlqLXeB8cjvtWdFxkOl7A6C6GcH.bFvg5JMuO
