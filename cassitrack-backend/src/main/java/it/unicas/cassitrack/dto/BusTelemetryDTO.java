@@ -13,4 +13,6 @@ public class BusTelemetryDTO {
     private float speed;
     private int bleDeviceCount;
     private Instant timestamp;
+    private Boolean postoDisabili;
+    private Integer numeroPosti;
 }

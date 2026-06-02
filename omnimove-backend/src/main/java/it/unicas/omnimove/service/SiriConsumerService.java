@@ -16,7 +16,6 @@ public class SiriConsumerService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final TelemetrySyncService telemetrySyncService;
 
-    // Costruttore corretto (senza doppioni o graffe extra)
     public SiriConsumerService(TelemetrySyncService telemetrySyncService) {
         this.telemetrySyncService = telemetrySyncService;
     }
@@ -36,7 +35,6 @@ public class SiriConsumerService {
                         .getVehicleMonitoringDelivery()
                         .getVehicleActivity();
 
-                // Creiamo una lista temporanea di DTO da passare al tuo metodo di scrittura
                 List<BusTelemetryDTO> dtoList = new ArrayList<>();
 
                 for (Siri.VehicleActivity activity : activities) {
@@ -51,20 +49,30 @@ public class SiriConsumerService {
 
                     System.out.println("[SIRI-AUTOMATIC] Ricevuto e in elaborazione Bus: " + busId);
 
-                    // Ricostruiamo il BusTelemetryDTO usando il Builder che hai già sul DTO
+                    // 🚌 Gestiamo la conversione del flag disabili da Stringa SIRI ("true"/"false") a Boolean
+                    Boolean postoDisabili = null;
+                    if (journey.getWheelchairAccessible() != null) {
+                        postoDisabili = "true".equalsIgnoreCase(journey.getWheelchairAccessible());
+                    }
+
+                    // Ricostruiamo il BusTelemetryDTO includendo i campi mancanti
                     BusTelemetryDTO dto = BusTelemetryDTO.builder()
                             .busId(busId)
-                            .latitude((float) lat)  // Cast a float richiesto dal tuo DTO
-                            .longitude((float) lon) // Cast a float richiesto dal tuo DTO
-                            .speed((float) speed)   // Cast a float richiesto dal tuo DTO
+                            .latitude((float) lat)
+                            .longitude((float) lon)
+                            .speed((float) speed)
                             .timestamp(timestampStr != null ? Instant.parse(timestampStr) : Instant.now())
-                            .bleDeviceCount(0) // SIRI non prevede i BLE device, lo impostiamo a 0 di default
+                            .bleDeviceCount(0)
+
+                            // 🚌 ECCO LE DUE RIGHE AGGIUNTE:
+                            .numeroPosti(journey.getNumberOfSeats())
+                            .postoDisabili(postoDisabili)
+
                             .build();
 
                     dtoList.add(dto);
                 }
 
-                // Se abbiamo trovato dei bus, sfruttiamo il tuo metodo esistente per salvare su InfluxDB!
                 if (!dtoList.isEmpty()) {
                     telemetrySyncService.saveToInfluxDB(dtoList);
                 }

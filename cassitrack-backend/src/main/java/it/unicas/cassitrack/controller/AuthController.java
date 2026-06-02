@@ -68,7 +68,7 @@ public class AuthController {
                 .passwordHash(passwordEncoder.encode(req.getPassword()))
                 // Se il ruolo è presente nella richiesta usa quello (in MAIUSCOLO), altrimenti usa "TRAVELLER"
                 .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
-                .telephone(req.getTelephone())
+                //.telephone(req.getTelephone())
                 .build();
 
         userRepository.save(user); // Corretto in userRepository

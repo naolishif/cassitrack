@@ -77,6 +77,9 @@ public class VehicleService {
 
         return VehicleStatusDTO.builder()
                 .vehicleId(pos.getVehicleId())
+                .busId(pos.getBusId())
+                .numeroPosti(pos.getNumeroPosti())       // 🚌
+                .postoDisabili(pos.getPostoDisabili())
                 .lat(pos.getLat())
                 .lon(pos.getLon())
                 .speedKmh(pos.getSpeedKmh())

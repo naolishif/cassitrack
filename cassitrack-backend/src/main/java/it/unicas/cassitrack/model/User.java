@@ -36,6 +36,6 @@ public class User {
     @Column(nullable = false)
     private String role; // User permission level (ADMIN, DRIVER, etc.)
 
-    @Column(name = "telephone", nullable = true)
-    private String telephone; // Contact telephone number
+    //@Column(name = "telephone", nullable = true)
+    //private String telephone; // Contact telephone number
 }

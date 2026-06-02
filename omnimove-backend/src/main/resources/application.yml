@@ -12,11 +12,18 @@ spring:
     password: omnimove
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+
+  data:
+    redis:
+        host: localhost
+        port: 6380
   h2:
     console:
       enabled: true
@@ -79,6 +86,6 @@ jwt:
 influx:
   url: ${INFLUX_URL:http://localhost:8087}
   # Paste here your InfluxDB generated token:
-  token: ${INFLUX_TOKEN:Vt0M3coM4PeQiPIL-Gb642xPfFFmsMVCt6_KOl5maH7LtyEenvdfO-rW0AB2UIAv_TJDGA-gt2oALr-tZISsiw==}
+  token: ${INFLUX_TOKEN:259SpThx8dDpp5TM2uve_Ff4J6_if2mzXKp8UDAqPERLKc-UK9e_wHSyrG92Cps0obG_jNdvbyBpXvobpNvMow==}
   org: omnimove_org
   bucket: omnimove_bucket

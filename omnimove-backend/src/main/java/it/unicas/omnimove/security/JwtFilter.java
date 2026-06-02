@@ -1,6 +1,7 @@
 package it.unicas.omnimove.security;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.*;
@@ -12,6 +13,8 @@ import java.io.IOException;
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+
+    @Lazy
     public JwtFilter(JwtUtil jwtUtil, UserDetailsService uds) {
         this.jwtUtil = jwtUtil; this.userDetailsService = uds;
     }
