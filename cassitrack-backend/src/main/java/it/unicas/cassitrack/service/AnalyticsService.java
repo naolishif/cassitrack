@@ -8,18 +8,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Fleet analytics data for the manager dashboard.
- *
- * Three views:
- * 1. Summary     — active buses, on-time rate, reports today
- * 2. Adherence   — breakdown by schedule status + vehicle table
- * 3. Busiest hrs — GPS activity per hour over last 24 hours
+ * * Aggiornato per architettura ibrida:
+ * - Dati Live presi da Redis (tramite VehiclePositionRepository e VehicleService)
+ * - Dati Storici in attesa di implementazione via InfluxDB
  */
 @Service
 @Slf4j
@@ -32,35 +28,32 @@ public class AnalyticsService {
     // ── View 1: Summary ───────────────────────────────────────
 
     public Map<String, Object> getSummary() {
-        Instant startOfDay = Instant.now().truncatedTo(ChronoUnit.DAYS);
-
         List<VehicleStatusDTO> active = vehicleService.getAllActiveVehicles();
         int activeBuses = active.size();
 
-        List<String> vehiclesToday =
-            positionRepo.findActiveVehicleIdsSince(startOfDay);
+        // 🏎️ REDIS: Prendiamo tutti i bus attualmente salvati in memoria
+        List<VehiclePosition> livePositions = positionRepo.findAll();
 
-        long totalReports = vehiclesToday.stream()
-            .mapToLong(v -> positionRepo
-                .countByVehicleIdAndReceivedAtAfter(v, startOfDay))
-            .sum();
+        // 📈 INFLUXDB TODO: Il conteggio totale dei report storici di oggi.
+        // Per ora lo mettiamo a 0 per far compilare il progetto.
+        long totalReports = 0L;
 
         long onTime = active.stream().filter(v ->
-            v.getScheduleStatus() != null &&
-            "ON_TIME".equals(v.getScheduleStatus().name())).count();
+                v.getScheduleStatus() != null &&
+                        "ON_TIME".equals(v.getScheduleStatus().name())).count();
         long late = active.stream().filter(v ->
-            v.getScheduleStatus() != null &&
-            v.getScheduleStatus().name().contains("LATE")).count();
+                v.getScheduleStatus() != null &&
+                        v.getScheduleStatus().name().contains("LATE")).count();
         long early = active.stream().filter(v ->
-            v.getScheduleStatus() != null &&
-            "EARLY".equals(v.getScheduleStatus().name())).count();
+                v.getScheduleStatus() != null &&
+                        "EARLY".equals(v.getScheduleStatus().name())).count();
 
         int onTimePct = activeBuses > 0
-            ? (int)(onTime * 100 / activeBuses) : 0;
+                ? (int)(onTime * 100 / activeBuses) : 0;
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("active_buses_now", activeBuses);
-        out.put("buses_today", vehiclesToday.size());
+        out.put("buses_today", livePositions.size()); // Sostituito con Redis live data
         out.put("position_reports_today", totalReports);
         out.put("on_time_count", onTime);
         out.put("late_count", late);
@@ -73,6 +66,8 @@ public class AnalyticsService {
     // ── View 2: Adherence breakdown ───────────────────────────
 
     public Map<String, Object> getAdherenceBreakdown() {
+        // Questo metodo è già perfetto perché usa il VehicleService
+        // che gestisce la logica del tempo reale.
         List<VehicleStatusDTO> active = vehicleService.getAllActiveVehicles();
 
         Map<String, Long> counts = new LinkedHashMap<>();
@@ -84,22 +79,22 @@ public class AnalyticsService {
 
         active.forEach(v -> {
             String s = v.getScheduleStatus() != null
-                ? v.getScheduleStatus().name() : "UNKNOWN";
+                    ? v.getScheduleStatus().name() : "UNKNOWN";
             counts.merge(s, 1L, Long::sum);
         });
 
         List<Map<String, Object>> vehicles = active.stream()
-            .map(v -> {
-                Map<String, Object> info = new LinkedHashMap<>();
-                info.put("vehicle_id", v.getVehicleId());
-                info.put("status", v.getScheduleStatus() != null
-                    ? v.getScheduleStatus().name() : "UNKNOWN");
-                info.put("speed_kmh", v.getSpeedKmh());
-                info.put("delay_minutes", v.getDelayMinutes());
-                info.put("crowding", v.getCrowdingLevel());
-                return info;
-            })
-            .collect(Collectors.toList());
+                .map(v -> {
+                    Map<String, Object> info = new LinkedHashMap<>();
+                    info.put("vehicle_id", v.getVehicleId());
+                    info.put("status", v.getScheduleStatus() != null
+                            ? v.getScheduleStatus().name() : "UNKNOWN");
+                    info.put("speed_kmh", v.getSpeedKmh());
+                    info.put("delay_minutes", v.getDelayMinutes());
+                    info.put("crowding", v.getCrowdingLevel());
+                    return info;
+                })
+                .collect(Collectors.toList());
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("status_counts", counts);
@@ -111,42 +106,25 @@ public class AnalyticsService {
     // ── View 3: Busiest hours ─────────────────────────────────
 
     public Map<String, Object> getBusiestHours() {
-        Instant since = Instant.now().minus(24, ChronoUnit.HOURS);
-
-        Map<Integer, Long> hourCounts = new LinkedHashMap<>();
-        for (int h = 0; h < 24; h++) hourCounts.put(h, 0L);
-
-        List<String> vehicleIds =
-            positionRepo.findActiveVehicleIdsSince(since);
-
-        vehicleIds.forEach(vehicleId -> {
-            List<VehiclePosition> positions =
-                positionRepo.findByVehicleIdAndTimestampBetweenOrderByTimestampAsc(
-                    vehicleId, since, Instant.now());
-            positions.forEach(pos -> {
-                int hour = pos.getTimestamp()
-                    .atZone(ZoneId.of("Europe/Rome")).getHour();
-                hourCounts.merge(hour, 1L, Long::sum);
-            });
-        });
+        // 📈 INFLUXDB TODO: Redis non conosce la storia passata.
+        // Tutta la logica di aggregazione temporale dovrà essere fatta
+        // tramite una Flux Query su InfluxDB.
+        // Per ora restituiamo una struttura vuota per non bloccare l'app.
 
         List<Map<String, Object>> hourlyData = new ArrayList<>();
-        hourCounts.forEach((hour, count) -> {
+        // Mock data temporaneo
+        for (int h = 0; h < 24; h++) {
             Map<String, Object> p = new LinkedHashMap<>();
-            p.put("hour", String.format("%02d:00", hour));
-            p.put("count", count);
+            p.put("hour", String.format("%02d:00", h));
+            p.put("count", 0);
             hourlyData.add(p);
-        });
-
-        String peakHour = hourCounts.entrySet().stream()
-            .max(Map.Entry.comparingByValue())
-            .map(e -> String.format("%02d:00", e.getKey()))
-            .orElse("N/A");
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("hourly_activity", hourlyData);
-        out.put("peak_hour", peakHour);
+        out.put("peak_hour", "N/A");
         out.put("period_hours", 24);
+        out.put("note", "Historical data will be available once InfluxDB is integrated.");
         return out;
     }
 }

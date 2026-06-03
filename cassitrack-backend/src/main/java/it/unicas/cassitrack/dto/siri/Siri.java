@@ -47,9 +47,7 @@ public class Siri {
 
     public static class VehicleMonitoringDelivery {
 
-        // Questo tag "useWrapping = false" è una magia: evita che Jackson
-        // crei un brutto tag <VehicleActivityList> e fa semplicemente
-        // ripetere i tag <VehicleActivity> uno dietro l'altro!
+        // Questo tag "useWrapping = false" evita che Jackson crei un brutto tag <VehicleActivityList>
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "VehicleActivity")
         private List<VehicleActivity> vehicleActivity = new ArrayList<>();
@@ -77,6 +75,7 @@ public class Siri {
         public void setMonitoredVehicleJourney(MonitoredVehicleJourney monitoredVehicleJourney) { this.monitoredVehicleJourney = monitoredVehicleJourney; }
     }
 
+    // ── HERE IS THE SUBCLASS TO MODIFY ─────────────────────────────────
     public static class MonitoredVehicleJourney {
         @JacksonXmlProperty(localName = "VehicleRef")
         private String vehicleRef;
@@ -87,13 +86,26 @@ public class Siri {
         @JacksonXmlProperty(localName = "Velocity")
         private double velocity;
 
-        // Getters e Setters
+        // 🚌 NUOVI CAMPI INSERITI QUI DENTRO PER IL PROTOCOLLO SIRI
+        @JacksonXmlProperty(localName = "WheelchairAccessible")
+        private String wheelchairAccessible;
+
+        @JacksonXmlProperty(localName = "NumberOfSeats")
+        private Integer numberOfSeats;
+
+        // Getters e Setters esistenti
         public String getVehicleRef() { return vehicleRef; }
         public void setVehicleRef(String vehicleRef) { this.vehicleRef = vehicleRef; }
         public VehicleLocation getVehicleLocation() { return vehicleLocation; }
         public void setVehicleLocation(VehicleLocation vehicleLocation) { this.vehicleLocation = vehicleLocation; }
         public double getVelocity() { return velocity; }
         public void setVelocity(double velocity) { this.velocity = velocity; }
+
+        // 🚌 NUOVI Getters e Setters aggiunti dentro la classe
+        public String getWheelchairAccessible() { return wheelchairAccessible; }
+        public void setWheelchairAccessible(String wheelchairAccessible) { this.wheelchairAccessible = wheelchairAccessible; }
+        public Integer getNumberOfSeats() { return numberOfSeats; }
+        public void setNumberOfSeats(Integer numberOfSeats) { this.numberOfSeats = numberOfSeats; }
     }
 
     public static class VehicleLocation {

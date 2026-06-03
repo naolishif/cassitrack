@@ -22,6 +22,12 @@ public class VehicleStatusDTO {
     @JsonProperty("vehicle_id")
     private String vehicleId;
 
+    /** this id is used to link the MQTT message to the relative bus in the postgres DB */
+    private Integer busId;
+
+    private Integer numeroPosti;    // 🚌
+    private Boolean postoDisabili;
+
     /** Current latitude */
     private Double lat;
 

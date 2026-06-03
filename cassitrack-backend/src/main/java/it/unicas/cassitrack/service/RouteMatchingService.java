@@ -93,9 +93,7 @@ public class RouteMatchingService {
         int windowEnd   = currentSeconds + 1800; // 30 min ahead
 
         var allTrips = scheduledStopRepo
-                .findByRouteIdAndServiceTypeOrderByStopSequenceAsc(
-                        routeId, serviceType
-                );
+                .findByTripRouteIdAndTripServiceTypeOrderByStopSequenceAsc(routeId, serviceType);
 
         // Find the trip whose stop time is closest
         // to the current time

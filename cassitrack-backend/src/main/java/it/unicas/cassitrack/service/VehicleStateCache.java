@@ -1,87 +1,83 @@
 package it.unicas.cassitrack.service;
 
 import it.unicas.cassitrack.model.VehiclePosition;
+import it.unicas.cassitrack.repository.VehiclePositionRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * In-memory cache that holds the LATEST known position for each vehicle.
- *
- * Why not just query PostgreSQL or InfluxDB every time?
- * Because the fleet dashboard and OMNIMOVE poll positions every 30 seconds
- * and we don't want a DB round-trip on every request. This cache is updated
- * on every MQTT message arrival (potentially every 15 seconds per vehicle).
- *
- * A vehicle is considered "active" if its last message arrived within
- * ACTIVE_THRESHOLD_SECONDS (default: 5 minutes).
- *
- * For production, this could be moved to Redis so multiple backend
- * instances share the same state. For the prototype, an in-memory
- * ConcurrentHashMap is sufficient.
+ * Production-ready cache backed by REDIS that holds the LATEST known position for each vehicle.
+ * Disables the local ConcurrentHashMap and delegates persistence directly to Redis.
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor // 🧠 Genera in automatico il costruttore per iniettare il repository
 public class VehicleStateCache {
 
     /** A vehicle not seen for more than this many seconds is marked inactive */
     private static final long ACTIVE_THRESHOLD_SECONDS = 300;
 
-    /** vehicleId → latest VehiclePosition */
-    private final Map<String, VehiclePosition> cache = new ConcurrentHashMap<>();
+    // 🏎️ Iniettiamo il repository di Redis che abbiamo configurato prima
+    private final VehiclePositionRepository positionRepo;
 
     /**
-     * Update the cache with the latest position for a vehicle.
+     * Update Redis with the latest position for a vehicle.
      * Called by MqttMessageHandler after every valid message.
      */
     public void update(String vehicleId, VehiclePosition position) {
-        cache.put(vehicleId, position);
-        log.debug("Cache updated for vehicle {}: {}, {}", vehicleId, position.getLat(), position.getLon());
+        // Ci assicuriamo che il vehicleId sia impostato correttamente come chiave
+        position.setVehicleId(vehicleId);
+
+        // 💾 Salva (o sovrascrive) il record direttamente in Redis
+        positionRepo.save(position);
+
+        log.debug("Redis cache updated for vehicle {}: {}, {}", vehicleId, position.getLat(), position.getLon());
     }
 
     /**
-     * Get the latest known position for a specific vehicle.
+     * Get the latest known position from Redis.
      */
     public Optional<VehiclePosition> get(String vehicleId) {
-        return Optional.ofNullable(cache.get(vehicleId));
+        return positionRepo.findById(vehicleId);
     }
 
     /**
-     * Get all vehicles currently in the cache (active and inactive).
+     * Get all vehicles currently tracked in Redis.
      */
     public Collection<VehiclePosition> getAll() {
-        return cache.values();
+        return positionRepo.findAll();
     }
 
     /**
-     * Get only active vehicles (seen within ACTIVE_THRESHOLD_SECONDS).
+     * Get only active vehicles from Redis (seen within ACTIVE_THRESHOLD_SECONDS).
      */
     public Collection<VehiclePosition> getActive() {
         Instant cutoff = Instant.now().minusSeconds(ACTIVE_THRESHOLD_SECONDS);
-        return cache.values().stream()
-            .filter(v -> v.getReceivedAt() != null && v.getReceivedAt().isAfter(cutoff))
-            .toList();
+        return positionRepo.findAll().stream()
+                .filter(v -> v.getReceivedAt() != null && v.getReceivedAt().isAfter(cutoff))
+                .toList();
     }
 
     /**
-     * Check if a specific vehicle is considered active.
+     * Check if a specific vehicle is considered active in Redis.
      */
     public boolean isActive(String vehicleId) {
         return get(vehicleId)
-            .map(v -> v.getReceivedAt() != null &&
-                v.getReceivedAt().isAfter(Instant.now().minusSeconds(ACTIVE_THRESHOLD_SECONDS)))
-            .orElse(false);
+                .map(v -> v.getReceivedAt() != null &&
+                        v.getReceivedAt().isAfter(Instant.now().minusSeconds(ACTIVE_THRESHOLD_SECONDS)))
+                .orElse(false);
     }
 
     /**
-     * How many vehicles are currently tracked.
+     * How many vehicles are currently tracked in Redis.
      */
     public int size() {
-        return cache.size();
+        // Sfrutta il conteggio nativo dei record di Redis
+        return (int) positionRepo.count();
     }
 }

@@ -19,6 +19,20 @@ public class SiriMapper {
             journey.setVehicleLocation(location);
             journey.setVelocity(bus.getSpeed());
 
+            // 🚌 ── COSTRUIAMO I NUOVI DATI DA INVIARE A OMNIMOVE ──
+
+            // 1. Gestione Accessibilità Disabili (Boolean -> Stringa standard SIRI)
+            if (bus.getPostoDisabili() != null) {
+                // Se true diventa "true", se false diventa "false"
+                journey.setWheelchairAccessible(bus.getPostoDisabili() ? "true" : "false");
+            } else {
+                // Valore di ripiego previsto dallo standard SIRI se il dato manca
+                journey.setWheelchairAccessible("unknown");
+            }
+
+            // 2. Passiamo il numero di posti totale
+            journey.setNumberOfSeats(bus.getNumeroPosti());
+
             Siri.VehicleActivity activity = new Siri.VehicleActivity();
             // Inseriamo il timestamp reale di quando il bus ha inviato il dato!
             if (bus.getTimestamp() != null) {

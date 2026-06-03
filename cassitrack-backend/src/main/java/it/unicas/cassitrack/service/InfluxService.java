@@ -54,6 +54,11 @@ public class InfluxService {
                             .speed(record.getValueByKey("speed_kmh") != null ? ((Number) record.getValueByKey("speed_kmh")).floatValue() : 0)
                             .bleDeviceCount(record.getValueByKey("ble_device_count") != null ? ((Number) record.getValueByKey("ble_device_count")).intValue() : 0)
                             .timestamp(record.getTime())
+
+                            // 🚌 RECUPERIAMO I NUOVI CAMPI DIRETTAMENTE DAL RECORD DI INFLUXDB:
+                            .numeroPosti(record.getValueByKey("numero_posti") != null ? ((Number) record.getValueByKey("numero_posti")).intValue() : 0)
+                            .postoDisabili(record.getValueByKey("posto_disabili") != null ? (Boolean) record.getValueByKey("posto_disabili") : false)
+
                             .build();
 
                     telemetryList.add(dto);

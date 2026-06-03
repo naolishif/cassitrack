@@ -5,8 +5,9 @@ import com.influxdb.client.WriteApiBlocking;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import it.unicas.cassitrack.dto.MqttPositionPayload;
+import it.unicas.cassitrack.model.Bus;
 import it.unicas.cassitrack.model.VehiclePosition;
-import it.unicas.cassitrack.repository.VehiclePositionRepository;
+import it.unicas.cassitrack.repository.BusRepository;
 import it.unicas.cassitrack.service.VehicleStateCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,18 +18,8 @@ import org.springframework.messaging.MessagingException;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Optional;
 
-/**
- * Processes every incoming MQTT message from a bus.
- *
- * Pipeline:
- *   1. Parse the JSON payload
- *   2. Validate (coordinates in bounds, timestamp fresh)
- *   3. Write to InfluxDB (time-series store)
- *   4. Write to PostgreSQL (for route matching and relational queries)
- *   5. Update Redis cache (latest position per vehicle)
- *   6. Broadcast via WebSocket to the fleet dashboard
- */
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -36,16 +27,13 @@ public class MqttMessageHandler implements MessageHandler {
 
     private final ObjectMapper objectMapper;
     private final WriteApiBlocking influxWriteApi;
-    private final VehiclePositionRepository positionRepository;
     private final VehicleStateCache vehicleStateCache;
+    private final BusRepository busRepository; // 🚌 Iniettiamo il repository reale di Postgres!
 
-    // Cassino bounding box — reject obviously wrong coordinates
     private static final double LAT_MIN = 41.40;
     private static final double LAT_MAX = 41.60;
     private static final double LON_MIN = 13.70;
     private static final double LON_MAX = 14.00;
-
-    // Reject messages older than 5 minutes (stale buffered data, etc.)
     private static final long MAX_AGE_SECONDS = 300;
 
     @Override
@@ -66,94 +54,80 @@ public class MqttMessageHandler implements MessageHandler {
                 return;
             }
 
-            // ── Step 3: Write to InfluxDB (optional — skip if unavailable) ─
+            // ── Step 3: Query reale su Postgres per ottenere il bus ──
+            // Cerchiamo l'anagrafica del pullman usando il vehicleId del messaggio MQTT
+            Optional<Bus> associatedBus = busRepository.findByCurrentVehicleId(pos.getVehicleId());
+
+            Integer busId = associatedBus.map(Bus::getBusId).orElse(null);
+            Integer numeroPosti = associatedBus.map(Bus::getNumeroPosti).orElse(null);
+            Boolean postoDisabili = associatedBus.map(Bus::getPostoDisabili).orElse(null);
+
+            // ── Step 4: Scrittura su InfluxDB (Aggiungiamo informazioni utili allo storico) ──
             try {
-                writeToInflux(pos);
+                writeToInflux(pos, busId, numeroPosti, postoDisabili);
             } catch (Exception influxError) {
                 log.warn("InfluxDB unavailable, skipping time-series write for vehicle {}: {}",
                         pos.getVehicleId(), influxError.getMessage());
             }
 
-// ── Step 4: Write to PostgreSQL ───────────────────────────────
-            VehiclePosition entity = toEntity(pos);
-            positionRepository.save(entity);
-
-// ── Step 5: Update in-memory cache ────────────────────────────
+            // ── Step 5: Salva in REDIS (Cache arricchita con i dati statici del bus) ──
+            VehiclePosition entity = toEntity(pos, busId, numeroPosti, postoDisabili);
             vehicleStateCache.update(pos.getVehicleId(), entity);
 
-            log.info("Position processed for vehicle [{}]: lat={}, lon={}, speed={}km/h",
-                pos.getVehicleId(), pos.getLat(), pos.getLon(), pos.getSpeedKmh());
+            log.info("Processed [{}] -> Bus ID: {}, Posti: {}, Disabili: {} | lat={}, lon={}",
+                    pos.getVehicleId(), busId, numeroPosti, postoDisabili, pos.getLat(), pos.getLon());
 
         } catch (Exception e) {
             log.error("Failed to process MQTT message from topic [{}]: {}", topic, e.getMessage(), e);
-            // Do NOT rethrow — we don't want one bad message to crash the listener
         }
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Private helpers
-    // ─────────────────────────────────────────────────────────────
 
     private boolean isValid(MqttPositionPayload pos) {
-        if (pos.getVehicleId() == null || pos.getVehicleId().isBlank()) {
-            log.warn("Missing vehicle_id");
-            return false;
-        }
-        if (pos.getLat() == null || pos.getLon() == null) {
-            log.warn("Missing coordinates for vehicle {}", pos.getVehicleId());
-            return false;
-        }
-        if (pos.getLat() < LAT_MIN || pos.getLat() > LAT_MAX ||
-            pos.getLon() < LON_MIN || pos.getLon() > LON_MAX) {
-            log.warn("Coordinates out of Cassino bounds for vehicle {}: {}, {}",
-                pos.getVehicleId(), pos.getLat(), pos.getLon());
-            return false;
-        }
-        if (pos.getTimestamp() == null) {
-            log.warn("Missing timestamp for vehicle {}", pos.getVehicleId());
-            return false;
-        }
+        if (pos.getVehicleId() == null || pos.getVehicleId().isBlank()) return false;
+        if (pos.getLat() == null || pos.getLon() == null) return false;
+        if (pos.getLat() < LAT_MIN || pos.getLat() > LAT_MAX || pos.getLon() < LON_MIN || pos.getLon() > LON_MAX) return false;
+        if (pos.getTimestamp() == null) return false;
+
         long ageSeconds = Instant.now().getEpochSecond() - pos.getTimestamp().getEpochSecond();
-        if (ageSeconds > MAX_AGE_SECONDS) {
-            log.warn("Stale message for vehicle {} (age: {}s)", pos.getVehicleId(), ageSeconds);
-            return false;
-        }
-        return true;
+        return ageSeconds <= MAX_AGE_SECONDS;
     }
 
-    private void writeToInflux(MqttPositionPayload pos) {
+    private void writeToInflux(MqttPositionPayload pos, Integer busId, Integer numeroPosti, Boolean postoDisabili) {
         Point point = Point
-            .measurement("vehicle_position")
-            .addTag("vehicle_id", pos.getVehicleId())
-            .addField("lat", pos.getLat())
-            .addField("lon", pos.getLon())
-            .addField("speed_kmh", pos.getSpeedKmh() != null ? pos.getSpeedKmh() : 0.0)
-            .addField("heading_deg", pos.getHeadingDeg() != null ? pos.getHeadingDeg() : 0.0)
-            .time(pos.getTimestamp(), WritePrecision.S);
+                .measurement("vehicle_position")
+                .addTag("vehicle_id", pos.getVehicleId())
+                .addTag("bus_id", busId != null ? busId.toString() : "UNKNOWN")
+                .addField("lat", pos.getLat())
+                .addField("lon", pos.getLon())
+                .addField("speed_kmh", pos.getSpeedKmh() != null ? pos.getSpeedKmh() : 0.0)
+                .addField("heading_deg", pos.getHeadingDeg() != null ? pos.getHeadingDeg() : 0.0)
+                // 📈 Salviamo i posti e l'accessibilità anche nello storico InfluxDB per statistiche future
+                .addField("numero_posti", numeroPosti != null ? numeroPosti : 0)
+                .addField("posto_disabili", postoDisabili != null ? postoDisabili : false)
+                .time(pos.getTimestamp(), WritePrecision.S);
 
-        if (pos.getBleDeviceCount() != null) {
-            point.addField("ble_device_count", pos.getBleDeviceCount());
-        }
-        if (pos.getBatteryVoltage() != null) {
-            point.addField("battery_voltage", pos.getBatteryVoltage());
-        }
+        if (pos.getBleDeviceCount() != null) point.addField("ble_device_count", pos.getBleDeviceCount());
+        if (pos.getBatteryVoltage() != null) point.addField("battery_voltage", pos.getBatteryVoltage());
 
         influxWriteApi.writePoint(point);
     }
 
-    private VehiclePosition toEntity(MqttPositionPayload pos) {
+    private VehiclePosition toEntity(MqttPositionPayload pos, Integer busId, Integer numeroPosti, Boolean postoDisabili) {
         return VehiclePosition.builder()
-            .vehicleId(pos.getVehicleId())
-            .timestamp(pos.getTimestamp())
-            .lat(pos.getLat())
-            .lon(pos.getLon())
-            .speedKmh(pos.getSpeedKmh())
-            .headingDeg(pos.getHeadingDeg())
-            .bleDeviceCount(pos.getBleDeviceCount())
-            .batteryVoltage(pos.getBatteryVoltage())
-            .firmwareVersion(pos.getFirmwareVersion())
-            .scheduleStatus(VehiclePosition.ScheduleStatus.UNKNOWN) // computed later
-            .receivedAt(Instant.now())
-            .build();
+                .vehicleId(pos.getVehicleId())
+                .busId(busId)
+                .numeroPosti(numeroPosti)       // 💾 Salvato in Redis
+                .postoDisabili(postoDisabili)   // 💾 Salvato in Redis
+                .timestamp(pos.getTimestamp())
+                .lat(pos.getLat())
+                .lon(pos.getLon())
+                .speedKmh(pos.getSpeedKmh())
+                .headingDeg(pos.getHeadingDeg())
+                .bleDeviceCount(pos.getBleDeviceCount())
+                .batteryVoltage(pos.getBatteryVoltage())
+                .firmwareVersion(pos.getFirmwareVersion())
+                .scheduleStatus(VehiclePosition.ScheduleStatus.UNKNOWN)
+                .receivedAt(Instant.now())
+                .build();
     }
 }
