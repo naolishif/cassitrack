@@ -37,8 +37,8 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository; // Il nome corretto è questo
 
-    @Autowired
-    private UserService userService; // Verify if this is correct since it was in the previous working version
+    //@Autowired
+    //private UserService userService; // Verify if this is correct since it was in the previous working version
 
     @Autowired
     private PasswordEncoder passwordEncoder; // <--- INIETTATO PER CRIPTARE LA PASSWORD
@@ -75,7 +75,7 @@ public class AuthController {
                 .passwordHash(passwordEncoder.encode(req.getPassword()))
                 // Se il ruolo è presente nella richiesta usa quello (in MAIUSCOLO), altrimenti usa "TRAVELLER"
                 .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
-                .telephone(req.getTelephone())
+                //.telephone(req.getTelephone())
                 .build();
 
             userRepository.save(user); // Corretto in userRepository

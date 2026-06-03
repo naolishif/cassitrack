@@ -68,7 +68,7 @@ public class UserService {
                 .email(req.getEmail())
                 .passwordHash(passwordEncoder.encode(req.getPassword()))
                 .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
-                .telephone(req.getTelephone())
+                //.telephone(req.getTelephone())
                 .build();
 
         User saved = userRepository.save(user);
@@ -90,9 +90,9 @@ public class UserService {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        if (userRepository.existsByTelephone(user.getTelephone())) {
-            throw new IllegalArgumentException("Telephone already exists");
-        }
+        //if (userRepository.existsByTelephone(user.getTelephone())) {
+            //throw new IllegalArgumentException("Telephone already exists");
+        //}
 
         if (userRepository.existsByTaxId(user.getTaxId())) {
             throw new IllegalArgumentException("Tax ID already exists");
@@ -119,10 +119,10 @@ public class UserService {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        if (!user.getTelephone().equals(updatedUser.getTelephone()) &&
-                userRepository.existsByTelephone(updatedUser.getTelephone())) {
-            throw new IllegalArgumentException("Telephone already exists");
-        }
+        //if (!user.getTelephone().equals(updatedUser.getTelephone()) &&
+          //      userRepository.existsByTelephone(updatedUser.getTelephone())) {
+          //  throw new IllegalArgumentException("Telephone already exists");
+        //}
 
         if (!user.getTaxId().equals(updatedUser.getTaxId()) &&
                 userRepository.existsByTaxId(updatedUser.getTaxId())) {
@@ -133,7 +133,7 @@ public class UserService {
         user.setName(updatedUser.getName());
         user.setSurname(updatedUser.getSurname());
         user.setEmail(updatedUser.getEmail());
-        user.setTelephone(updatedUser.getTelephone());
+        //user.setTelephone(updatedUser.getTelephone());
         user.setRole(updatedUser.getRole());
 
         if (updatedUser.getPasswordHash() != null &&
