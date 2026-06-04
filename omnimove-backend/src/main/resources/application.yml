@@ -12,10 +12,10 @@ spring:
     password: omnimove
   sql:
     init:
-      mode: always
-      data-locations: classpath:database/init_data.sql
+      mode: never
+      data-locations: classpath:database/V2__init_data.sql
   jpa:
-    defer-datasource-initialization: true
+    defer-datasource-initialization: false
     hibernate:
       ddl-auto: validate
     show-sql: false
