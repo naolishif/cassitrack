@@ -40,39 +40,39 @@ public class UserService {
 
     public User registerUser(RegisterRequest req) {
 
+        // 1. Validate that all required fields are present (including telephone)
         if (req.getEmail() == null || req.getPassword() == null ||
                 req.getName() == null || req.getSurname() == null ||
-                req.getTaxId() == null) {
+                req.getTaxId() == null || req.getTelephone() == null) {
             throw new IllegalArgumentException(
-                    "Tax ID, Name, Surname, Email and Password are required."
-            );
+                    "Tax ID, Name, Surname, Email, Password, and Telephone are required.");
         }
 
+        // 2. Check for duplicates
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("Email already registered.");
         }
-
-        if (req.getTelephone() != null &&
-                userRepository.existsByTelephone(req.getTelephone())) {
-            throw new IllegalArgumentException("Telephone already registered.");
-        }
-
         if (userRepository.existsByTaxId(req.getTaxId())) {
             throw new IllegalArgumentException("Tax ID already registered.");
         }
+        if (userRepository.existsByTelephone(req.getTelephone())) {
+            throw new IllegalArgumentException("Telephone already registered.");
+        }
 
+        // 3. Build the User entity
         User user = User.builder()
                 .taxId(req.getTaxId())
                 .name(req.getName())
                 .surname(req.getSurname())
                 .email(req.getEmail())
+                .telephone(req.getTelephone()) // <-- Make sure to set it here!
                 .passwordHash(passwordEncoder.encode(req.getPassword()))
-                .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
-                //.telephone(req.getTelephone())
+                .role(req.getRole() != null ? req.getRole() : "TRAVELLER")
                 .build();
 
+        // 4. Save to database
         User saved = userRepository.save(user);
-        log.info("User registered: {}", saved.getEmail());
+        log.info("New user registered: {}", saved.getEmail());
         return saved;
     }
 
@@ -119,10 +119,10 @@ public class UserService {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        //if (!user.getTelephone().equals(updatedUser.getTelephone()) &&
-          //      userRepository.existsByTelephone(updatedUser.getTelephone())) {
-          //  throw new IllegalArgumentException("Telephone already exists");
-        //}
+        if (!user.getTelephone().equals(updatedUser.getTelephone()) &&
+                userRepository.existsByTelephone(updatedUser.getTelephone())) {
+            throw new IllegalArgumentException("Telephone already exists");
+        }
 
         if (!user.getTaxId().equals(updatedUser.getTaxId()) &&
                 userRepository.existsByTaxId(updatedUser.getTaxId())) {
@@ -133,7 +133,7 @@ public class UserService {
         user.setName(updatedUser.getName());
         user.setSurname(updatedUser.getSurname());
         user.setEmail(updatedUser.getEmail());
-        //user.setTelephone(updatedUser.getTelephone());
+        user.setTelephone(updatedUser.getTelephone());
         user.setRole(updatedUser.getRole());
 
         if (updatedUser.getPasswordHash() != null &&

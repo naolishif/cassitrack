@@ -24,6 +24,7 @@ public class AnalyticsService {
 
     private final VehiclePositionRepository positionRepo;
     private final VehicleService            vehicleService;
+    private final InfluxService             influxService;
 
     // ── View 1: Summary ───────────────────────────────────────
 
@@ -106,25 +107,35 @@ public class AnalyticsService {
     // ── View 3: Busiest hours ─────────────────────────────────
 
     public Map<String, Object> getBusiestHours() {
-        // 📈 INFLUXDB TODO: Redis non conosce la storia passata.
-        // Tutta la logica di aggregazione temporale dovrà essere fatta
-        // tramite una Flux Query su InfluxDB.
-        // Per ora restituiamo una struttura vuota per non bloccare l'app.
-
-        List<Map<String, Object>> hourlyData = new ArrayList<>();
-        // Mock data temporaneo
-        for (int h = 0; h < 24; h++) {
-            Map<String, Object> p = new LinkedHashMap<>();
-            p.put("hour", String.format("%02d:00", h));
-            p.put("count", 0);
-            hourlyData.add(p);
-        }
+        // 🚀 We are no longer mocking! Fetching real 24h aggregated data from InfluxDB
+        List<Map<String, Object>> hourlyData = influxService.getBusiestHours();
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("hourly_activity", hourlyData);
-        out.put("peak_hour", "N/A");
-        out.put("period_hours", 24);
-        out.put("note", "Historical data will be available once InfluxDB is integrated.");
+        out.put("message", "Data aggregated from InfluxDB stop_arrival events");
         return out;
     }
+
+//    public Map<String, Object> getBusiestHours() {
+//        // 📈 INFLUXDB TODO: Redis non conosce la storia passata.
+//        // Tutta la logica di aggregazione temporale dovrà essere fatta
+//        // tramite una Flux Query su InfluxDB.
+//        // Per ora restituiamo una struttura vuota per non bloccare l'app.
+//
+//        List<Map<String, Object>> hourlyData = new ArrayList<>();
+//        // Mock data temporaneo
+//        for (int h = 0; h < 24; h++) {
+//            Map<String, Object> p = new LinkedHashMap<>();
+//            p.put("hour", String.format("%02d:00", h));
+//            p.put("count", 0);
+//            hourlyData.add(p);
+//        }
+//
+//        Map<String, Object> out = new LinkedHashMap<>();
+//        out.put("hourly_activity", hourlyData);
+//        out.put("peak_hour", "N/A");
+//        out.put("period_hours", 24);
+//        out.put("note", "Historical data will be available once InfluxDB is integrated.");
+//        return out;
+//    }
 }

@@ -5,99 +5,76 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.integration.mqtt.support.MqttHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Driver Web App endpoint.
- *
- * Receives GPS from browser Geolocation API and
- * publishes it to MQTT — same format as ESP32 hardware.
- *
- * This replaces the Android app for demo purposes.
- * The driver opens driver-app.html in their phone browser,
- * grants location permission, and their GPS is published
- * to the CASSITRACK system in real time.
- *
- * POST /api/v1/driver/location
- */
 @RestController
 @RequestMapping("/api/v1/driver")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Driver App", description = "Web-based driver GPS tracking")
+@Tag(name = "Driver App", description = "Web-based driver GPS publisher")
 public class DriverController {
 
-    @Value("${mqtt.broker.url}")
-    private String brokerUrl;
-
     private final ObjectMapper objectMapper;
+    // Inject the outbound channel we just created in MqttConfig
+    private final MessageChannel mqttOutboundChannel;
 
     @PostMapping("/location")
-    @Operation(summary = "Publish driver GPS location",
-        description = "Receives GPS from driver's browser and publishes to MQTT. " +
-            "Simulates what the Android driver app would do.")
+    @Operation(summary = "Publish driver location securely")
     public ResponseEntity<Map<String, Object>> publishLocation(
-            @RequestBody Map<String, Object> body) {
+            @RequestBody Map<String, Object> body,
+            Principal principal) {
 
         try {
-            String vehicleId = (String) body.getOrDefault(
-                "vehicle_id", "DRIVER-001");
-            double lat = Double.parseDouble(
-                body.getOrDefault("lat", 41.4917).toString());
-            double lon = Double.parseDouble(
-                body.getOrDefault("lon", 13.8314).toString());
-            double speed = Double.parseDouble(
-                body.getOrDefault("speed_kmh", 0.0).toString());
-            double heading = Double.parseDouble(
-                body.getOrDefault("heading_deg", 0.0).toString());
+            // 1. Identify the authenticated driver natively via Spring Security
+            String driverEmail = principal != null ? principal.getName() : "UNKNOWN_DRIVER";
 
-            // Build MQTT payload — same format as ESP32
+            // 2. Extract requested vehicle_id from payload.
+            String vehicleId = (String) body.getOrDefault("vehicle_id", "UNKNOWN_VEHICLE");
+
+            // TODO: Query your database here to verify this driverEmail is currently assigned to this vehicleId!
+            // Example: if (!assignmentService.isDriverAssignedToBus(driverEmail, vehicleId)) throw new SecurityException();
+
+            Double lat = Double.valueOf(body.getOrDefault("lat", 0.0).toString());
+            Double lon = Double.valueOf(body.getOrDefault("lon", 0.0).toString());
+            Double speed = Double.valueOf(body.getOrDefault("speed_kmh", 0.0).toString());
+
+            // 3. Build the standardized payload
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("vehicle_id", vehicleId);
             payload.put("timestamp", Instant.now().toString());
             payload.put("lat", lat);
             payload.put("lon", lon);
             payload.put("speed_kmh", speed);
-            payload.put("heading_deg", heading);
-            payload.put("ble_device_count", 0);
-            payload.put("battery_voltage", 100.0);
-            payload.put("firmware_version", "driver-web-1.0");
+            payload.put("heading_deg", body.getOrDefault("heading_deg", 0.0));
+            payload.put("battery_voltage", body.getOrDefault("battery_voltage", 100.0));
 
-            String json = objectMapper.writeValueAsString(payload);
+            String jsonString = objectMapper.writeValueAsString(payload);
             String topic = "cassitrack/" + vehicleId + "/position";
 
-            // Publish to MQTT
-            MqttClient client = new MqttClient(
-                brokerUrl,
-                "driver-web-" + vehicleId + "-" + System.currentTimeMillis()
-            );
-            MqttConnectOptions opts = new MqttConnectOptions();
-            opts.setConnectionTimeout(5);
-            opts.setCleanSession(true);
-            client.connect(opts);
-            MqttMessage msg = new MqttMessage(json.getBytes());
-            msg.setQos(1);
-            client.publish(topic, msg);
-            client.disconnect();
-            client.close();
+            // 4. Publish via Spring Integration (Reuses standard connection, No DoS vulnerability)
+            Message<String> message = MessageBuilder
+                    .withPayload(jsonString)
+                    .setHeader(MqttHeaders.TOPIC, topic)
+                    .build();
 
-            log.info("Driver GPS published: {} at [{}, {}] {}km/h",
-                vehicleId, lat, lon, speed);
+            mqttOutboundChannel.send(message);
+
+            log.info("Driver {} securely published GPS for {} at [{}, {}]", driverEmail, vehicleId, lat, lon);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("success", true);
             response.put("vehicle_id", vehicleId);
-            response.put("topic", topic);
-            response.put("timestamp", Instant.now().toString());
+            response.put("published_by", driverEmail);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -107,15 +84,5 @@ public class DriverController {
             error.put("error", e.getMessage());
             return ResponseEntity.internalServerError().body(error);
         }
-    }
-
-    @GetMapping("/ping")
-    @Operation(summary = "Check driver API is reachable")
-    public ResponseEntity<Map<String, Object>> ping() {
-        return ResponseEntity.ok(Map.of(
-            "status", "ok",
-            "message", "Driver API ready",
-            "timestamp", Instant.now().toString()
-        ));
     }
 }

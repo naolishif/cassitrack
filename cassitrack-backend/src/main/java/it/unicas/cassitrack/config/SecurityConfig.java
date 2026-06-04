@@ -58,24 +58,24 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // ── 1. Public Access points (UI and Auth) ───────────────
-                        .requestMatchers("/error", "/", "/cassitrack-login.html", "/api/v1/auth/**").permitAll()
-
                         // Allow internal forwards and error routing to pass through
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 
+                        // ── 1. Public Access points (UI and Auth) ───────────────
+                        .requestMatchers("/error", "/", "/cassitrack-login.html", "/api/v1/auth/login").permitAll()
+
                         // ── 2. Public APIs (GTFS, Live Tracking, Swagger) ───────────────
-                        .requestMatchers(
-                                "/h2-console/**",
-                                "/api/v1/vehicles",
-                                "/api/v1/vehicles/{id}",
-                                "/api/v1/stops/{stopId}/arrivals",
-                                "/api/v1/telemetry/**",
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, // Public for OMNIMOVE
+                                "/api/v1/vehicles/**",
+                                "/api/v1/stops/**",
                                 "/api/v1/siri/**",
                                 "/api/v1/feed/**",
-                                "/api/v1/driver/**",
-                                "/api/v1/ai/**",
                                 "/api/v1/journeys/**",
+                                "/api/v1/telemetry/**"
+                        ).permitAll()
+
+                        .requestMatchers( // Dev tools
+                                "/h2-console/**",
                                 "/ws/**",
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
@@ -86,13 +86,24 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/cassitrack-fleetmanager.html",
                                 "/api/v1/analytics/**",
-                                "cassitrack-analytics.html"
+                                "cassitrack-analytics.html",
+                                "/api/v1/ai/**"
                         ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
 
                         .requestMatchers(
                                 "/cassitrack-admin.html",
-                                "/api/v1/users/**"
+                                "/api/v1/users/**",
+                                "/api/v1/telemetry/**",
+                                "/api/v1/ai/**",
+                                "/api/v1/auth/register"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+
+                        .requestMatchers("/api/v1/driver/**"
+                        ).hasAnyAuthority("DRIVER", "ROLE_DRIVER")
+
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/vehicles/**", "/api/v1/stops/**", "/api/v1/journeys/**").hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/vehicles/**", "/api/v1/stops/**", "/api/v1/journeys/**").hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/v1/vehicles/**", "/api/v1/stops/**", "/api/v1/journeys/**").hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
 
                         // ── 4. Everything else requires authentication ───────
                         .anyRequest().authenticated()
