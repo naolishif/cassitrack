@@ -25,22 +25,20 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ─────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
     // GET ALL USERS
-    // ─────────────────────────────
-
+    // ─────────────────────────────────────────────────────────────────
     public List<User> getAllUsers() {
         log.info("Fetching all users");
         return userRepository.findAll();
     }
 
-    // ─────────────────────────────
-    // REGISTER USER (Auth flow)
-    // ─────────────────────────────
-
+    // ─────────────────────────────────────────────────────────────────
+    // REGISTER USER (Auth flow - Public registration)
+    // ─────────────────────────────────────────────────────────────────
     public User registerUser(RegisterRequest req) {
 
-        if (req.getEmail() == null || req.getPassword() == null ||
+        if (req.getEmail() == null || req.getPasswordHash() == null ||
                 req.getName() == null || req.getSurname() == null ||
                 req.getTaxId() == null) {
             throw new IllegalArgumentException(
@@ -66,7 +64,7 @@ public class UserService {
                 .name(req.getName())
                 .surname(req.getSurname())
                 .email(req.getEmail())
-                .passwordHash(passwordEncoder.encode(req.getPassword()))
+                .passwordHash(passwordEncoder.encode(req.getPasswordHash()))
                 .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
                 .telephone(req.getTelephone())
                 .build();
@@ -76,82 +74,87 @@ public class UserService {
         return saved;
     }
 
-    // ─────────────────────────────
-    // CREATE USER (Admin flow)
-    // ─────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
+    // CREATE USER (Admin flow - Receives the validated DTO)
+    // ─────────────────────────────────────────────────────────────────
+    public User createUser(RegisterRequest req) {
 
-    public User createUser(User user) {
-
-        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+        if (req.getPasswordHash() == null || req.getPasswordHash().isBlank()) {
             throw new IllegalArgumentException("Password is required");
         }
 
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (userRepository.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        if (userRepository.existsByTelephone(user.getTelephone())) {
+        if (userRepository.existsByTelephone(req.getTelephone())) {
             throw new IllegalArgumentException("Telephone already exists");
         }
 
-        if (userRepository.existsByTaxId(user.getTaxId())) {
+        if (userRepository.existsByTaxId(req.getTaxId())) {
             throw new IllegalArgumentException("Tax ID already exists");
         }
 
-        user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
+        // We convert the safe DTO data into a database User entity
+        User user = User.builder()
+                .taxId(req.getTaxId())
+                .name(req.getName())
+                .surname(req.getSurname())
+                .email(req.getEmail())
+                .passwordHash(passwordEncoder.encode(req.getPasswordHash())) // Hashing raw text!
+                .role(req.getRole() != null ? req.getRole().toUpperCase() : "DRIVER")
+                .telephone(req.getTelephone())
+                .build();
 
         User saved = userRepository.save(user);
-        log.info("User created: {}", saved.getEmail());
+        log.info("User created by admin: {}", saved.getEmail());
         return saved;
     }
 
-    // ─────────────────────────────
-    // UPDATE USER
-    // ─────────────────────────────
-
-    public User updateUser(Long id, User updatedUser) {
+    // ─────────────────────────────────────────────────────────────────
+    // UPDATE USER (Admin flow - Handles optional password change)
+    // ─────────────────────────────────────────────────────────────────
+    public User updateUser(Long id, RegisterRequest req) {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (!user.getEmail().equals(updatedUser.getEmail()) &&
-                userRepository.existsByEmail(updatedUser.getEmail())) {
+        if (!user.getEmail().equals(req.getEmail()) &&
+                userRepository.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        if (!user.getTelephone().equals(updatedUser.getTelephone()) &&
-                userRepository.existsByTelephone(updatedUser.getTelephone())) {
+        if (user.getTelephone() != null && !user.getTelephone().equals(req.getTelephone()) &&
+                userRepository.existsByTelephone(req.getTelephone())) {
             throw new IllegalArgumentException("Telephone already exists");
         }
 
-        if (!user.getTaxId().equals(updatedUser.getTaxId()) &&
-                userRepository.existsByTaxId(updatedUser.getTaxId())) {
+        if (!user.getTaxId().equals(req.getTaxId()) &&
+                userRepository.existsByTaxId(req.getTaxId())) {
             throw new IllegalArgumentException("Tax ID already exists");
         }
 
-        user.setTaxId(updatedUser.getTaxId());
-        user.setName(updatedUser.getName());
-        user.setSurname(updatedUser.getSurname());
-        user.setEmail(updatedUser.getEmail());
-        user.setTelephone(updatedUser.getTelephone());
-        user.setRole(updatedUser.getRole());
+        // Map updated fields from DTO to entity
+        user.setTaxId(req.getTaxId());
+        user.setName(req.getName());
+        user.setSurname(req.getSurname());
+        user.setEmail(req.getEmail());
+        user.setTelephone(req.getTelephone());
+        user.setRole(req.getRole() != null ? req.getRole().toUpperCase() : user.getRole());
 
-        if (updatedUser.getPasswordHash() != null &&
-                !updatedUser.getPasswordHash().isBlank()) {
-            user.setPasswordHash(
-                    passwordEncoder.encode(updatedUser.getPasswordHash())
-            );
+        // Only update and re-hash password if the admin typed a new one in the modal
+        if (req.getPasswordHash() != null && !req.getPasswordHash().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(req.getPasswordHash()));
         }
 
         User saved = userRepository.save(user);
-        log.info("User updated: {}", saved.getEmail());
+        log.info("User updated by admin: {}", saved.getEmail());
         return saved;
     }
 
-    // ─────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
     // DELETE USER
-    // ─────────────────────────────
-
+    // ─────────────────────────────────────────────────────────────────
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new IllegalArgumentException("User not found");
@@ -160,10 +163,9 @@ public class UserService {
         log.info("User deleted: id={}", id);
     }
 
-    // ─────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
     // GET USER BY EMAIL
-    // ─────────────────────────────
-
+    // ─────────────────────────────────────────────────────────────────
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

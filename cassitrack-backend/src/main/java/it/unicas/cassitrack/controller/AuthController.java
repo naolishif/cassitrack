@@ -19,7 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
-@Slf4j // <--- AGGIUNTO PER ABILITARE L'OGGETTO log
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -33,23 +33,17 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    // ─────────────────────────────────────────────────────────────────
+    // REGISTER ACCOUNT (SOLVED FLOW)
+    // ─────────────────────────────────────────────────────────────────
     @PostMapping("/register")
     @Operation(summary = "Register a new user account")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
 
         try {
-            User user = User.builder()
-                    .taxId(req.getTaxId())
-                    .name(req.getName())
-                    .surname(req.getSurname())
-                    .email(req.getEmail())
-                    .passwordHash(req.getPassword()) // createUser will encode it
-                    .role(req.getRole() != null ? req.getRole().toUpperCase() : "TRAVELLER")
-                    .telephone(req.getTelephone())
-                    .build();
-
-            User saved = userService.createUser(user); // ← all logic lives in the service
-            log.info("New user registered: {}", saved.getEmail());
+            // FIXED: We now delegate the registration to registerUser(req) which matches perfectly!
+            User saved = userService.registerUser(req);
+            log.info("New user registered successfully via public flow: {}", saved.getEmail());
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(AuthResponse.builder()
@@ -69,6 +63,9 @@ public class AuthController {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // LOGIN ACCOUNT
+    // ─────────────────────────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
 
@@ -81,8 +78,7 @@ public class AuthController {
             );
 
             String token = jwtUtil.generateToken(authentication);
-
-            User user = userService.getUserByEmail(loginRequest.getEmail()); // ← service, not repo
+            User user = userService.getUserByEmail(loginRequest.getEmail());
 
             LoginResponse response = new LoginResponse();
             response.setToken(token);
