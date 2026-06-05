@@ -40,12 +40,12 @@ public class UserService {
 
         if (req.getEmail() == null || req.getPasswordHash() == null ||
                 req.getName() == null || req.getSurname() == null ||
-                req.getTaxId() == null) {
+                req.getTaxId() == null || req.getTelephone() == null) {
             throw new IllegalArgumentException(
-                    "Tax ID, Name, Surname, Email and Password are required."
-            );
+                    "Tax ID, Name, Surname, Email, Password, and Telephone are required.");
         }
 
+        // 2. Check for duplicates
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("Email already registered.");
         }
@@ -59,6 +59,7 @@ public class UserService {
             throw new IllegalArgumentException("Tax ID already registered.");
         }
 
+        // 3. Build the User entity
         User user = User.builder()
                 .taxId(req.getTaxId())
                 .name(req.getName())
@@ -69,8 +70,9 @@ public class UserService {
                 .telephone(req.getTelephone())
                 .build();
 
+        // 4. Save to database
         User saved = userRepository.save(user);
-        log.info("User registered: {}", saved.getEmail());
+        log.info("New user registered: {}", saved.getEmail());
         return saved;
     }
 

@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS users (
     email         VARCHAR(200) NOT NULL UNIQUE, -- Login email identifier
     password_hash VARCHAR(200) NOT NULL,        -- bcrypt hash
     role          VARCHAR(20)  NOT NULL DEFAULT 'DRIVER', -- Can be FLEET_MANAGER or DRIVER
-    telephone     VARCHAR(20)                    -- Contact telephone number
+    telephone     VARCHAR(20)  NOT NULL UNIQUE  -- Contact telephone number
 );
 
 -- ── SEEDING SECURE USERS ──────────────────────────────────────────

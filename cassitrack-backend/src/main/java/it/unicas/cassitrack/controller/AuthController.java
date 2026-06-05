@@ -33,9 +33,6 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
-    // ─────────────────────────────────────────────────────────────────
-    // REGISTER ACCOUNT (SOLVED FLOW)
-    // ─────────────────────────────────────────────────────────────────
     @PostMapping("/register")
     @Operation(summary = "Register a new user account")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {

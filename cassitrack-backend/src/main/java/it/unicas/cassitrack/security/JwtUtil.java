@@ -23,11 +23,16 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
+    // EXISTING METHOD: Used during Login
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+        return generateTokenFromUsername(userPrincipal.getUsername());
+    }
 
+    // NEW METHOD: Used during Registration
+    public String generateTokenFromUsername(String username) {
         return Jwts.builder()
-                .setSubject(userPrincipal.getUsername())
+                .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -50,6 +55,7 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
+            // In a real app, you might want to log this exception
             return false;
         }
     }
