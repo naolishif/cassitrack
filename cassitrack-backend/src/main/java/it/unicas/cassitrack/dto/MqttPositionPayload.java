@@ -54,4 +54,13 @@ public class MqttPositionPayload {
 
     @JsonProperty("firmware_version")
     private String firmwareVersion;
+
+    @JsonProperty("trip_id")
+    private String tripId;
+
+    @JsonProperty("delay")
+    private Integer delay;
+
+    @JsonProperty("last_stop_registered")
+    private String lastStopRegistered;
 }

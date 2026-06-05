@@ -1,25 +1,10 @@
 #!/usr/bin/env python3
 """
-CASSITRACK — GPS Bus Simulator
+CASSITRACK — GPS Bus Simulator (With Analytics Support)
 University of Cassino and Southern Lazio
 
 Simulates one or more MAGNI buses moving along the Bus 16 route
 and publishes their positions to the MQTT broker every N seconds.
-
-This lets you develop and test the entire backend without
-any real hardware (ESP32 / GPS tracker on a bus).
-
-Usage:
-    pip install paho-mqtt
-    python3 gps_simulator.py                    # 1 bus, default settings
-    python3 gps_simulator.py --buses 3          # 3 buses on the same route
-    python3 gps_simulator.py --interval 15      # publish every 15 seconds
-    python3 gps_simulator.py --broker localhost --port 1883
-
-Topics published:
-    cassitrack/MAGNI-001/position
-    cassitrack/MAGNI-002/position
-    ...
 """
 
 import argparse
@@ -32,8 +17,6 @@ from datetime import datetime, timezone
 import paho.mqtt.client as mqtt
 
 # ── Bus 16 Route: stop coordinates in order ──────────────────────
-# These are the actual approximate coordinates of stops on the route
-# from Cassino Stazione to Campus Folcara.
 ROUTE_STOPS = [
     {"id": "CASSINO-STAZIONE",  "name": "Cassino Stazione FS",     "lat": 41.4892, "lon": 13.8282},
     {"id": "CASSINO-CENTRO",    "name": "Cassino Centro",           "lat": 41.4917, "lon": 13.8314},
@@ -48,11 +31,11 @@ STEPS_BETWEEN_STOPS = 10
 
 def interpolate_route(stops, steps_between):
     """
-    Generate a list of (lat, lon) waypoints by interpolating
-    linearly between each pair of consecutive stops.
-    At the end of the route, the bus reverses back to the start.
+    Generate a list of waypoints and keep track of which stop names
+    they correspond to.
     """
-    waypoints = []
+    waypoints_data = []
+
     for i in range(len(stops) - 1):
         a = stops[i]
         b = stops[i + 1]
@@ -60,12 +43,17 @@ def interpolate_route(stops, steps_between):
             t = step / steps_between
             lat = a["lat"] + (b["lat"] - a["lat"]) * t
             lon = a["lon"] + (b["lon"] - a["lon"]) * t
-            waypoints.append((lat, lon))
+            # The current stop is 'a' until we reach 'b'
+            waypoints_data.append(((lat, lon), a["name"]))
+
     # Add last stop
-    waypoints.append((stops[-1]["lat"], stops[-1]["lon"]))
+    waypoints_data.append(((stops[-1]["lat"], stops[-1]["lon"]), stops[-1]["name"]))
+
     # Return trip (reverse)
-    waypoints += list(reversed(waypoints[:-1]))
-    return waypoints
+    return_trip = list(reversed(waypoints_data[:-1]))
+    waypoints_data += return_trip
+
+    return waypoints_data
 
 
 def compute_heading(lat1, lon1, lat2, lon2):
@@ -88,23 +76,30 @@ def add_gps_noise(lat, lon, meters=5):
 
 
 class BusSimulator:
-    """Simulates a single bus moving along the route."""
+    """Simulates a single bus moving along the route with analytical data."""
 
     def __init__(self, vehicle_id: str, offset: int = 0):
         self.vehicle_id = vehicle_id
-        self.waypoints = interpolate_route(ROUTE_STOPS, STEPS_BETWEEN_STOPS)
-        # Offset different buses so they're not all at the same position
-        self.position_index = offset % len(self.waypoints)
+        self.waypoints_data = interpolate_route(ROUTE_STOPS, STEPS_BETWEEN_STOPS)
+        self.position_index = offset % len(self.waypoints_data)
         self.speed_kmh = random.uniform(20, 45)
 
-    def next_position(self):
-        """Advance the bus one step and return a position payload."""
-        current = self.waypoints[self.position_index]
-        next_idx = (self.position_index + 1) % len(self.waypoints)
-        next_wp = self.waypoints[next_idx]
+        # ── Analytics Simulated States ──
+        self.trip_id = f"TRIP_L16_{vehicle_id.replace('-', '_')}"
+        # Empezamos con un retraso aleatorio entre 0 y 5 minutos enteros
+        self.simulated_delay_min = random.randint(0, 5)
 
-        lat, lon = add_gps_noise(current[0], current[1])
-        heading = compute_heading(current[0], current[1], next_wp[0], next_wp[1])
+    def next_position(self):
+        """Advance the bus one step and return a position payload with analytics."""
+        current_data = self.waypoints_data[self.position_index]
+        current_coords = current_data[0]
+        last_stop_name = current_data[1]
+
+        next_idx = (self.position_index + 1) % len(self.waypoints_data)
+        next_coords = self.waypoints_data[next_idx][0]
+
+        lat, lon = add_gps_noise(current_coords[0], current_coords[1])
+        heading = compute_heading(current_coords[0], current_coords[1], next_coords[0], next_coords[1])
 
         # Simulate realistic speed variation
         self.speed_kmh += random.uniform(-3, 3)
@@ -115,6 +110,10 @@ class BusSimulator:
         if at_stop:
             self.speed_kmh = 0
 
+        # Fluctuating delay en minutos enteros (máximo 30 minutos)
+        self.simulated_delay_min += random.choice([-1, 0, 1])
+        self.simulated_delay_min = max(0, min(30, self.simulated_delay_min))
+
         self.position_index = next_idx
 
         return {
@@ -124,9 +123,14 @@ class BusSimulator:
             "lon": round(lon, 6),
             "speed_kmh": round(self.speed_kmh, 1),
             "heading_deg": round(heading, 1),
-            "ble_device_count": random.randint(3, 35),   # simulated passengers
+            "ble_device_count": random.randint(3, 35),
             "battery_voltage": round(random.uniform(12.0, 12.8), 2),
-            "firmware_version": "1.0.0-sim"
+            "firmware_version": "1.0.0-sim",
+
+            # ─── ADDED FOR THE ANALYTICS SPRINT ───
+            "trip_id": self.trip_id,
+            "delay": self.simulated_delay_min,  # Enviamos los minutos limpios
+            "last_stop_registered": last_stop_name
         }
 
 
@@ -142,10 +146,9 @@ def main():
     parser.add_argument("--broker",   default="localhost",  help="MQTT broker host")
     parser.add_argument("--port",     type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--buses",    type=int, default=1,  help="Number of buses to simulate")
-    parser.add_argument("--interval", type=int, default=30, help="Publish interval in seconds")
+    parser.add_argument("--interval", type=int, default=10, help="Publish interval in seconds")
     args = parser.parse_args()
 
-    # Create bus simulators, spaced evenly along the route
     total_waypoints = len(interpolate_route(ROUTE_STOPS, STEPS_BETWEEN_STOPS))
     buses = [
         BusSimulator(
@@ -155,18 +158,16 @@ def main():
         for i in range(args.buses)
     ]
 
-    # Connect to MQTT broker
     client = mqtt.Client(userdata={"broker": args.broker, "port": args.port})
     client.on_connect = on_connect
     client.connect(args.broker, args.port, keepalive=60)
     client.loop_start()
 
-    time.sleep(1)  # wait for connection
+    time.sleep(1)
 
     print(f"\n🚌 Simulating {args.buses} bus(es) on Linea 16 — Cassino")
     print(f"📡 Publishing to MQTT every {args.interval}s")
-    print(f"📍 Route: Cassino Stazione → Campus Folcara → (return)")
-    print(f"🔗 Topics: cassitrack/MAGNI-XXX/position")
+    print(f"📈 Analytics Enabled: sending [trip_id, delay, last_stop_registered]")
     print(f"\nPress Ctrl+C to stop.\n")
 
     try:
@@ -177,9 +178,11 @@ def main():
                 client.publish(topic, json.dumps(payload), qos=1)
                 print(
                     f"📤 {payload['vehicle_id']} | "
-                    f"lat={payload['lat']}, lon={payload['lon']} | "
-                    f"speed={payload['speed_kmh']} km/h | "
-                    f"BLE devices={payload['ble_device_count']}"
+                    f"Pos: ({payload['lat']}, {payload['lon']}) | "
+                    f"Speed: {payload['speed_kmh']} km/h | "
+                    f"Stop: {payload['last_stop_registered']} | "
+                    f"Delay: {payload['delay']}m | "  # Cambiado a 'm' para ver minutos en consola
+                    f"Trip: {payload['trip_id']}"
                 )
             print()
             time.sleep(args.interval)

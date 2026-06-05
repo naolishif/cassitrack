@@ -31,7 +31,7 @@ public class InfluxService {
 
         InfluxDBClient client = InfluxDBClientFactory.create(influxUrl, token.toCharArray(), org, bucket);
 
-        // QUERY AGGIORNATA: Usa vehicle_position e compatta le colonne con pivot!
+        // QUERY AGGIORNATA: Estrae vehicle_position con la funzione pivot per l'analisi dei dati
         String fluxQuery = String.format(
                 "from(bucket: \"%s\") " +
                         "|> range(start: -1h) " +
@@ -46,13 +46,19 @@ public class InfluxService {
             for (FluxTable table : tables) {
                 for (FluxRecord record : table.getRecords()) {
 
-                    // NOMI AGGIORNATI COME DA SCHERMATA: lat, lon, speed_kmh, vehicle_id
+                    // Estrazione dei nuovi campi analitici con controlli di sicurezza per i valori nulli
                     BusTelemetryDTO dto = BusTelemetryDTO.builder()
                             .busId(record.getValueByKey("vehicle_id") != null ? record.getValueByKey("vehicle_id").toString() : "UNKNOWN")
                             .latitude(record.getValueByKey("lat") != null ? ((Number) record.getValueByKey("lat")).floatValue() : 0.0f)
                             .longitude(record.getValueByKey("lon") != null ? ((Number) record.getValueByKey("lon")).floatValue() : 0.0f)
                             .speed(record.getValueByKey("speed_kmh") != null ? ((Number) record.getValueByKey("speed_kmh")).floatValue() : 0)
                             .bleDeviceCount(record.getValueByKey("ble_device_count") != null ? ((Number) record.getValueByKey("ble_device_count")).intValue() : 0)
+
+                            // ─── NEW ───
+                            .tripId(record.getValueByKey("trip_id") != null ? record.getValueByKey("trip_id").toString() : "UNKNOWN")
+                            .delay(record.getValueByKey("delay") != null ? ((Number) record.getValueByKey("delay")).intValue() : 0)
+                            .lastStopRegistered(record.getValueByKey("last_stop_registered") != null ? record.getValueByKey("last_stop_registered").toString() : "-")
+
                             .timestamp(record.getTime())
                             .build();
 

@@ -13,4 +13,7 @@ public class BusTelemetryDTO {
     private float speed;
     private int bleDeviceCount;
     private Instant timestamp;
+    private Integer delay;
+    private String lastStopRegistered;
+    private String tripId;
 }

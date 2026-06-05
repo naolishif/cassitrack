@@ -123,19 +123,27 @@ public class MqttMessageHandler implements MessageHandler {
 
     private void writeToInflux(MqttPositionPayload pos) {
         Point point = Point
-            .measurement("vehicle_position")
-            .addTag("vehicle_id", pos.getVehicleId())
-            .addField("lat", pos.getLat())
-            .addField("lon", pos.getLon())
-            .addField("speed_kmh", pos.getSpeedKmh() != null ? pos.getSpeedKmh() : 0.0)
-            .addField("heading_deg", pos.getHeadingDeg() != null ? pos.getHeadingDeg() : 0.0)
-            .time(pos.getTimestamp(), WritePrecision.S);
+                .measurement("vehicle_position")
+                .addTag("vehicle_id", pos.getVehicleId())
+                .addTag("trip_id", pos.getTripId() != null ? pos.getTripId() : "UNKNOWN")
+                .addField("lat", pos.getLat())
+                .addField("lon", pos.getLon())
+                .addField("speed_kmh", pos.getSpeedKmh() != null ? pos.getSpeedKmh() : 0.0)
+                .addField("heading_deg", pos.getHeadingDeg() != null ? pos.getHeadingDeg() : 0.0)
+                .time(pos.getTimestamp(), WritePrecision.S);
 
         if (pos.getBleDeviceCount() != null) {
             point.addField("ble_device_count", pos.getBleDeviceCount());
         }
         if (pos.getBatteryVoltage() != null) {
             point.addField("battery_voltage", pos.getBatteryVoltage());
+        }
+
+        if (pos.getDelay() != null) {
+            point.addField("delay", pos.getDelay());
+        }
+        if (pos.getLastStopRegistered() != null) {
+            point.addField("last_stop_registered", pos.getLastStopRegistered());
         }
 
         influxWriteApi.writePoint(point);
