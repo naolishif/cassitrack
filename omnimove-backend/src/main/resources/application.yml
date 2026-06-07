@@ -91,6 +91,6 @@ jwt:
 influx:
   url: ${INFLUX_URL:http://localhost:8087}
   # Paste here your InfluxDB generated token:
-  token: ${INFLUX_TOKEN:259SpThx8dDpp5TM2uve_Ff4J6_if2mzXKp8UDAqPERLKc-UK9e_wHSyrG92Cps0obG_jNdvbyBpXvobpNvMow==}
+  token: ${INFLUX_TOKEN:OG0tfWw6uZU0eAjBzIxk3WHD5a0qJpf-IjgMTlOe9Pke_xdLORZDPYauvCKY8Q2WvV6j7m2BG3KZMdDZW_D57Q==}
   org: omnimove_org
   bucket: omnimove_bucket
