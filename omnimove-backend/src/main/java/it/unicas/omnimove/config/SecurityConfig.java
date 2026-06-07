@@ -30,9 +30,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/error", "/omnimove-login.html", "/api/v1/auth/**").permitAll()
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 
-                        // 2. Protected Role-Based HTML Files
-                        .requestMatchers("/omnimove-traveller.html").hasAnyAuthority("TRAVELLER", "ROLE_TRAVELLER")
-                        .requestMatchers("/omnimove-admin.html").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+                        // 2. Static HTML files — public (security enforced by JWT on all /api/** endpoints)
+                        .requestMatchers("/omnimove-traveller.html", "/omnimove-admin.html").permitAll()
 
 
                         // 3. This is your existing public API configuration. It needs to be changed in future versions to protect the server.
