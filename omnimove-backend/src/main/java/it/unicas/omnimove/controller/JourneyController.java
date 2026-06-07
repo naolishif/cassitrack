@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/journeys")
 @RequiredArgsConstructor
@@ -26,23 +28,23 @@ public class JourneyController {
 
         JourneyResponse response = plannerService.plan(request);
 
-        // ── Record analytics event for each option returned ──
-        if (response.getOptions() != null) {
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
-            int hour = now.getHour();
-            String day = now.getDayOfWeek().toString(); // "MONDAY", "TUESDAY" etc
-
-            response.getOptions().forEach(opt ->
-                    journeyEventService.recordJourneySearch(
-                            opt.getMode(),
-                            hour,
-                            day,
-                            opt.getGreenIndex(),
-                            opt.getDistanceMetres() / 1000.0
-                    )
-            );
-        }
-
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/select")
+    @Operation(summary = "Record a journey mode selection")
+    public ResponseEntity<?> select(
+            @RequestBody Map<String, Object> body) {
+
+        String mode       = (String) body.get("mode");
+        int greenIndex    = body.get("green_index") != null ? ((Number) body.get("green_index")).intValue() : 0;
+        double distanceKm = body.get("distance_km") != null ? ((Number) body.get("distance_km")).doubleValue() : 0.0;
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        journeyEventService.recordJourneySearch(
+                mode, now.getHour(), now.getDayOfWeek().toString(), greenIndex, distanceKm
+        );
+
+        return ResponseEntity.ok(Map.of("message", "Journey recorded"));
     }
 }
