@@ -110,11 +110,11 @@ public class MqttMessageHandler implements MessageHandler {
         if (pos.getBleDeviceCount() != null) point.addField("ble_device_count", pos.getBleDeviceCount());
         if (pos.getBatteryVoltage() != null) point.addField("battery_voltage", pos.getBatteryVoltage());
 
-        if (pos.getDelay() != null) {
-            point.addField("delay", pos.getDelay());
+        if (pos.getDelayMinutes() != null) {
+            point.addField("delay", pos.getDelayMinutes());
         }
-        if (pos.getLastStopRegistered() != null) {
-            point.addField("last_stop_registered", pos.getLastStopRegistered());
+        if (pos.getNearestStop() != null) {
+            point.addField("last_stop_registered", pos.getNearestStop());
         }
 
         influxWriteApi.writePoint(point);
@@ -124,8 +124,8 @@ public class MqttMessageHandler implements MessageHandler {
         return VehiclePosition.builder()
                 .vehicleId(pos.getVehicleId())
                 .busId(busId)
-                .numeroPosti(numeroPosti)       // 💾 Salvato in Redis
-                .postoDisabili(postoDisabili)   // 💾 Salvato in Redis
+                .numeroPosti(numeroPosti)
+                .postoDisabili(postoDisabili)
                 .timestamp(pos.getTimestamp())
                 .lat(pos.getLat())
                 .lon(pos.getLon())
@@ -134,8 +134,17 @@ public class MqttMessageHandler implements MessageHandler {
                 .bleDeviceCount(pos.getBleDeviceCount())
                 .batteryVoltage(pos.getBatteryVoltage())
                 .firmwareVersion(pos.getFirmwareVersion())
+                .passengers(pos.getPassengers())
+                .capacity(pos.getCapacity())
+                .delayMinutes(pos.getDelayMinutes())
+                .nearestStop(pos.getNearestStop())
+                .nearestStopId(pos.getNearestStopId())
+                .tripId(pos.getTripId())
+                .routeId(pos.getRouteId())
+                .routeName(pos.getRouteName())
                 .scheduleStatus(VehiclePosition.ScheduleStatus.UNKNOWN)
                 .receivedAt(Instant.now())
                 .build();
     }
+
 }

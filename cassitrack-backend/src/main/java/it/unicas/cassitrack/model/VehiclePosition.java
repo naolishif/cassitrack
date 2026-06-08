@@ -36,6 +36,14 @@ public class VehiclePosition {
     private Integer bleDeviceCount;
     private Double batteryVoltage;
     private String firmwareVersion;
+    private Integer passengers;
+    private Integer capacity;
+    private Integer delayMinutes;
+    private String  nearestStop;
+    private String  nearestStopId;
+    private String  tripId;
+    private String  routeId;
+    private String  routeName;        // from simulator
 
     // Server-side processing fields
     private String matchedRouteId;
