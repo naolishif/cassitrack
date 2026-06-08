@@ -85,7 +85,7 @@ public class RouteMatchingService {
             String stopId,
             int currentSeconds) {
 
-        String serviceType = getTodayServiceType();
+
 
         // Look for trips within a 30-minute window
         // around the current time
@@ -93,8 +93,7 @@ public class RouteMatchingService {
         int windowEnd   = currentSeconds + 1800; // 30 min ahead
 
         var allTrips = scheduledStopRepo
-                .findByTripRouteIdAndTripServiceTypeOrderByStopSequenceAsc(routeId, serviceType);
-
+                .findByTripRouteIdOrderByStopSequenceAsc(routeId);
         // Find the trip whose stop time is closest
         // to the current time
         return allTrips.stream()

@@ -1,21 +1,25 @@
 package it.unicas.cassitrack.service;
 
+import com.influxdb.client.InfluxDBClient;
+import com.influxdb.query.FluxRecord;
+import com.influxdb.query.FluxTable;
 import it.unicas.cassitrack.dto.VehicleStatusDTO;
 import it.unicas.cassitrack.model.VehiclePosition;
 import it.unicas.cassitrack.repository.VehiclePositionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Fleet analytics data for the manager dashboard.
- * * Aggiornato per architettura ibrida:
- * - Dati Live presi da Redis (tramite VehiclePositionRepository e VehicleService)
- * - Dati Storici in attesa di implementazione via InfluxDB
+ * Sistema híbrido real: Datos instantáneos desde Redis y agregaciones históricas desde InfluxDB.
  */
 @Service
 @Slf4j
@@ -24,21 +28,63 @@ public class AnalyticsService {
 
     private final VehiclePositionRepository positionRepo;
     private final VehicleService            vehicleService;
-    private final InfluxService             influxService;
+    private final InfluxDBClient            influxDBClient; // Conexión directa a InfluxDB
 
-    // ── View 1: Summary ───────────────────────────────────────
+    @Value("${spring.influx.bucket:vehicle_telemetry}")
+    private String bucket;
+
+    // ── View 1: Summary (GET /api/v1/analytics/summary) ───────────────────────
 
     public Map<String, Object> getSummary() {
         List<VehicleStatusDTO> active = vehicleService.getAllActiveVehicles();
         int activeBuses = active.size();
 
-        // 🏎️ REDIS: Prendiamo tutti i bus attualmente salvati in memoria
+        // REDIS: Autobuses en memoria ahora mismo
         List<VehiclePosition> livePositions = positionRepo.findAll();
 
-        // 📈 INFLUXDB TODO: Il conteggio totale dei report storici di oggi.
-        // Per ora lo mettiamo a 0 per far compilare il progetto.
+        // 📈 INFLUXDB 1: Contamos todos los reportes de posición recibidos hoy
         long totalReports = 0L;
+        String fluxCount = String.format(
+                "from(bucket: \"%s\") " +
+                        "|> range(start: -24h) " +
+                        "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
+                        "|> filter(fn: (r) => r[\"_field\"] == \"delay\") " +
+                        "|> count()", bucket
+        );
 
+        try {
+            List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxCount);
+            if (!tables.isEmpty() && !tables.get(0).getRecords().isEmpty()) {
+                Number val = (Number) tables.get(0).getRecords().get(0).getValue();
+                if (val != null) totalReports = val.longValue();
+            }
+        } catch (Exception e) {
+            log.error("Error al consultar conteo de reportes en InfluxDB", e);
+        }
+
+        // 📈 INFLUXDB 2: Calculamos el Average Delay global de la red en la última hora
+        double globalAverageDelay = 0.0;
+        String fluxGlobalDelay = String.format(
+                "from(bucket: \"%s\") " +
+                        "|> range(start: -1h) " +
+                        "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
+                        "|> filter(fn: (r) => r[\"_field\"] == \"delay\") " +
+                        "|> mean()", bucket
+        );
+
+        try {
+            List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxGlobalDelay);
+            if (!tables.isEmpty() && !tables.get(0).getRecords().isEmpty()) {
+                Number val = (Number) tables.get(0).getRecords().get(0).getValue();
+                if (val != null) {
+                    globalAverageDelay = Math.round(val.doubleValue() * 10.0) / 10.0;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error al consultar retraso promedio global en InfluxDB", e);
+        }
+
+        // Cálculos de la lógica estacional de puntualidad
         long onTime = active.stream().filter(v ->
                 v.getScheduleStatus() != null &&
                         "ON_TIME".equals(v.getScheduleStatus().name())).count();
@@ -49,13 +95,14 @@ public class AnalyticsService {
                 v.getScheduleStatus() != null &&
                         "EARLY".equals(v.getScheduleStatus().name())).count();
 
-        int onTimePct = activeBuses > 0
-                ? (int)(onTime * 100 / activeBuses) : 0;
+        int onTimePct = activeBuses > 0 ? (int)(onTime * 100 / activeBuses) : 0;
 
+        // Construimos la respuesta exacta que tu cuadro de mandos va a devorar
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("active_buses_now", activeBuses);
-        out.put("buses_today", livePositions.size()); // Sostituito con Redis live data
+        out.put("buses_today", livePositions.size());
         out.put("position_reports_today", totalReports);
+        out.put("average_delay_minutes", globalAverageDelay); // ¡Aquí metemos tu métrica limpia!
         out.put("on_time_count", onTime);
         out.put("late_count", late);
         out.put("early_count", early);
@@ -64,11 +111,9 @@ public class AnalyticsService {
         return out;
     }
 
-    // ── View 2: Adherence breakdown ───────────────────────────
+    // ── View 2: Adherence breakdown (GET /api/v1/analytics/adherence) ───────
 
     public Map<String, Object> getAdherenceBreakdown() {
-        // Questo metodo è già perfetto perché usa il VehicleService
-        // che gestisce la logica del tempo reale.
         List<VehicleStatusDTO> active = vehicleService.getAllActiveVehicles();
 
         Map<String, Long> counts = new LinkedHashMap<>();
@@ -79,19 +124,43 @@ public class AnalyticsService {
         counts.put("UNKNOWN", 0L);
 
         active.forEach(v -> {
-            String s = v.getScheduleStatus() != null
-                    ? v.getScheduleStatus().name() : "UNKNOWN";
+            String s = v.getScheduleStatus() != null ? v.getScheduleStatus().name() : "UNKNOWN";
             counts.merge(s, 1L, Long::sum);
         });
+
+        // INFLUXDB: Sacamos la media del delay de la última hora para cada autobús de forma individual
+        Map<String, Double> avgDelaysByBus = new HashMap<>();
+        String fluxDelayMean = String.format(
+                "from(bucket: \"%s\") " +
+                        "|> range(start: -1h) " +
+                        "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
+                        "|> filter(fn: (r) => r[\"_field\"] == \"delay\") " +
+                        "|> mean()", bucket
+        );
+
+        try {
+            List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxDelayMean);
+            for (FluxTable table : tables) {
+                for (FluxRecord record : table.getRecords()) {
+                    String vId = (String) record.getValueByKey("vehicle_id");
+                    Number val = (Number) record.getValue();
+                    if (vId != null && val != null) {
+                        avgDelaysByBus.put(vId, Math.round(val.doubleValue() * 10.0) / 10.0);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error al consultar medias de retraso individuales en InfluxDB", e);
+        }
 
         List<Map<String, Object>> vehicles = active.stream()
                 .map(v -> {
                     Map<String, Object> info = new LinkedHashMap<>();
                     info.put("vehicle_id", v.getVehicleId());
-                    info.put("status", v.getScheduleStatus() != null
-                            ? v.getScheduleStatus().name() : "UNKNOWN");
+                    info.put("status", v.getScheduleStatus() != null ? v.getScheduleStatus().name() : "UNKNOWN");
                     info.put("speed_kmh", v.getSpeedKmh());
-                    info.put("delay_minutes", v.getDelayMinutes());
+                    // Inyectamos la media calculada por InfluxDB
+                    info.put("delay_minutes", avgDelaysByBus.getOrDefault(v.getVehicleId(), (double) v.getDelayMinutes()));
                     info.put("crowding", v.getCrowdingLevel());
                     return info;
                 })
@@ -104,38 +173,62 @@ public class AnalyticsService {
         return out;
     }
 
-    // ── View 3: Busiest hours ─────────────────────────────────
+    // ── View 3: Busiest hours (GET /api/v1/analytics/busiest-hours) ───────
 
     public Map<String, Object> getBusiestHours() {
-        // 🚀 We are no longer mocking! Fetching real 24h aggregated data from InfluxDB
-        List<Map<String, Object>> hourlyData = influxService.getBusiestHours();
+        List<Map<String, Object>> hourlyData = new ArrayList<>();
+
+        // Estructura limpia inicial de 24 horas para prevenir gráficas vacías
+        for (int h = 0; h < 24; h++) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("hour", String.format("%02d:00", h));
+            p.put("count", 0);
+            hourlyData.add(p);
+        }
+
+        // INFLUXDB: Historial de pasajeros agregados por tramos horarios
+        String fluxBusiest = String.format(
+                "from(bucket: \"%s\") " +
+                        "|> range(start: -24h) " +
+                        "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
+                        "|> filter(fn: (r) => r[\"_field\"] == \"ble_device_count\") " +
+                        "|> aggregateWindow(every: 1h, fn: mean, createEmpty: false)", bucket
+        );
+
+        try {
+            List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxBusiest);
+            if (!tables.isEmpty()) {
+                for (FluxRecord record : tables.get(0).getRecords()) {
+                    Instant time = record.getTime();
+                    Number val = (Number) record.getValue();
+                    if (time != null && val != null) {
+                        ZonedDateTime zdt = time.atZone(ZoneId.systemDefault());
+                        int hour = zdt.getHour();
+                        if (hour >= 0 && hour < 24) {
+                            hourlyData.get(hour).put("count", val.intValue());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error al calcular tramos horarios de ocupación en InfluxDB", e);
+        }
+
+        String peakHour = "N/A";
+        int maxCount = -1;
+        for (Map<String, Object> data : hourlyData) {
+            int currentCount = (int) data.get("count");
+            if (currentCount > maxCount && currentCount > 0) {
+                maxCount = currentCount;
+                peakHour = (String) data.get("hour");
+            }
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("hourly_activity", hourlyData);
-        out.put("message", "Data aggregated from InfluxDB stop_arrival events");
+        out.put("peak_hour", peakHour);
+        out.put("period_hours", 24);
+        out.put("message", "Data aggregated live from InfluxDB Bluetooth telemetry");
         return out;
     }
-
-//    public Map<String, Object> getBusiestHours() {
-//        // 📈 INFLUXDB TODO: Redis non conosce la storia passata.
-//        // Tutta la logica di aggregazione temporale dovrà essere fatta
-//        // tramite una Flux Query su InfluxDB.
-//        // Per ora restituiamo una struttura vuota per non bloccare l'app.
-//
-//        List<Map<String, Object>> hourlyData = new ArrayList<>();
-//        // Mock data temporaneo
-//        for (int h = 0; h < 24; h++) {
-//            Map<String, Object> p = new LinkedHashMap<>();
-//            p.put("hour", String.format("%02d:00", h));
-//            p.put("count", 0);
-//            hourlyData.add(p);
-//        }
-//
-//        Map<String, Object> out = new LinkedHashMap<>();
-//        out.put("hourly_activity", hourlyData);
-//        out.put("peak_hour", "N/A");
-//        out.put("period_hours", 24);
-//        out.put("note", "Historical data will be available once InfluxDB is integrated.");
-//        return out;
-//    }
 }
