@@ -120,4 +120,40 @@ public class InfluxService {
 
         return hourlyData;
     }
+
+    public Map<String, Integer> getPassengersByRoute() {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        InfluxDBClient client = InfluxDBClientFactory.create(influxUrl, token.toCharArray(), influxOrg, bucket);
+
+        try {
+            String fluxQuery = String.format(
+                    "from(bucket: \"%s\") " +
+                            "|> range(start: -24h) " +
+                            "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
+                            "|> filter(fn: (r) => r[\"_field\"] == \"passengers\") " +
+                            "|> group(columns: [\"route_id\"]) " +
+                            "|> sum()",
+                    bucket
+            );
+
+            List<FluxTable> tables = client.getQueryApi().query(fluxQuery);
+            for (FluxTable table : tables) {
+                for (FluxRecord record : table.getRecords()) {
+                    String routeId = record.getValueByKey("route_id") != null
+                            ? record.getValueByKey("route_id").toString()
+                            : "UNKNOWN";
+                    int total = record.getValue() != null
+                            ? ((Number) record.getValue()).intValue()
+                            : 0;
+                    result.put(routeId, total);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error fetching passengers by route: {}", e.getMessage());
+        } finally {
+            client.close();
+        }
+
+        return result;
+    }
 }

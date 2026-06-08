@@ -231,4 +231,44 @@ public class AnalyticsService {
         out.put("message", "Data aggregated live from InfluxDB Bluetooth telemetry");
         return out;
     }
+
+    public Map<String, Object> getPassengersByRouteAndHour() {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        String fluxQuery = String.format(
+                "from(bucket: \"%s\") " +
+                        "|> range(start: -24h) " +
+                        "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
+                        "|> filter(fn: (r) => r[\"_field\"] == \"passengers\") " +
+                        "|> aggregateWindow(every: 1h, fn: mean, createEmpty: false)",
+                bucket
+        );
+
+        try {
+            List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxQuery);
+            for (FluxTable table : tables) {
+                for (FluxRecord record : table.getRecords()) {
+                    // Usar trip_id como clave (que sí está guardado como tag)
+                    String tripId = record.getValueByKey("trip_id") != null
+                            ? record.getValueByKey("trip_id").toString()
+                            : "UNKNOWN";
+                    Instant time = record.getTime();
+                    Number val = record.getValue() != null ? (Number) record.getValue() : null;
+                    if (time == null || val == null) continue;
+
+                    String hourLabel = String.format("%02d:00",
+                            time.atZone(ZoneId.systemDefault()).getHour());
+
+                    @SuppressWarnings("unchecked")
+                    Map<String, Integer> byHour = (Map<String, Integer>)
+                            result.computeIfAbsent(tripId, k -> new LinkedHashMap<String, Integer>());
+                    byHour.merge(hourLabel, val.intValue(), Integer::sum);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error fetching passengers by route and hour: {}", e.getMessage());
+        }
+
+        return result;
+    }
 }

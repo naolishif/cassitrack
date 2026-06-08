@@ -109,7 +109,8 @@ public class MqttMessageHandler implements MessageHandler {
 
         if (pos.getBleDeviceCount() != null) point.addField("ble_device_count", pos.getBleDeviceCount());
         if (pos.getBatteryVoltage() != null) point.addField("battery_voltage", pos.getBatteryVoltage());
-
+        if (pos.getPassengers() != null) point.addField("passengers", pos.getPassengers());
+        if (pos.getCapacity()   != null) point.addField("capacity",   pos.getCapacity());
         if (pos.getDelayMinutes() != null) {
             point.addField("delay", pos.getDelayMinutes());
         }

@@ -1050,60 +1050,8 @@
                         </div>
                     </div>
 
-                    <div class="route-list">
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 16</span>
-                                <span>542 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:92%"></div>
-                            </div>
-
-                        </div>
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 03</span>
-                                <span>381 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:68%"></div>
-                            </div>
-
-                        </div>
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 07</span>
-                                <span>244 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:48%"></div>
-                            </div>
-
-                        </div>
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 11</span>
-                                <span>179 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:31%"></div>
-                            </div>
-
-                        </div>
-
+                    <div class="route-list" id="route-list-container">
+                        <div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Loading...</div>
                     </div>
 
                 </div>
@@ -1452,6 +1400,64 @@
         setInterval(fetchVehicles, REFRESH);
 
     });
+
+    // ── ANALYTICS: passengers by trip ─────────────────────────────
+    async function loadPassengersByRoute() {
+        const container = document.getElementById('route-list-container');
+        if (!container) return;
+
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/passengers-by-route`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!r.ok) throw new Error(r.status);
+            const data = await r.json();
+
+            const trips = Object.keys(data);
+            if (trips.length === 0) {
+                container.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
+                return;
+            }
+
+            // Total passengers per trip (suma de todas las horas)
+            const totals = trips.map(t => ({
+                id: t,
+                total: Object.values(data[t]).reduce((a, b) => a + b, 0)
+            })).sort((a, b) => b.total - a.total);
+
+            const max = totals[0].total || 1;
+
+            const COLORS = ['#3B82F6','#06B6D4','#8B5CF6','#22C55E','#F59E0B','#EF4444'];
+
+            container.innerHTML = totals.map((item, i) => {
+                const pct = Math.round((item.total / max) * 100);
+                const col = COLORS[i % COLORS.length];
+                return `
+            <div class="route-item">
+                <div class="route-top">
+                    <span style="color:${col}">${item.id}</span>
+                    <span>${item.total} pax</span>
+                </div>
+                <div class="route-bar">
+                    <div class="route-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}99)"></div>
+                </div>
+            </div>`;
+            }).join('');
+
+        } catch(e) {
+            console.error('Failed to load passengers by route', e);
+            if (container) container.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
+        }
+    }
+
+    // Cargar al abrir Analytics
+    document.querySelectorAll('.top-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.textContent.trim() === 'Analytics') loadPassengersByRoute();
+        });
+    });
+
 </script>
 </body>
 </html>
