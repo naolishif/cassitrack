@@ -1,0 +1,10 @@
+package it.unicas.omnimove.dto.netex;
+
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import lombok.Data;
+
+@Data
+public class DataObjects {
+    @JacksonXmlProperty(localName = "CompositeFrame")
+    private CompositeFrameDTO compositeFrame; // Nota: ho aggiunto "DTO" al nome per coerenza
+}

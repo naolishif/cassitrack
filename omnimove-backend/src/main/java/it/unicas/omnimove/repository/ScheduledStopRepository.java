@@ -1,8 +1,9 @@
-package it.unicas.cassitrack.repository;
+package it.unicas.omnimove.repository;
 
-import it.unicas.cassitrack.model.ScheduledStop; // Controlla il package del tuo model
+import it.unicas.omnimove.model.ScheduledStop;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
 @Repository

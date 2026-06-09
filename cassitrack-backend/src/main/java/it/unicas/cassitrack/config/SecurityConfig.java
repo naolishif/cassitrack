@@ -89,7 +89,9 @@ public class SecurityConfig {
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html",
-                                "/ws/**"
+                                "/ws/**",
+                                "/api/v1/auth/**",
+                                "/api/static/**"
                         ).permitAll()
 
                         // ── Auth endpoints ────────────────────────────────

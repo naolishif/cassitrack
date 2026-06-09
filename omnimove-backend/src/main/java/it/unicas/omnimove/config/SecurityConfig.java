@@ -30,7 +30,9 @@ public class SecurityConfig {
                                 "/*.css",
                                 "/*.js",
                                 "/favicon.ico",
-                                "/test-siri-pull"
+                                "/test-siri-pull",
+                                "/api/test/**",
+                                "/error"
                         ).permitAll()
 
                         // 2. This is your existing public API configuration:
