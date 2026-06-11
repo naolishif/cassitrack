@@ -71,7 +71,8 @@ public class SecurityConfig {
                                 "/api/v1/siri/**",
                                 "/api/v1/feed/**",
                                 "/api/v1/journeys/**",
-                                "/api/v1/telemetry/**"
+                                "/api/v1/telemetry/**",
+                                "/api/v1/traffic/**"
                         ).permitAll()
 
                         .requestMatchers( // Dev tools

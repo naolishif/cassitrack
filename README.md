@@ -8,11 +8,11 @@
 ## What Is This?
 Two interconnected systems built for Cassino's **Bus 16** (MAGNI Autoservizi),
 
-CASSITRACK is a real-time bus fleet monitoring system built for **MAGNI Autoservizi Linea 16** 
+CASSITRACK is a real-time bus fleet monitoring system built for **MAGNI Autoservizi Linea 16**
 — the bus that connects Cassino city centre to the UNICAS Campus via Via Folcara.
 
-**OMNIMOVE** is the multimodal journey planning layer built on top of CASSITRACK, 
-allowing passengers to compare Bus, Bike, Scooter, and Walking options with real-time data, 
+**OMNIMOVE** is the multimodal journey planning layer built on top of CASSITRACK,
+allowing passengers to compare Bus, Bike, Scooter, and Walking options with real-time data,
 cost estimates, and Green Index CO₂ scoring.
 
 The motivation is personal and real: Bus 16 has **zero live tracking**.
@@ -43,6 +43,7 @@ Spring Boot Backend (port 8080)
   ├── Redis                  (live position cache)
   ├── Schedule Adherence     (on time / late detection)
   ├── ETA Service            (arrival predictions)
+  ├── Google Maps API        (traffic-aware travel times)
   ├── AI Orchestration       (Claude API + RAG pattern)
   ├── GTFS Realtime Feed     (national NAP standard)
   └── Journey Planner        (multimodal OMNIMOVE)
@@ -62,6 +63,7 @@ REST API (OpenAPI 3.0 documented)
 | Live Bus Tracking | GPS positions every 15 seconds via MQTT | ✅ Working |
 | Schedule Adherence | Green / Amber / Red bus status | ✅ Working |
 | ETA Prediction | "Bus arrives in 4 min" at your stop | ✅ Working |
+| Traffic-Aware ETA | Real-time travel time via Google Maps Distance Matrix API | ✅ Working |
 | Crowd Estimation | BLE device count → passenger density | ✅ Working |
 | AI Chatbot | Natural language queries in EN + IT | ✅ Working |
 | GTFS Realtime Feed | Standard feed for Italy national NAP | ✅ Working |
@@ -147,22 +149,24 @@ cassitrack-mosquitto   running (healthy)
 
 ---
 
-### Step 2 — Set the Anthropic API Key in IntelliJ
+### Step 2 — Set API Keys in IntelliJ
 
-The AI chatbot requires an Anthropic API key. Never put it in a file — always set it as an environment variable inside IntelliJ.
+The AI chatbot requires an Anthropic API key, and the traffic-aware ETA requires a Google Maps API key. Never put them in a file — always set them as environment variables inside IntelliJ.
 
 1. Open IntelliJ → Run → **Edit Configurations**
-2. Select **OmnimoveApplication**
+2. Select **CassitrackApplication**
 3. Click **Modify options → Environment variables**
-4. Add: `ANTHROPIC_API_KEY=your_key_here`
-5. Click OK
-
- ```
-   Name:  ANTHROPIC_API_KEY
-   Value: sk-ant-api03-your-key-here
+4. Add both keys:
    ```
+   ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+   GOOGLE_MAPS_API_KEY=AIza-your-key-here
+   ```
+5. Click OK, then repeat for **OmnimoveApplication** (Anthropic key only)
 
-> Get a free API key at [console.anthropic.com](https://console.anthropic.com)
+> Get a free Anthropic key at [console.anthropic.com](https://console.anthropic.com)
+> Get a Google Maps key at [console.cloud.google.com](https://console.cloud.google.com) — enable **Distance Matrix API**
+
+> **Note:** `GOOGLE_MAPS_API_KEY` is optional. If not set, the system automatically falls back to haversine-based ETA estimates. The `dataSource` field in the response will indicate `"HAVERSINE"` instead of `"GOOGLE_MAPS"`.
 
 
 ---
@@ -311,6 +315,7 @@ To install: **Share button → Add to Home Screen → Add**
 
 **APIs**
 - Anthropic Claude API (AI assistant)
+- Google Maps Distance Matrix API (traffic-aware ETA)
 - Open-Meteo (weather)
 - Elerent (bike/scooter availability)
 
@@ -328,6 +333,8 @@ Both backends expose Swagger UI for interactive API exploration:
 | GET | `/api/v1/vehicles` | All active bus positions |
 | GET | `/api/v1/vehicles/{id}` | Single vehicle detail |
 | GET | `/api/v1/stops/{id}/arrivals` | ETA at a specific stop |
+| GET | `/api/v1/traffic/eta?stopId={id}` | Traffic-aware ETA via Google Maps |
+| GET | `/api/v1/traffic/eta?stopId={id}&vehicleId={id}` | Traffic ETA filtered by bus |
 | POST | `/api/v1/ai/chat` | AI chatbot query |
 | POST | `/api/v1/journeys/search` | Multimodal journey planning |
 | GET | `/api/v1/feed/gtfs-rt` | GTFS Realtime feed (Protobuf) |
@@ -356,6 +363,36 @@ curl -X POST http://localhost:8080/api/v1/journeys/search \
     "dest_name": "Cassino Stazione FS"
   }'
 ```
+
+### Traffic-Aware ETA Example
+
+```bash
+# All active buses heading to Campus Folcara (with real-time traffic)
+curl http://localhost:8080/api/v1/traffic/eta?stopId=FOLCARA-CAMPUS
+
+# Filter by specific bus
+curl "http://localhost:8080/api/v1/traffic/eta?stopId=FOLCARA-CAMPUS&vehicleId=MAGNI-001"
+```
+
+Example response:
+```json
+[
+  {
+    "vehicleId": "MAGNI-001",
+    "routeId": "LINEA-16",
+    "stopId": "FOLCARA-CAMPUS",
+    "estimatedArrival": "2026-06-08T10:55:31Z",
+    "durationSeconds": 553,
+    "trafficDurationSeconds": 519,
+    "trafficDelaySeconds": -34,
+    "distanceMetres": 3200,
+    "dataSource": "GOOGLE_MAPS",
+    "scheduleStatus": "ON_TIME"
+  }
+]
+```
+
+`dataSource` is `"GOOGLE_MAPS"` when the key is configured, `"HAVERSINE"` as fallback.
 
 ---
 
@@ -418,6 +455,7 @@ cassitrack-fresh/
         │   ├── AiController.java         ← /api/v1/ai/chat
         │   ├── JourneyController.java    ← /api/v1/journeys
         │   ├── GtfsRealtimeController.java ← /api/v1/feed
+        │   ├── TrafficController.java    ← /api/v1/traffic (NEW)
         │   └── AuthController.java       ← /api/v1/auth
         ├── service/
         │   ├── VehicleService.java       ← Vehicle business logic
@@ -428,7 +466,9 @@ cassitrack-fresh/
         │   ├── GtfsRealtimeService.java  ← GTFS-RT feed builder
         │   ├── JourneyPlannerService.java ← Multimodal planner
         │   ├── GreenIndexService.java    ← CO₂ scoring
-        │   └── RouteMatchingService.java ← Haversine distance
+        │   ├── RouteMatchingService.java ← Haversine distance
+        │   ├── GoogleMapsService.java    ← Distance Matrix API client (NEW)
+        │   └── TrafficAwareETAService.java ← Traffic-aware ETA logic (NEW)
         ├── model/
         │   ├── VehiclePosition.java      ← JPA entity
         │   ├── ScheduledStop.java        ← Stop entity
@@ -497,8 +537,11 @@ curl http://localhost:8080/api/v1/feed/gtfs-rt/debug
 | No buses on map | Simulator not running | Run `python gps_simulator.py --buses 2` |
 | Phone cannot reach backend | CORS not configured | Add your IP to `SecurityConfig.java` allowed origins |
 | Container name conflict | Old containers still registered | Run `docker compose down` then `docker compose up -d` |
- | Tomcat error on startup | Database miss-match | Run 'docker compose down -v' to reset all data, then start again. If necessary, in application.yml change ddl-auto:update to create-drop |
-| Omnimove cannot recieve Influx data from Cassitrack | Create and use you own token | From InfluxDB UI in port 8087, go in Load Data, clone the token and copy-paste it in the application.yml of omnimove (found in the lower section of the file) |
+| Tomcat error on startup | Database miss-match | Run `docker compose down -v` to reset all data, then start again. If necessary, in application.yml change ddl-auto:update to create-drop |
+| Omnimove cannot receive Influx data from Cassitrack | Create and use your own token | From InfluxDB UI in port 8087, go in Load Data, clone the token and copy-paste it in the application.yml of omnimove (found in the lower section of the file) |
+| `/api/v1/traffic/eta` returns `dataSource: "HAVERSINE"` | Google Maps key not set | Add `GOOGLE_MAPS_API_KEY` in IntelliJ Run Configurations for CassitrackApplication |
+| `/api/v1/traffic/eta` returns 403 | Endpoint not whitelisted in Security | Add `.requestMatchers("/api/v1/traffic/**").permitAll()` in `SecurityConfig.java` |
+| Flyway checksum mismatch on startup | Migration file modified after first run | Run `UPDATE flyway_schema_history SET checksum = <new_value> WHERE version = '1';` on the DB |
 
 ---
 

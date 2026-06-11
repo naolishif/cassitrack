@@ -110,3 +110,10 @@ weather:
     url: https://api.openweathermap.org/data/2.5/weather
     city: Cassino
     country: IT
+# ── Google Maps API ───────────────────────────────────────────
+# Richiede: Distance Matrix API abilitata su Google Cloud Console
+# Set as env variable GOOGLE_MAPS_API_KEY in IntelliJ
+# Se non configurata, il sistema cade in fallback haversine
+google:
+  maps:
+    api-key: ${GOOGLE_MAPS_API_KEY:AIzaSyAIcS5KU5svVtHFC6KzMHGkgc37dHm9HBU}
