@@ -29,6 +29,16 @@ public class SecurityConfig {
                         // 1. Public UI and Auth APIs
                         .requestMatchers("/", "/error", "/omnimove-login.html", "/api/v1/auth/**").permitAll()
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/*.html",
+                                "/*.css",
+                                "/*.js",
+                                "/favicon.ico",
+                                "/test-siri-pull",
+                                "/api/test/**",
+                                "/error"
+                        ).permitAll()
 
                         // 2. Protected Role-Based HTML Files
                         .requestMatchers("/omnimove-traveller.html").hasAnyAuthority("TRAVELLER", "ROLE_TRAVELLER")

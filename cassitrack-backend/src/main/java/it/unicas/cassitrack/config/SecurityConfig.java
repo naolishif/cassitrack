@@ -80,6 +80,10 @@ public class SecurityConfig {
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html"
+                                "/api/swagger-ui.html",
+                                "/ws/**",
+                                "/api/v1/auth/**",
+                                "/api/static/**"
                         ).permitAll()
 
                         // ── 3. Role-Specific Protected HTML ───────────────

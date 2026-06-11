@@ -1,5 +1,9 @@
-package it.unicas.cassitrack.model;
-import jakarta.persistence.*;
+package it.unicas.omnimove.model;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.*;
 
 @Entity
@@ -19,6 +23,7 @@ public class Route {
     private String shortName;
 
     private boolean active;
+
 
     // Se nel database la tabella routes ha altre colonne (es. name, type),
     // puoi aggiungerle qui sotto come semplici variabili. Per ora lasciamo solo l'ID.
