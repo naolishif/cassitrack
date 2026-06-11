@@ -462,37 +462,6 @@
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.err { border-color: var(--accent-red); color: var(--accent-red); }
 
-        /* ── HEATMAP ── */
-        .heatmap-grid {
-            display: grid;
-            grid-template-columns: 44px repeat(24,1fr);
-            gap: 2px;
-            font-family: var(--font-mono);
-            font-size: 9px;
-        }
-        .heatmap-label {
-            display: flex; align-items: center; justify-content: flex-end;
-            padding-right: 6px;
-            color: var(--text-dim);
-            font-size: 9px;
-            font-family: var(--font-mono);
-            white-space: nowrap;
-        }
-        .heatmap-cell {
-            height: 18px;
-            border-radius: 2px;
-            background: var(--border);
-            transition: transform .15s;
-            cursor: default;
-            position: relative;
-        }
-        .heatmap-cell:hover { transform: scale(1.25); z-index: 10; }
-        .heatmap-header {
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-dim);
-            font-size: 8px;
-        }
-
         /* ── PREFERENCE BARS ── */
         .pref-row {
             display: flex;
@@ -647,20 +616,6 @@
                 <div class="chart-wrap" style="height:140px">
                     <canvas id="chartGreenIndex"></canvas>
                 </div>
-            </div>
-        </div>
-
-        <!-- FR-OM-009 (c) Time-of-day / day-of-week heatmap -->
-        <div class="card">
-            <div class="card-title" style="justify-content:space-between">
-                <span>Search Patterns — Heatmap by Hour &amp; Day of Week</span>
-                <span class="gdpr-badge" style="font-size:8px;padding:2px 6px">ANON</span>
-            </div>
-            <div id="heatmapContainer"></div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-                <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim)">Low</span>
-                <div style="flex:1;height:6px;border-radius:3px;background:linear-gradient(to right,#1e3348,rgba(0,207,255,.4),#00e5a0,#f5a623,rgba(255,69,96,.8))"></div>
-                <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim)">High</span>
             </div>
         </div>
 
@@ -1101,51 +1056,6 @@
         }
     };
 
-
-
-    // ── Heatmap dinámico desde InfluxDB ───────────────────────────────────
-    function heatColor(v, max) {
-        const t = v / max;
-        if (t < .15) return `rgba(30,51,72,${0.4 + t*2})`;
-        if (t < .35) return `rgba(0,207,255,${0.2 + t*.6})`;
-        if (t < .60) return `rgba(0,229,160,${0.4 + t*.4})`;
-        if (t < .80) return `rgba(245,166,35,${0.5 + t*.3})`;
-        return `rgba(255,69,96,${0.6 + t*.4})`;
-    }
-
-    function updateHeatmap(heatmap) {
-        if (!heatmap) return;
-
-        // El simulador usa nombres en inglés en mayúsculas
-        const dayOrder  = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
-        const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-        const hours = Array.from({length: 24}, (_, i) => i);
-
-        // Aplanar para calcular el máximo global
-        const allVals = dayOrder.flatMap(d => Array.from(heatmap[d] || new Array(24).fill(0)));
-        const maxVal  = Math.max(...allVals, 1);
-
-        let html = '<div class="heatmap-grid">';
-        // Header fila de horas
-        html += '<div></div>';
-        hours.forEach(h => {
-            html += `<div class="heatmap-header">${h % 6 === 0 ? h + 'h' : ''}</div>`;
-        });
-        // Filas por día
-        dayOrder.forEach((day, i) => {
-            html += `<div class="heatmap-label">${dayLabels[i]}</div>`;
-            const row = heatmap[day] || new Array(24).fill(0);
-            Array.from(row).forEach((v, h) => {
-                const col = heatColor(v, maxVal);
-                const pct = Math.round(v / maxVal * 100);
-                html += `<div class="heatmap-cell" style="background:${col}"
-                          title="${dayLabels[i]} ${h}:00 — ${v} trips (${pct}% of peak)"></div>`;
-            });
-        });
-        html += '</div>';
-        document.getElementById('heatmapContainer').innerHTML = html;
-    }
-
     // ── FR-OM-009 (e) Preference trend ──
     const weeks=['W1','W2','W3','W4'];
     new Chart(document.getElementById('chartPrefTrend'),{
@@ -1214,7 +1124,6 @@
             updateModeChart(data.modeDistribution);
             updateModeByHourChart(data.modeByHour);
             updateGreenIndexChart(data.greenIndexTrend);
-            updateHeatmap(data.heatmap);
 
         } catch(e) {
             console.error('loadAnalytics error:', e);

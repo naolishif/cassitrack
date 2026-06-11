@@ -160,7 +160,6 @@ public class AdminController {
         payload.put("modeDistribution",analyticsService.getModeDistribution());
         payload.put("modeByHour",      analyticsService.getModeByHour());
         payload.put("greenIndexTrend", analyticsService.getGreenIndexTrend());
-        payload.put("heatmap", analyticsService.getModeByDayAndHour());
 
         return ResponseEntity.ok(payload);
     }

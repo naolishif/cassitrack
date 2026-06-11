@@ -182,50 +182,6 @@ public class AnalyticsService {
         return InfluxDBClientFactory.create(influxUrl, token.toCharArray(), influxOrg, bucket);
     }
 
-    // Query 5: counting per weekday and hour (heatmap)
-    public Map<String, long[]> getModeByDayAndHour() {
-        String flux = String.format("""
-        from(bucket: "%s")
-          |> range(start: -30d)
-          |> filter(fn: (r) => r._measurement == "journey_search")
-          |> filter(fn: (r) => r._field == "count")
-          |> group(columns: ["day_of_week", "hour"])
-          |> sum()
-        """, bucket);
-
-        // día → array de 24 horas
-        String[] days = {"MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"};
-        Map<String, long[]> result = new LinkedHashMap<>();
-        for (String d : days) result.put(d, new long[24]);
-
-        // To reconstruct the hour we use the tag + field hour separated
-        String fluxRaw = String.format("""
-        from(bucket: "%s")
-          |> range(start: -30d)
-          |> filter(fn: (r) => r._measurement == "journey_search")
-          |> filter(fn: (r) => r._field == "hour")
-          |> keep(columns: ["_value", "day_of_week"])
-        """, bucket);
-
-        try (InfluxDBClient client = buildClient()) {
-            QueryApi q = client.getQueryApi();
-            for (FluxTable table : q.query(fluxRaw, influxOrg)) {
-                for (FluxRecord r : table.getRecords()) {
-                    String day = (String) r.getValueByKey("day_of_week");
-                    Number hourVal = (Number) r.getValue();
-                    if (day == null || hourVal == null) continue;
-                    int hour = hourVal.intValue();
-                    if (hour < 0 || hour > 23) continue;
-                    String key = day.toUpperCase();
-                    if (result.containsKey(key))
-                        result.get(key)[hour]++;
-                }
-            }
-        } catch (Exception e) {
-            log.error("getModeByDayAndHour error: {}", e.getMessage());
-        }
-        return result;
-    }
 
 
 }
