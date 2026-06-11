@@ -1,4 +1,4 @@
-package it.unicas.cassitrack.service;
+package it.unicas.omnimove.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,27 +7,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.time.Instant;
 import java.util.Optional;
 
 /**
  * Client for the Google Maps Distance Matrix API.
  *
- * What it does:
- *   Given an origin (bus GPS position) and a destination (stop coordinates),
- *   it returns the travel duration accounting for REAL-TIME traffic.
+ * Given an origin and a destination, returns the travel duration
+ * accounting for REAL-TIME traffic (departure_time=now).
  *
- * Why Distance Matrix and not Directions?
- *   Distance Matrix is cheaper (fewer API credits) and faster —
- *   we only need duration_in_traffic, not the full route polyline.
- *
- * API used:
- *   https://maps.googleapis.com/maps/api/distancematrix/json
- *   Requires: Maps Distance Matrix API enabled on your Google Cloud project.
- *
- * Fallback:
- *   If the API key is missing or the call fails, returns Optional.empty()
- *   so the caller can fall back to the haversine-based estimate.
+ * If the API key is missing or the call fails, returns Optional.empty()
+ * so the caller can fall back to haversine-based estimates.
  */
 @Service
 @Slf4j
@@ -51,9 +40,9 @@ public class GoogleMapsService {
     /**
      * Result from the Distance Matrix API.
      *
-     * @param durationSeconds   travel time WITHOUT traffic (baseline)
-     * @param durationInTrafficSeconds  travel time WITH real-time traffic
-     * @param distanceMetres    road distance in metres (not straight-line)
+     * @param durationSeconds          travel time WITHOUT traffic (baseline)
+     * @param durationInTrafficSeconds travel time WITH real-time traffic
+     * @param distanceMetres           road distance in metres
      */
     public record TrafficResult(
             long durationSeconds,
@@ -62,13 +51,12 @@ public class GoogleMapsService {
     ) {}
 
     /**
-     * Query Google Maps for travel time from a bus position to a stop,
-     * considering live traffic conditions.
+     * Query Google Maps for travel time between two points with live traffic.
      *
-     * @param originLat      Bus current latitude
-     * @param originLon      Bus current longitude
-     * @param destLat        Stop latitude
-     * @param destLon        Stop longitude
+     * @param originLat  origin latitude
+     * @param originLon  origin longitude
+     * @param destLat    destination latitude
+     * @param destLon    destination longitude
      * @return Optional with traffic data, or empty if unavailable
      */
     public Optional<TrafficResult> getTravelTime(
@@ -84,8 +72,6 @@ public class GoogleMapsService {
             String origins      = originLat + "," + originLon;
             String destinations = destLat   + "," + destLon;
 
-            // departure_time=now enables traffic-aware routing
-            // traffic_model=best_guess is the default and most accurate for ETA
             String response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .queryParam("origins",        origins)
@@ -107,22 +93,6 @@ public class GoogleMapsService {
         }
     }
 
-    /**
-     * Parse the Distance Matrix JSON response.
-     *
-     * Expected structure:
-     * {
-     *   "status": "OK",
-     *   "rows": [{
-     *     "elements": [{
-     *       "status": "OK",
-     *       "duration":            { "value": 180 },
-     *       "duration_in_traffic": { "value": 240 },
-     *       "distance":            { "value": 1500 }
-     *     }]
-     *   }]
-     * }
-     */
     private Optional<TrafficResult> parseResponse(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
@@ -143,24 +113,19 @@ public class GoogleMapsService {
                 return Optional.empty();
             }
 
-            long duration           = element.path("duration").path("value").asLong();
-            long distanceMetres     = element.path("distance").path("value").asLong();
+            long duration       = element.path("duration").path("value").asLong();
+            long distanceMetres = element.path("distance").path("value").asLong();
 
-            // duration_in_traffic is only present when departure_time=now is set
-            // and traffic data is available for this route
             JsonNode trafficNode = element.path("duration_in_traffic");
             long durationInTraffic = trafficNode.isMissingNode()
-                    ? duration   // fallback to base duration if traffic unavailable
+                    ? duration
                     : trafficNode.path("value").asLong();
 
             log.debug("Google Maps: dist={}m, base={}s, traffic={}s",
                     distanceMetres, duration, durationInTraffic);
 
             return Optional.of(new TrafficResult(
-                    duration,
-                    durationInTraffic,
-                    distanceMetres
-            ));
+                    duration, durationInTraffic, distanceMetres));
 
         } catch (Exception e) {
             log.error("Failed to parse Google Maps response: {}", e.getMessage());

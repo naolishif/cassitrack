@@ -42,7 +42,8 @@ public class SecurityConfig {
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html",
-                                "/test-siri-pull"
+                                "/test-siri-pull",
+                                "/api/v1/traffic/**"
                         ).permitAll()
 
                         // 4. Everything else requires authentication
