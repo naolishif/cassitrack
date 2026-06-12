@@ -14,16 +14,16 @@ import java.util.Optional;
 /**
  * Traffic-aware ETA service for OMNIMOVE journey planning.
  *
- * Enriches bus arrival data (fetched from CASSITRACK via REST)
- * with real-time traffic information from Google Maps.
+ * Fetches bus arrival data from CASSITRACK via REST, then enriches
+ * each arrival with real-time traffic data from Google Maps.
  *
- * Strategy:
- *   1. Get active bus arrivals from CASSITRACK via CassitrackClient
- *   2. For each arrival, call GoogleMapsService to get traffic-adjusted time
- *   3. Return enriched result with dataSource field indicating the source
+ * The origin used for the Google Maps query is the first stop of the
+ * route (CASSINO-STAZIONE), so no user coordinates are needed.
+ * Google Maps computes the traffic along the bus route itself.
  *
- * Used by JourneyPlannerService to give more accurate bus ETAs
- * in multimodal journey comparisons.
+ * dataSource values:
+ *   "GOOGLE_MAPS" → real-time traffic data available
+ *   "CASSITRACK"  → fallback, using CASSITRACK ETA as-is
  */
 @Service
 @Slf4j
@@ -33,6 +33,7 @@ public class TrafficAwareETAService {
     private final CassitrackClient  cassitrackClient;
     private final GoogleMapsService googleMapsService;
 
+    // Coordinates of all known stops
     private static final Map<String, double[]> STOP_COORDS = Map.of(
             "CASSINO-STAZIONE",  new double[]{41.4892, 13.8282},
             "CASSINO-CENTRO",    new double[]{41.4917, 13.8314},
@@ -40,6 +41,10 @@ public class TrafficAwareETAService {
             "FOLCARA-VIA",       new double[]{41.5020, 13.8200},
             "FOLCARA-CAMPUS",    new double[]{41.5041, 13.8189}
     );
+
+    // Route start: used as origin for Google Maps when no position available
+    private static final double ROUTE_START_LAT = 41.4892;
+    private static final double ROUTE_START_LON = 13.8282;
 
     /**
      * Result enriched with Google Maps traffic data.
@@ -58,16 +63,13 @@ public class TrafficAwareETAService {
     /**
      * Get traffic-enriched ETA for buses arriving at a stop.
      *
-     * Fetches base arrival data from CASSITRACK, then enriches
-     * each entry with Google Maps real-time traffic if available.
+     * No user coordinates needed — Google Maps query uses
+     * the route start as origin and the requested stop as destination.
      *
      * @param stopId  the stop to query (e.g. "FOLCARA-CAMPUS")
-     * @param originLat  latitude of the bus / journey origin
-     * @param originLon  longitude of the bus / journey origin
-     * @return list of enriched ETA results
+     * @return list of enriched ETA results, sorted by estimated arrival
      */
-    public List<TrafficEtaResult> getEnrichedArrivals(
-            String stopId, double originLat, double originLon) {
+    public List<TrafficEtaResult> getEnrichedArrivals(String stopId) {
 
         double[] stopCoords = STOP_COORDS.get(stopId);
         if (stopCoords == null) {
@@ -88,33 +90,36 @@ public class TrafficAwareETAService {
             return List.of();
         }
 
-        // Enrich each arrival with Google Maps traffic data
+        // Query Google Maps once for this stop (route start → stop destination)
+        Optional<GoogleMapsService.TrafficResult> trafficOpt =
+                googleMapsService.getTravelTime(
+                        ROUTE_START_LAT, ROUTE_START_LON,
+                        stopCoords[0], stopCoords[1]);
+
+        // Enrich each arrival with the same traffic delta
         return arrivals.stream()
-                .map(arrival -> enrich(arrival, stopId, originLat, originLon, stopCoords))
+                .map(arrival -> enrich(arrival, stopId, trafficOpt))
+                .sorted((a, b) -> a.estimatedArrival().compareTo(b.estimatedArrival()))
                 .toList();
     }
 
     /**
      * Enrich a single arrival with Google Maps traffic data.
-     * Falls back to the original CASSITRACK ETA if Google Maps is unavailable.
+     * Falls back to CASSITRACK ETA if Google Maps is unavailable.
      */
     private TrafficEtaResult enrich(
-            StopArrivalDTO arrival, String stopId,
-            double originLat, double originLon, double[] stopCoords) {
-
-        Optional<GoogleMapsService.TrafficResult> trafficOpt =
-                googleMapsService.getTravelTime(
-                        originLat, originLon,
-                        stopCoords[0], stopCoords[1]);
+            StopArrivalDTO arrival,
+            String stopId,
+            Optional<GoogleMapsService.TrafficResult> trafficOpt) {
 
         if (trafficOpt.isPresent()) {
             GoogleMapsService.TrafficResult t = trafficOpt.get();
             long delay = t.durationInTrafficSeconds() - t.durationSeconds();
 
-            // Adjust the arrival time from CASSITRACK with the traffic delta
+            // Adjust the CASSITRACK arrival time with the traffic delta
             Instant adjusted = arrival.getEstimatedArrival().plusSeconds(delay);
 
-            log.debug("Enriched stop {} with Google Maps: base={}s traffic={}s delay={}s",
+            log.debug("Enriched {} with Google Maps: base={}s traffic={}s delay={}s",
                     stopId, t.durationSeconds(), t.durationInTrafficSeconds(), delay);
 
             return new TrafficEtaResult(
@@ -137,8 +142,8 @@ public class TrafficAwareETAService {
                 arrival.getVehicleId(),
                 stopId,
                 arrival.getEstimatedArrival(),
-                etaSec,
-                etaSec,
+                Math.max(0, etaSec),
+                Math.max(0, etaSec),
                 0L,
                 0L,
                 "CASSITRACK"

@@ -156,17 +156,17 @@ The AI chatbot requires an Anthropic API key, and the traffic-aware ETA requires
 1. Open IntelliJ → Run → **Edit Configurations**
 2. Select **CassitrackApplication**
 3. Click **Modify options → Environment variables**
-4. Add both keys:
+4. Add: `ANTHROPIC_API_KEY=sk-ant-api03-your-key-here`
+5. Click OK, then select **OmnimoveApplication** and add both:
    ```
    ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
    GOOGLE_MAPS_API_KEY=AIza-your-key-here
    ```
-5. Click OK, then repeat for **OmnimoveApplication** (Anthropic key only)
 
 > Get a free Anthropic key at [console.anthropic.com](https://console.anthropic.com)
 > Get a Google Maps key at [console.cloud.google.com](https://console.cloud.google.com) — enable **Distance Matrix API**
 
-> **Note:** `GOOGLE_MAPS_API_KEY` is optional. If not set, the system automatically falls back to haversine-based ETA estimates. The `dataSource` field in the response will indicate `"HAVERSINE"` instead of `"GOOGLE_MAPS"`.
+> **Note:** `GOOGLE_MAPS_API_KEY` goes only on **OmnimoveApplication** — the traffic endpoint lives on OMNIMOVE (port 8081). If not set, responses fall back to `"dataSource": "CASSITRACK"`.
 
 
 ---
@@ -333,8 +333,7 @@ Both backends expose Swagger UI for interactive API exploration:
 | GET | `/api/v1/vehicles` | All active bus positions |
 | GET | `/api/v1/vehicles/{id}` | Single vehicle detail |
 | GET | `/api/v1/stops/{id}/arrivals` | ETA at a specific stop |
-| GET | `/api/v1/traffic/eta?stopId={id}` | Traffic-aware ETA via Google Maps |
-| GET | `/api/v1/traffic/eta?stopId={id}&vehicleId={id}` | Traffic ETA filtered by bus |
+| GET | `/api/v1/traffic/eta?stopId={id}` | Traffic-aware ETA via Google Maps (OMNIMOVE port 8081) |
 | POST | `/api/v1/ai/chat` | AI chatbot query |
 | POST | `/api/v1/journeys/search` | Multimodal journey planning |
 | GET | `/api/v1/feed/gtfs-rt` | GTFS Realtime feed (Protobuf) |
@@ -368,10 +367,8 @@ curl -X POST http://localhost:8080/api/v1/journeys/search \
 
 ```bash
 # All active buses heading to Campus Folcara (with real-time traffic)
-curl http://localhost:8080/api/v1/traffic/eta?stopId=FOLCARA-CAMPUS
-
-# Filter by specific bus
-curl "http://localhost:8080/api/v1/traffic/eta?stopId=FOLCARA-CAMPUS&vehicleId=MAGNI-001"
+# No coordinates needed — runs on OMNIMOVE (port 8081)
+curl http://localhost:8081/api/v1/traffic/eta?stopId=FOLCARA-CAMPUS
 ```
 
 Example response:
@@ -379,20 +376,22 @@ Example response:
 [
   {
     "vehicleId": "MAGNI-001",
-    "routeId": "LINEA-16",
     "stopId": "FOLCARA-CAMPUS",
     "estimatedArrival": "2026-06-08T10:55:31Z",
     "durationSeconds": 553,
     "trafficDurationSeconds": 519,
     "trafficDelaySeconds": -34,
     "distanceMetres": 3200,
-    "dataSource": "GOOGLE_MAPS",
-    "scheduleStatus": "ON_TIME"
+    "dataSource": "GOOGLE_MAPS"
   }
 ]
 ```
 
-`dataSource` is `"GOOGLE_MAPS"` when the key is configured, `"HAVERSINE"` as fallback.
+`dataSource` is `"GOOGLE_MAPS"` when the key is configured, `"CASSITRACK"` as fallback.
+
+> **Note:** The endpoint lives on OMNIMOVE (port 8081), not CASSITRACK.
+> Google Maps uses the route start (Cassino Stazione) as origin and the
+> requested stop as destination — no user coordinates required.
 
 ---
 
@@ -539,8 +538,8 @@ curl http://localhost:8080/api/v1/feed/gtfs-rt/debug
 | Container name conflict | Old containers still registered | Run `docker compose down` then `docker compose up -d` |
 | Tomcat error on startup | Database miss-match | Run `docker compose down -v` to reset all data, then start again. If necessary, in application.yml change ddl-auto:update to create-drop |
 | Omnimove cannot receive Influx data from Cassitrack | Create and use your own token | From InfluxDB UI in port 8087, go in Load Data, clone the token and copy-paste it in the application.yml of omnimove (found in the lower section of the file) |
-| `/api/v1/traffic/eta` returns `dataSource: "HAVERSINE"` | Google Maps key not set | Add `GOOGLE_MAPS_API_KEY` in IntelliJ Run Configurations for CassitrackApplication |
-| `/api/v1/traffic/eta` returns 403 | Endpoint not whitelisted in Security | Add `.requestMatchers("/api/v1/traffic/**").permitAll()` in `SecurityConfig.java` |
+| `/api/v1/traffic/eta` returns `dataSource: "CASSITRACK"` | Google Maps key not set | Add `GOOGLE_MAPS_API_KEY` in IntelliJ Run Configurations for **OmnimoveApplication** |
+| `/api/v1/traffic/eta` returns 403 | Endpoint not whitelisted in Security | Add `.requestMatchers("/api/v1/traffic/**").permitAll()` in omnimove `SecurityConfig.java` |
 | Flyway checksum mismatch on startup | Migration file modified after first run | Run `UPDATE flyway_schema_history SET checksum = <new_value> WHERE version = '1';` on the DB |
 
 ---

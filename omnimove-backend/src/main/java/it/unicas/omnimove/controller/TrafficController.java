@@ -18,6 +18,9 @@ import java.util.List;
  * Fetches bus arrival data from CASSITRACK and enriches it with
  * real-time traffic information from Google Maps Distance Matrix API.
  *
+ * No user coordinates required — Google Maps uses the route start
+ * as origin and the requested stop as destination.
+ *
  * Swagger UI: http://localhost:8081/api/swagger-ui
  */
 @RestController
@@ -29,7 +32,7 @@ public class TrafficController {
     private final TrafficAwareETAService trafficAwareETAService;
 
     /**
-     * GET /api/v1/traffic/eta?stopId=FOLCARA-CAMPUS&originLat=41.49&originLon=13.83
+     * GET /api/v1/traffic/eta?stopId=FOLCARA-CAMPUS
      *
      * Returns predicted bus arrivals at a stop enriched with
      * real-time traffic data from Google Maps.
@@ -43,22 +46,17 @@ public class TrafficController {
         summary = "Get traffic-aware ETA for a stop",
         description = """
             Fetches bus arrivals from CASSITRACK and enriches them with
-            Google Maps real-time traffic data. Falls back to CASSITRACK
-            ETA if Google Maps is unavailable (dataSource will be "CASSITRACK").
+            Google Maps real-time traffic data.
+            Falls back to CASSITRACK ETA if Google Maps is unavailable
+            (dataSource will be "CASSITRACK").
             """
     )
     public ResponseEntity<List<TrafficAwareETAService.TrafficEtaResult>> getTrafficEta(
             @Parameter(description = "Stop ID, e.g. FOLCARA-CAMPUS")
-            @RequestParam String stopId,
-
-            @Parameter(description = "Origin latitude (user or bus position)")
-            @RequestParam double originLat,
-
-            @Parameter(description = "Origin longitude (user or bus position)")
-            @RequestParam double originLon
+            @RequestParam String stopId
     ) {
         List<TrafficAwareETAService.TrafficEtaResult> results =
-                trafficAwareETAService.getEnrichedArrivals(stopId, originLat, originLon);
+                trafficAwareETAService.getEnrichedArrivals(stopId);
 
         if (results.isEmpty()) {
             return ResponseEntity.noContent().build();
