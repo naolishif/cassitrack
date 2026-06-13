@@ -5,6 +5,8 @@ import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.WriteApiBlocking;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,13 +29,36 @@ public class JourneyEventService {
     @Value("${influx.bucket}")
     private String bucket;
 
+    // Singleton client — created once at startup, reused for all writes
+    private InfluxDBClient client;
+    private WriteApiBlocking writeApi;
+
+    @PostConstruct
+    public void init() {
+        client = InfluxDBClientFactory.create(influxUrl, token.toCharArray(), influxOrg, bucket);
+        writeApi = client.getWriteApiBlocking();
+        log.info("InfluxDB client initialized → {}", influxUrl);
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (client != null) {
+            client.close();
+            log.info("InfluxDB client closed.");
+        }
+    }
+
+    /**
+     * Records a journey search event to InfluxDB.
+     * Called on every user search — each call writes one point with the current timestamp,
+     * so the data is as live as your user traffic.
+     *
+     * Dashboard auto-refresh (e.g. Grafana every 1 min) controls how often the UI updates —
+     * not this method.
+     */
     public void recordJourneySearch(String mode, int hour, String dayOfWeek,
                                     int greenIndex, double distanceKm) {
-        try (InfluxDBClient client = InfluxDBClientFactory.create(
-                influxUrl, token.toCharArray(), influxOrg, bucket)) {
-
-            WriteApiBlocking writeApi = client.getWriteApiBlocking();
-
+        try {
             Point point = Point.measurement("journey_search")
                     .addTag("mode", mode.toUpperCase())
                     .addTag("day_of_week", dayOfWeek)
