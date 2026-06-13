@@ -453,7 +453,6 @@
         .profile-scroll::-webkit-scrollbar { width: 3px; }
         .profile-scroll::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
 
-        /* ─── PROFILE HERO ─── */
         .profile-hero-card {
             background: var(--ai-gradient);
             border-radius: var(--radius-lg);
@@ -487,7 +486,6 @@
         .pstat-val { font-size: 20px; font-weight: 800; }
         .pstat-lbl { font-size: 10px; opacity: 0.75; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
 
-        /* ─── PROFILE TABS ─── */
         .profile-tabs {
             display: flex;
             gap: 4px;
@@ -512,7 +510,6 @@
         .ptab-pane { display: none; }
         .ptab-pane.active { display: block; }
 
-        /* ─── ROUTE HISTORY CARDS ─── */
         .route-hist-grid {
             display: flex;
             flex-direction: column;
@@ -563,7 +560,6 @@
         .fav-star:hover { color: var(--amber); }
         .fav-star.starred { color: var(--amber); }
 
-        /* ─── PAYMENT ─── */
         .payment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
         .payment-card {
             background: var(--bg-white);
@@ -584,7 +580,6 @@
             background: var(--bg-app);
         }
 
-        /* ─── SETTINGS ─── */
         .settings-section { margin-bottom: 28px; }
         .pref-row {
             display: flex;
@@ -630,7 +625,6 @@
             outline: none;
         }
 
-        /* ─── FAVOURITES EMPTY ─── */
         .empty-state {
             text-align: center;
             padding: 48px 20px;
@@ -744,7 +738,11 @@
             cursor: pointer;
         }
 
-        /* ─── SCROLLBAR ─── */
+        @keyframes pulse-blue {
+            0%,100% { box-shadow: 0 0 0 4px rgba(59,130,246,0.35); }
+            50%      { box-shadow: 0 0 0 10px rgba(59,130,246,0.08); }
+        }
+
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
@@ -807,12 +805,16 @@
     <!-- TOPBAR -->
     <div class="topbar">
         <div class="topbar-search">
-            <div class="search-seg" onclick="detectLocation()" style="cursor:pointer">
+            <div class="search-seg">
                 <span>📍</span>
-                <span id="originLabel" style="font-size:12px;color:var(--text-dark);padding:10px 0;flex:1">
-        Tap to use your location
-                </span>
-                <span id="originSpinner" style="display:none;font-size:11px;color:var(--text-soft)">📡 Locating...</span>
+                <select id="originSelect" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;cursor:pointer;">
+                    <option value="GPS">📍 My Location</option>
+                    <option value="CASSINO-STAZIONE">Cassino Stazione FS</option>
+                    <option value="CASSINO-CENTRO">Cassino Centro</option>
+                    <option value="CASSINO-OSPEDALE">Ospedale S. Scolastica</option>
+                    <option value="FOLCARA-VIA">Via Folcara</option>
+                    <option value="FOLCARA-CAMPUS">Campus UNICAS Folcara</option>
+                </select>
             </div>
             <div class="search-seg">
                 <span>🏁</span>
@@ -824,6 +826,7 @@
                     <option value="FOLCARA-CAMPUS">Campus UNICAS Folcara</option>
                 </select>
             </div>
+            <button class="search-btn" onclick="swapStops()" style="background:var(--bg-app);color:var(--text-dark);border-left:1px solid var(--border-mid);padding:10px 14px;font-size:16px" title="Swap">⇄</button>
             <button class="search-btn" onclick="doSearch()">Search →</button>
         </div>
         <div class="cats">
@@ -1047,7 +1050,6 @@
         <div class="pane" id="pane-profile">
             <div class="profile-scroll">
 
-                <!-- HERO -->
                 <div class="profile-hero-card">
                     <div class="profile-avatar-lg">👤</div>
                     <div class="profile-hero-info">
@@ -1074,7 +1076,6 @@
                     </div>
                 </div>
 
-                <!-- TABS -->
                 <div class="profile-tabs">
                     <div class="profile-tab active" data-ptab="history" onclick="switchProfileTab('history')">Last Routes</div>
                     <div class="profile-tab" data-ptab="favorites" onclick="switchProfileTab('favorites')">Favourites</div>
@@ -1082,11 +1083,9 @@
                     <div class="profile-tab" data-ptab="settings" onclick="switchProfileTab('settings')">Preferences</div>
                 </div>
 
-                <!-- HISTORY TAB -->
                 <div class="ptab-pane active" id="ptab-history">
                     <span class="section-label">Recent Trips</span>
                     <div class="route-hist-grid">
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bus">🚌</div>
                             <div class="route-hist-info">
@@ -1099,7 +1098,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)" title="Add to favourites">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bike">🚲</div>
                             <div class="route-hist-info">
@@ -1112,7 +1110,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-scooter">🛴</div>
                             <div class="route-hist-info">
@@ -1125,7 +1122,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bus">🚌</div>
                             <div class="route-hist-info">
@@ -1138,7 +1134,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-walk">🚶</div>
                             <div class="route-hist-info">
@@ -1151,7 +1146,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bike">🚲</div>
                             <div class="route-hist-info">
@@ -1164,7 +1158,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bus">🚌</div>
                             <div class="route-hist-info">
@@ -1177,7 +1170,6 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-scooter">🛴</div>
                             <div class="route-hist-info">
@@ -1190,15 +1182,12 @@
                             </div>
                             <span class="fav-star" onclick="toggleFav(this)">☆</span>
                         </div>
-
                     </div>
                 </div>
 
-                <!-- FAVOURITES TAB -->
                 <div class="ptab-pane" id="ptab-favorites">
                     <span class="section-label">Saved Favourite Routes</span>
                     <div class="route-hist-grid" id="favs-list">
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bus">🚌</div>
                             <div class="route-hist-info">
@@ -1210,7 +1199,6 @@
                             </div>
                             <span class="fav-star starred" onclick="toggleFav(this)">★</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-bike">🚲</div>
                             <div class="route-hist-info">
@@ -1222,7 +1210,6 @@
                             </div>
                             <span class="fav-star starred" onclick="toggleFav(this)">★</span>
                         </div>
-
                         <div class="route-hist-card">
                             <div class="route-hist-icon ri-scooter">🛴</div>
                             <div class="route-hist-info">
@@ -1234,11 +1221,9 @@
                             </div>
                             <span class="fav-star starred" onclick="toggleFav(this)">★</span>
                         </div>
-
                     </div>
                 </div>
 
-                <!-- PAYMENT TAB -->
                 <div class="ptab-pane" id="ptab-payment">
                     <span class="section-label">Saved Payment Methods</span>
                     <div class="payment-grid">
@@ -1261,7 +1246,6 @@
                     <button class="action-btn btn-dark" style="width:auto;margin-top:16px;padding:11px 24px">+ Add Payment Method</button>
                 </div>
 
-                <!-- SETTINGS TAB -->
                 <div class="ptab-pane" id="ptab-settings">
                     <div class="settings-section">
                         <span class="section-label">Journey Preferences</span>
@@ -1298,7 +1282,6 @@
                             <div class="toggle" onclick="this.classList.toggle('on')"></div>
                         </div>
                     </div>
-
                     <div class="settings-section">
                         <span class="section-label">Notifications</span>
                         <div class="pref-row">
@@ -1323,7 +1306,6 @@
                             <div class="toggle" onclick="this.classList.toggle('on')"></div>
                         </div>
                     </div>
-
                     <div class="settings-section">
                         <span class="section-label">Account</span>
                         <div class="pref-row">
@@ -1362,13 +1344,11 @@
 <script>
     // 🛡️ FRONTEND ROUTE GUARD
     if (!localStorage.getItem('omnimove_token')) {
-        // No token found? Kick them straight back to the login screen!
         window.location.href = 'omnimove-login.html';
     }
 
-    // Name and email
     const _user = JSON.parse(localStorage.getItem('omnimove_user') || '{}');
-    document.getElementById('sidebarName').textContent = _user.name || _user.username || 'Utente';
+    document.getElementById('sidebarName').textContent  = _user.name || _user.username || 'Utente';
     document.getElementById('sidebarEmail').textContent = _user.email || '';
     document.getElementById('profileName').textContent  = _user.name  || _user.username || 'Utente';
     document.getElementById('profileEmail').textContent = _user.email || '';
@@ -1378,8 +1358,7 @@
     document.getElementById('aiGreeting').textContent =
         `👋 Hi ${_name}! I'm OmniAI. I can help you find the best route, check real-time delays, or suggest eco-friendly alternatives. What do you need?`;
 
-    // ── API base URL e helper autenticato ─────────────────────────────────
-    const API_BASE = '/api/v1';  // relativo — OMNIMOVE è sulla porta 8081
+    const API_BASE = '/api/v1';
 
     async function apiFetch(path, options = {}) {
         const token = localStorage.getItem('omnimove_token');
@@ -1393,149 +1372,185 @@
         });
     }
 
-    // ── Map ──
-    const map = L.map('map', {zoomControl: true}).setView([41.4901, 13.8303], 15);
+    // ── Map init ──────────────────────────────────────────────────────
+    const map = L.map('map', { zoomControl: true }).setView([41.4901, 13.8303], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    const makeIcon = (emoji, color) => L.divIcon({
-        html: `<div style="background:${color};color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:15px">${emoji}</div>`,
-        className: '', iconSize: [34, 34]
+    // ── Icons ─────────────────────────────────────────────────────────
+
+    // Pulsing blue dot — used for "you are here" both on the idle map and during journey
+    const userIcon = L.divIcon({
+        html: `<div style="
+            width:18px;height:18px;border-radius:50%;
+            background:#3b82f6;border:3px solid white;
+            box-shadow:0 0 0 4px rgba(59,130,246,0.35);
+            animation:pulse-blue 2s infinite;
+        "></div>`,
+        className: '',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
     });
 
-    L.marker([41.492, 13.824], {icon: makeIcon('🚏', '#10b981')}).addTo(map).bindPopup('Linea 16 – Magni|Stop Carrer del carme');
-    L.marker([41.489, 13.828], {icon: makeIcon('🚲', '#3b82f6')}).addTo(map).bindPopup('Elerent Bike Share');
-    L.marker([41.4885, 13.8335], {icon: makeIcon('🛴', '#7c3aed')}).addTo(map).bindPopup('E-Scooter Station');
-    L.marker([41.4901, 13.8303], {icon: makeIcon('📍', '#ef4444')}).addTo(map).bindPopup('Via Folcara (you)');
-
-    const route = [[41.4901, 13.8303], [41.492, 13.824], [41.490, 13.828], [41.487, 13.831]];
-    L.polyline(route, {color: '#3b82f6', weight: 5, opacity: 0.65, dashArray: '10, 8'}).addTo(map);
-
-    // ── Sidebar nav ──
-    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const pane = item.dataset.pane;
-            const tab = item.dataset.tab;
-
-            document.querySelectorAll('.sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-
-            document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-            document.getElementById('pane-' + pane).classList.add('active');
-
-            if (pane === 'profile' && tab) switchProfileTab(tab);
-            if (pane === 'map') setTimeout(() => map.invalidateSize(), 50);
+    // Destination pin — SVG teardrop (no text that could leak into the DOM)
+    function makeDestIcon(color) {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="42" viewBox="0 0 28 42">
+            <circle cx="14" cy="14" r="12" fill="${color}" stroke="white" stroke-width="2.5"
+                style="filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35))"/>
+            <circle cx="14" cy="14" r="5" fill="white" opacity="0.9"/>
+            <line x1="14" y1="26" x2="14" y2="41" stroke="${color}" stroke-width="3"
+                stroke-linecap="round" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,0.2))"/>
+        </svg>`;
+        return L.divIcon({
+            html: svg,
+            className: '',
+            iconSize: [28, 42],
+            iconAnchor: [14, 41]   // tip of the line anchors to the coordinate
         });
-    });
-
-    // ── Category chips ──
-    function setCat(el) {
-        document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-        el.classList.add('active');
     }
 
-    // ── Stop coordinates (Bus 16 route) ──────────────────────────────
+    // ── Stop markers (bus stops) ──────────────────────────────────────
     const STOPS = {
-        'CASSINO-STAZIONE': { name: 'Cassino Stazione FS',    lat: 41.4892, lon: 13.8282 },
-        'CASSINO-CENTRO':   { name: 'Cassino Centro',          lat: 41.4917, lon: 13.8314 },
+        'CASSINO-STAZIONE': { name: 'Cassino Stazione FS',   lat: 41.4892, lon: 13.8282 },
+        'CASSINO-CENTRO':   { name: 'Cassino Centro',         lat: 41.4917, lon: 13.8314 },
         'CASSINO-OSPEDALE': { name: 'Ospedale S. Scolastica', lat: 41.4955, lon: 13.8330 },
-        'FOLCARA-VIA':      { name: 'Via Folcara',             lat: 41.5020, lon: 13.8200 },
+        'FOLCARA-VIA':      { name: 'Via Folcara',            lat: 41.5020, lon: 13.8200 },
         'FOLCARA-CAMPUS':   { name: 'Campus UNICAS Folcara',  lat: 41.5041, lon: 13.8189 },
     };
 
-    // Current GPS position
+    window._stopMarkers = [];
+
+    Object.entries(STOPS).forEach(([id, stop]) => {
+        const stopIcon = L.divIcon({
+            html: '<div style="background:#10b981;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:11px;font-weight:800">M</div>',
+            className: '', iconSize: [28, 28]
+        });
+        const marker = L.marker([stop.lat, stop.lon], { icon: stopIcon })
+            .addTo(map)
+            .bindPopup('<b>' + stop.name + '</b><br>Linea 16 — Magni Autoservizi');
+        window._stopMarkers.push(marker);
+    });
+
+    // ── GPS state ─────────────────────────────────────────────────────
     let userLat = null;
     let userLon = null;
-    let userLocationName = 'My Location';
+    let userMarker = null;   // the pulsing dot on the map
 
-    function detectLocation() {
-        if (!navigator.geolocation) {
-            showToast('GPS not available on this device', true); return;
-        }
-        document.getElementById('originLabel').style.display  = 'none';
-        document.getElementById('originSpinner').style.display = 'inline';
-
-        navigator.geolocation.getCurrentPosition(
-            pos => {
-                userLat = pos.coords.latitude;
-                userLon = pos.coords.longitude;
-                userLocationName = 'My Location';
-
-                document.getElementById('originSpinner').style.display = 'none';
-                document.getElementById('originLabel').style.display   = 'inline';
-                document.getElementById('originLabel').textContent     = '📍 My Location detected';
-                document.getElementById('originLabel').style.color     = 'var(--primary-dark)';
-
-                // Show user on map
-                map.setView([userLat, userLon], 16);
-                L.marker([userLat, userLon], {
-                    icon: makeIcon('📍', '#ef4444')
-                }).addTo(map).bindPopup('You are here').openPopup();
-
-                showToast('📍 Location detected!');
-            },
-            err => {
-                // Fallback to Via Folcara if GPS denied
-                userLat = 41.5020; userLon = 13.8200;
-                userLocationName = 'Via Folcara (default)';
-                document.getElementById('originSpinner').style.display = 'none';
-                document.getElementById('originLabel').style.display   = 'inline';
-                document.getElementById('originLabel').textContent     = '📍 Via Folcara (default)';
-                showToast('GPS unavailable — using Via Folcara', true);
-            },
-            { timeout: 8000, maximumAge: 60000 }
-        );
+    function placeUserMarker(lat, lon) {
+        if (userMarker) map.removeLayer(userMarker);
+        userMarker = L.marker([lat, lon], { icon: userIcon })
+            .addTo(map)
+            .bindPopup('📍 You are here');
     }
 
+    function tryGetGPS() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) { reject('no_geolocation'); return; }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                    placeUserMarker(userLat, userLon);
+                    resolve({ name: 'My Location', lat: userLat, lon: userLon, isGPS: true });
+                },
+                err => {
+                    // Friendly fallback so the demo still works
+                    userLat = 41.5020; userLon = 13.8200;
+                    placeUserMarker(userLat, userLon);
+                    resolve({ name: 'Via Folcara (approx)', lat: userLat, lon: userLon, isGPS: true });
+                },
+                { timeout: 8000, maximumAge: 60000 }
+            );
+        });
+    }
+
+    // ── GPS trigger when user switches to "My Location" ───────────────
+    document.getElementById('originSelect').addEventListener('change', function () {
+        if (this.value === 'GPS') {
+            showToast('📡 Getting your location...');
+            tryGetGPS()
+                .then(pos => {
+                    showToast('📍 Location detected!');
+                    map.setView([pos.lat, pos.lon], 16);
+                })
+                .catch(() => {
+                    showToast('GPS unavailable — select a stop', true);
+                    this.value = 'FOLCARA-VIA';
+                });
+        }
+    });
+
+    function swapStops() {
+        const originSel = document.getElementById('originSelect');
+        const destSel   = document.getElementById('destSelect');
+        const ov = originSel.value;
+        const dv = destSel.value;
+        if (ov !== 'GPS') destSel.value = ov;
+        originSel.value = dv;
+    }
+
+    function getOrigin() {
+        const val = document.getElementById('originSelect').value;
+        if (val === 'GPS') {
+            if (!userLat) return null;
+            return { name: 'My Location', lat: userLat, lon: userLon, isGPS: true };
+        }
+        return { ...STOPS[val], isGPS: false };
+    }
+
+    // ── Search ────────────────────────────────────────────────────────
     async function doSearch() {
         const destId = document.getElementById('destSelect').value;
         const dest   = STOPS[destId];
+        let origin   = getOrigin();
 
-        // If no GPS yet, try to get it first
-        if (!userLat) {
-            showToast('Tap 📍 first to detect your location', true); return;
+        if (!origin) {
+            showToast('📡 Getting your location...', false);
+            try { origin = await tryGetGPS(); }
+            catch (e) { showToast('GPS unavailable — select a stop as origin', true); return; }
         }
 
-        // Show map pane
+        if (origin.name === dest.name) {
+            showToast('Origin and destination cannot be the same', true); return;
+        }
+
+        // Switch to map pane
         document.querySelectorAll('.sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector('[data-pane="map"]').classList.add('active');
         document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
         document.getElementById('pane-map').classList.add('active');
         setTimeout(() => map.invalidateSize(), 50);
 
-        // Loading state
-        document.querySelector('.routes-list').innerHTML = `
-        <div style="text-align:center;padding:40px 20px;color:var(--text-soft)">
-            <div style="font-size:28px;margin-bottom:10px">🔄</div>
-            <div style="font-size:13px;font-weight:600">Finding best routes...</div>
-        </div>`;
+        document.querySelector('.routes-list').innerHTML =
+            '<div style="text-align:center;padding:40px 20px;color:var(--text-soft)">'
+            + '<div style="font-size:28px;margin-bottom:10px">🔄</div>'
+            + '<div style="font-size:13px;font-weight:600">Finding best routes...</div>'
+            + '</div>';
 
         try {
             const r = await apiFetch('/journeys/search', {
                 method: 'POST',
                 body: JSON.stringify({
-                    origin_lat:  userLat,
-                    origin_lon:  userLon,
-                    origin_name: userLocationName,
-                    dest_lat:    dest.lat,
-                    dest_lon:    dest.lon,
-                    dest_name:   dest.name
+                    origin_lat: origin.lat, origin_lon: origin.lon, origin_name: origin.name,
+                    dest_lat:   dest.lat,   dest_lon:   dest.lon,   dest_name:   dest.name
                 })
             });
             if (!r.ok) throw new Error('Search failed');
             const data = await r.json();
+            window._currentOrigin = origin;
+            window._currentDest   = dest;
             renderRoutes(data);
         } catch (e) {
-            document.querySelector('.routes-list').innerHTML = `
-            <div style="text-align:center;padding:40px 20px;color:var(--red)">
-                <div style="font-size:28px;margin-bottom:10px">⚠️</div>
-                <div style="font-size:13px;font-weight:600">Could not load routes.</div>
-            </div>`;
+            document.querySelector('.routes-list').innerHTML =
+                '<div style="text-align:center;padding:40px 20px;color:var(--red)">'
+                + '<div style="font-size:28px;margin-bottom:10px">⚠️</div>'
+                + '<div style="font-size:13px;font-weight:600">Could not load routes.</div>'
+                + '</div>';
         }
     }
 
-    // ── Render route cards ────────────────────────────────────────────
+    // ── Route rendering ───────────────────────────────────────────────
     const MODE_ICONS = { BUS:'🚌', BIKE:'🚲', SCOOTER:'🛴', WALK:'🚶' };
     const MODE_BTNS  = {
         BUS:     { label:'Select Bus',     cls:'btn-dark'   },
@@ -1543,25 +1558,23 @@
         SCOOTER: { label:'Select Scooter', cls:'btn-purple' },
         WALK:    { label:'Start Walking',  cls:'btn-green'  },
     };
+    const LINE_COLORS = { BUS:'#0f172a', BIKE:'#3b82f6', SCOOTER:'#7c3aed', WALK:'#10b981' };
 
     function greenColor(g) {
         return g >= 75 ? '#10b981' : g >= 50 ? '#f59e0b' : '#ef4444';
     }
 
-    // Currently selected journey option
     let selectedJourney = null;
 
     function renderRoutes(data) {
         if (data.weather_summary) {
             document.querySelector('.weather-pill').textContent = data.weather_summary;
         }
-
         const list = document.querySelector('.routes-list');
         if (!data.options || data.options.length === 0) {
             list.innerHTML = '<div style="padding:20px;color:var(--text-soft);font-size:13px">No routes found.</div>';
             return;
         }
-
         list.innerHTML = data.options.map(opt => {
             const icon = MODE_ICONS[opt.mode] || '🚗';
             const btn  = MODE_BTNS[opt.mode]  || { label: 'Select', cls: 'btn-dark' };
@@ -1569,7 +1582,6 @@
             const co2  = opt.co2_grams > 0 ? Math.round(opt.co2_grams) + ' g' : '0 g';
             const warn = opt.weather_warning
                 ? `<span class="status-badge s-delay">${opt.weather_warning}</span>` : '';
-
             return `
         <div class="route-card" id="card-${opt.mode}">
             <div class="route-top">
@@ -1580,27 +1592,22 @@
                 ${warn || '<span class="status-badge s-ok">✓ Available</span>'}
             </div>
             <div class="metrics-row">
-                <div class="metric-box">
-                    <div class="metric-label">Cost</div>
-                    <div class="metric-value">${cost}</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">CO₂</div>
-                    <div class="metric-value">${co2}</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">Green</div>
+                <div class="metric-box"><div class="metric-label">Cost</div><div class="metric-value">${cost}</div></div>
+                <div class="metric-box"><div class="metric-label">CO₂</div><div class="metric-value">${co2}</div></div>
+                <div class="metric-box"><div class="metric-label">Green</div>
                     <div class="metric-value" style="color:${greenColor(opt.green_index)}">${opt.green_index}/100</div>
                 </div>
             </div>
             <button class="action-btn ${btn.cls}"
-                onclick="selectMode('${opt.mode}', '${opt.mode_label}', ${opt.green_index}, ${opt.distance_metres})">
+                onclick="selectMode('${opt.mode}','${opt.mode_label}',${opt.green_index},${opt.distance_metres})">
                 ${btn.label}
             </button>
         </div>`;
         }).join('');
     }
 
+    // selectMode — only highlights the card and shows the Start Journey banner.
+    // The actual map drawing happens in startJourney so GPS is resolved first.
     function selectMode(mode, label, greenIndex, distanceMetres) {
         selectedJourney = { mode, label, greenIndex, distanceKm: distanceMetres / 1000 };
 
@@ -1610,33 +1617,9 @@
             c.style.opacity = '0.6';
         });
         const card = document.getElementById('card-' + mode);
-        if (card) {
-            card.style.border = '2px solid var(--primary)';
-            card.style.opacity = '1';
-        }
+        if (card) { card.style.border = '2px solid var(--primary)'; card.style.opacity = '1'; }
 
-        // Draw route line on map
-        if (window._routeLine)  map.removeLayer(window._routeLine);
-        if (window._destMarker) map.removeLayer(window._destMarker);
-
-        const destId = document.getElementById('destSelect').value;
-        const dest   = STOPS[destId];
-
-        const lineColors = { BUS:'#0f172a', BIKE:'#3b82f6', SCOOTER:'#7c3aed', WALK:'#10b981' };
-        const color = lineColors[mode] || '#0f172a';
-
-        window._routeLine = L.polyline(
-            [[userLat, userLon], [dest.lat, dest.lon]],
-            { color, weight: 5, opacity: 0.8, dashArray: mode === 'WALK' ? '8,8' : null }
-        ).addTo(map);
-
-        window._destMarker = L.marker([dest.lat, dest.lon], {
-            icon: makeIcon('🏁', color)
-        }).addTo(map).bindPopup(dest.name).openPopup();
-
-        map.fitBounds([[userLat, userLon], [dest.lat, dest.lon]], { padding: [40, 40] });
-
-        // Remove existing banner if any
+        // Remove old banner if any
         const existing = document.getElementById('start-banner');
         if (existing) existing.remove();
 
@@ -1648,7 +1631,7 @@
 
         const infoDiv = document.createElement('div');
         infoDiv.style.cssText = 'font-size:11px;color:var(--text-soft);margin-bottom:8px;font-weight:600';
-        infoDiv.textContent = modeEmoji + ' ' + label + ' · 🌱 ' + greenIndex + '/100 · ' + (distanceMetres/1000).toFixed(1) + ' km';
+        infoDiv.textContent = `${modeEmoji} ${label} · 🌱 ${greenIndex}/100 · ${(distanceMetres/1000).toFixed(1)} km`;
 
         const startBtn = document.createElement('button');
         startBtn.className = 'action-btn btn-green';
@@ -1660,11 +1643,37 @@
         banner.appendChild(startBtn);
         document.querySelector('.routes-list').appendChild(banner);
 
-        showToast(modeEmoji + ' ' + label + ' selected — tap Start Journey');
+        showToast(`${modeEmoji} ${label} selected — tap Start Journey`);
     }
+
+    // startJourney — gets GPS silently, draws GPS→stop→dest route, correct icons
     async function startJourney() {
         if (!selectedJourney) return;
 
+        const origin = window._currentOrigin;  // the named stop (or GPS stop)
+        const dest   = window._currentDest;
+
+        // 1) Silently try to get the real device GPS position (no toast/prompt UI)
+        //    We always attempt this regardless of origin type so we can show the user's
+        //    real position and draw the GPS→stop leg.
+        let gpsPos = null;
+        try {
+            gpsPos = await new Promise((resolve, reject) => {
+                if (!navigator.geolocation) { reject(); return; }
+                navigator.geolocation.getCurrentPosition(
+                    p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+                    () => reject(),
+                    { timeout: 6000, maximumAge: 30000 }
+                );
+            });
+            userLat = gpsPos.lat;
+            userLon = gpsPos.lon;
+        } catch (e) {
+            // GPS not available / denied — that's fine, we just skip the GPS leg
+            gpsPos = null;
+        }
+
+        // 2) Post to backend (non-blocking)
         try {
             await apiFetch('/journeys/select', {
                 method: 'POST',
@@ -1674,35 +1683,81 @@
                     distance_km: selectedJourney.distanceKm
                 })
             });
-        } catch (e) {
-            console.warn('Could not record journey event:', e);
-        }
+        } catch (e) { console.warn('Could not record journey event:', e); }
+
+        // 3) Hide ALL bus-stop markers (they'll be restored on end)
+        if (window._stopMarkers) window._stopMarkers.forEach(m => map.removeLayer(m));
+
+        // 4) Clean up any previous journey layers
+        ['_routeLine','_routeLineGps','_journeyDestMarker','_journeyOriginMarker','_journeyGpsMarker']
+            .forEach(k => { if (window[k]) { map.removeLayer(window[k]); window[k] = null; } });
 
         const { mode, label, greenIndex, distanceKm } = selectedJourney;
-        const modeEmoji = MODE_ICONS[mode];
-        const durationMin = Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
+        const color = LINE_COLORS[mode] || '#0f172a';
 
-        const inProgressHTML = '<div style="padding:16px 0">'
+        // 5) Place ORIGIN STOP marker — re-use the green "M" stop icon (same as the hidden ones)
+        const stopIcon = L.divIcon({
+            html: '<div style="background:#10b981;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:11px;font-weight:800">M</div>',
+            className: '', iconSize: [28, 28]
+        });
+        window._journeyOriginMarker = L.marker([origin.lat, origin.lon], { icon: stopIcon })
+            .addTo(map)
+            .bindPopup('<b>' + origin.name + '</b><br>Starting point');
+
+        // 6) Place real GPS marker (pulsing blue dot) if we have a position
+        if (gpsPos) {
+            placeUserMarker(gpsPos.lat, gpsPos.lon);
+            // Dashed grey leg: GPS → origin stop
+            window._routeLineGps = L.polyline(
+                [[gpsPos.lat, gpsPos.lon], [origin.lat, origin.lon]],
+                { color: '#94a3b8', weight: 3, opacity: 0.7, dashArray: '6,6' }
+            ).addTo(map);
+        } else if (userMarker) {
+            map.removeLayer(userMarker);
+            userMarker = null;
+        }
+
+        // 7) Place DESTINATION marker — SVG red pin
+        window._journeyDestMarker = L.marker([dest.lat, dest.lon], { icon: makeDestIcon('#ef4444') })
+            .addTo(map)
+            .bindPopup('<b>📍 ' + dest.name + '</b>').openPopup();
+
+        // 8) Draw main route line: origin stop → destination
+        window._routeLine = L.polyline(
+            [[origin.lat, origin.lon], [dest.lat, dest.lon]],
+            { color, weight: 5, opacity: 0.85, dashArray: mode === 'WALK' ? '8,8' : null }
+        ).addTo(map);
+
+        // 9) Fit bounds: include GPS pos if available
+        const allPoints = gpsPos
+            ? [[gpsPos.lat, gpsPos.lon], [origin.lat, origin.lon], [dest.lat, dest.lon]]
+            : [[origin.lat, origin.lon], [dest.lat, dest.lon]];
+        map.fitBounds(allPoints, { padding: [50, 50] });
+
+        // 9) Render in-progress panel
+        const durationMin = Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
+        const modeEmoji   = MODE_ICONS[mode];
+
+        document.querySelector('.routes-list').innerHTML =
+            '<div style="padding:16px 0">'
             + '<div style="background:linear-gradient(135deg,#10b981,#3b82f6);border-radius:20px;padding:20px;color:white;margin-bottom:16px;text-align:center">'
-            + '<div style="font-size:36px;margin-bottom:8px">' + modeEmoji + '</div>'
+            + `<div style="font-size:36px;margin-bottom:8px">${modeEmoji}</div>`
             + '<div style="font-size:18px;font-weight:800;margin-bottom:4px">Journey in Progress</div>'
-            + '<div style="font-size:13px;opacity:0.85">' + label + '</div>'
+            + `<div style="font-size:13px;opacity:0.85">${label}</div>`
             + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">'
             + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
             + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Distance</div>'
-            + '<div style="font-size:16px;font-weight:800">' + distanceKm.toFixed(1) + ' km</div></div>'
+            + `<div style="font-size:16px;font-weight:800">${distanceKm.toFixed(1)} km</div></div>`
             + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
             + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">ETA</div>'
-            + '<div style="font-size:16px;font-weight:800" id="etaCounter">' + durationMin + ' min</div></div>'
+            + `<div style="font-size:16px;font-weight:800" id="etaCounter">${durationMin} min</div></div>`
             + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
             + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Green</div>'
-            + '<div style="font-size:16px;font-weight:800">🌱 ' + greenIndex + '</div></div>'
+            + `<div style="font-size:16px;font-weight:800">🌱 ${greenIndex}</div></div>`
             + '</div></div>'
             + '<button class="action-btn" onclick="endJourney()" style="width:100%;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;font-size:14px;padding:13px;margin-bottom:12px">🏁 End Journey</button>'
             + '<div style="text-align:center;font-size:11px;color:var(--text-soft);font-weight:600">📡 Live tracking active</div>'
             + '</div>';
-
-        document.querySelector('.routes-list').innerHTML = inProgressHTML;
 
         let remaining = durationMin;
         window._etaInterval = setInterval(() => {
@@ -1716,17 +1771,27 @@
             }
         }, 60000);
 
-        showToast('🚀 Journey started! ' + durationMin + ' min to destination');
+        showToast(`🚀 Journey started! ${durationMin} min to destination`);
     }
 
     function endJourney() {
         clearInterval(window._etaInterval);
         selectedJourney = null;
 
-        if (window._routeLine)  map.removeLayer(window._routeLine);
-        if (window._destMarker) map.removeLayer(window._destMarker);
+        // Remove all journey map layers
+        ['_routeLine','_routeLineGps','_journeyDestMarker','_journeyOriginMarker','_journeyGpsMarker']
+            .forEach(k => { if (window[k]) { map.removeLayer(window[k]); window[k] = null; } });
 
-        document.querySelector('.routes-list').innerHTML = '<div style="text-align:center;padding:48px 20px;color:var(--text-soft)">'
+        // Keep the live GPS dot if we have a real position
+        if (userLat) placeUserMarker(userLat, userLon);
+
+        // Restore bus-stop markers
+        if (window._stopMarkers) window._stopMarkers.forEach(m => m.addTo(map));
+
+        map.setView([41.4901, 13.8303], 15);
+
+        document.querySelector('.routes-list').innerHTML =
+            '<div style="text-align:center;padding:48px 20px;color:var(--text-soft)">'
             + '<div style="font-size:36px;margin-bottom:12px">🌱</div>'
             + '<div style="font-size:14px;font-weight:700;color:var(--text-dark)">Journey completed!</div>'
             + '<div style="font-size:12px;margin-top:6px">Search a new route above</div>'
@@ -1735,28 +1800,43 @@
         showToast('🏁 Journey ended — great trip!');
     }
 
-    // ── Toast notification (replaces alert) ──────────────────────────
+    // ── Toast ─────────────────────────────────────────────────────────
     function showToast(msg, isError = false) {
         const existing = document.getElementById('toast-notif');
         if (existing) existing.remove();
-
         const toast = document.createElement('div');
         toast.id = 'toast-notif';
         toast.style.cssText = `
-        position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-        background:${isError ? '#ef4444' : '#0f172a'};
-        color:white; padding:12px 20px; border-radius:50px;
-        font-size:13px; font-weight:700; z-index:9999;
-        box-shadow:0 8px 24px rgba(0,0,0,0.2);
-        white-space:nowrap;
-        animation: fadeInUp 0.3s ease;
-    `;
+            position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+            background:${isError ? '#ef4444' : '#0f172a'};
+            color:white;padding:12px 20px;border-radius:50px;
+            font-size:13px;font-weight:700;z-index:9999;
+            box-shadow:0 8px 24px rgba(0,0,0,0.2);white-space:nowrap;
+        `;
         toast.textContent = msg;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
 
-    // ── Ticket type selector ──
+    // ── Sidebar nav ───────────────────────────────────────────────────
+    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const pane = item.dataset.pane;
+            const tab  = item.dataset.tab;
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+            document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('pane-' + pane).classList.add('active');
+            if (pane === 'profile' && tab) switchProfileTab(tab);
+            if (pane === 'map') setTimeout(() => map.invalidateSize(), 50);
+        });
+    });
+
+    function setCat(el) {
+        document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+    }
+
     function showTicketType(type, el) {
         document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
@@ -1764,24 +1844,19 @@
         document.getElementById(type + '-tickets').classList.add('active');
     }
 
-    // ── Profile tabs ──
     function switchProfileTab(tab) {
-        document.querySelectorAll('.profile-tab').forEach(t => {
-            t.classList.toggle('active', t.dataset.ptab === tab);
-        });
+        document.querySelectorAll('.profile-tab').forEach(t => t.classList.toggle('active', t.dataset.ptab === tab));
         document.querySelectorAll('.ptab-pane').forEach(p => p.classList.remove('active'));
         const el = document.getElementById('ptab-' + tab);
         if (el) el.classList.add('active');
     }
 
-    // ── Favourites toggle ──
     function toggleFav(star) {
         const isStarred = star.classList.contains('starred');
         star.classList.toggle('starred', !isStarred);
         star.textContent = isStarred ? '☆' : '★';
     }
 
-    // ── AI Panel ──
     function openAI() {
         document.getElementById('aiOverlay').classList.add('open');
         setTimeout(() => document.getElementById('aiInput').focus(), 100);
@@ -1793,21 +1868,18 @@
         }
     }
 
-    // --log out --
     function logout() {
         localStorage.removeItem('omnimove_token');
         localStorage.removeItem('omnimove_user');
         window.location.href = 'omnimove-login.html';
     }
 
-    // ── AI Panel — chiamata reale a OMNIMOVE /api/v1/ai/chat ──────────────
     let aiThinking = false;
-
     async function sendAI() {
         if (aiThinking) return;
         const input = document.getElementById('aiInput');
-        const msgs = document.getElementById('aiMessages');
-        const text = input.value.trim();
+        const msgs  = document.getElementById('aiMessages');
+        const text  = input.value.trim();
         if (!text) return;
 
         const userMsg = document.createElement('div');
@@ -1827,7 +1899,7 @@
         try {
             const r = await apiFetch('/ai/chat', {
                 method: 'POST',
-                body: JSON.stringify({message: text, language: 'it'})
+                body: JSON.stringify({ message: text, language: 'it' })
             });
             const data = await r.json();
             waitMsg.textContent = data.answer || 'Risposta non disponibile.';
