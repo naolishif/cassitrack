@@ -1,5 +1,5 @@
 -- =================================================================
--- V3__sim_users.sql
+-- V4__sim_users.sql
 -- OMNIMOVE — Simulated test users for Smart Cities demo
 -- All passwords: test1234
 -- BCrypt $2a$ compatible with Spring Security BCryptPasswordEncoder
