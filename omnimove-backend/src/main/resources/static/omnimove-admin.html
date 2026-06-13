@@ -462,37 +462,6 @@
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.err { border-color: var(--accent-red); color: var(--accent-red); }
 
-        /* ── HEATMAP ── */
-        .heatmap-grid {
-            display: grid;
-            grid-template-columns: 44px repeat(24,1fr);
-            gap: 2px;
-            font-family: var(--font-mono);
-            font-size: 9px;
-        }
-        .heatmap-label {
-            display: flex; align-items: center; justify-content: flex-end;
-            padding-right: 6px;
-            color: var(--text-dim);
-            font-size: 9px;
-            font-family: var(--font-mono);
-            white-space: nowrap;
-        }
-        .heatmap-cell {
-            height: 18px;
-            border-radius: 2px;
-            background: var(--border);
-            transition: transform .15s;
-            cursor: default;
-            position: relative;
-        }
-        .heatmap-cell:hover { transform: scale(1.25); z-index: 10; }
-        .heatmap-header {
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-dim);
-            font-size: 8px;
-        }
-
         /* ── PREFERENCE BARS ── */
         .pref-row {
             display: flex;
@@ -650,17 +619,14 @@
             </div>
         </div>
 
-        <!-- FR-OM-009 (c) Time-of-day / day-of-week heatmap -->
+        <!-- FR-OM-009 STACKED BAR: Mode by Time Slot — USER STORY CENTRAL -->
         <div class="card">
             <div class="card-title" style="justify-content:space-between">
-                <span>Search Patterns — Heatmap by Hour &amp; Day of Week</span>
+                <span>Transport Mode by Time Slot — 24h</span>
                 <span class="gdpr-badge" style="font-size:8px;padding:2px 6px">ANON</span>
             </div>
-            <div id="heatmapContainer"></div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-                <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim)">Low</span>
-                <div style="flex:1;height:6px;border-radius:3px;background:linear-gradient(to right,#1e3348,rgba(0,207,255,.4),#00e5a0,#f5a623,rgba(255,69,96,.8))"></div>
-                <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim)">High</span>
+            <div class="chart-wrap" style="height:220px">
+                <canvas id="chartModeByHour"></canvas>
             </div>
         </div>
 
@@ -1090,110 +1056,6 @@
         }
     };
 
-    // ── FR-OM-009 (b) Mode distribution doughnut ──
-    const modeData = [
-        {label:'Bus',pct:38,color:'#00cfff'},
-        {label:'Shared Bike',pct:22,color:'#00e5a0'},
-        {label:'E-Scooter',pct:18,color:'#3a8eff'},
-        {label:'Walking',pct:12,color:'#7a9ab8'},
-        {label:'Train',pct:10,color:'#a855f7'},
-    ];
-    new Chart(document.getElementById('chartMode'),{
-        type:'doughnut',
-        data:{
-            labels: modeData.map(m=>m.label),
-            datasets:[{
-                data: modeData.map(m=>m.pct),
-                backgroundColor: modeData.map(m=>m.color),
-                borderColor:'#131f2b',borderWidth:3
-            }]
-        },
-        options:{
-            responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{display:false}},
-            cutout:'64%'
-        }
-    });
-    document.getElementById('modeList').innerHTML = modeData.map(m=>`
-  <div style="display:flex;align-items:center;gap:7px">
-    <div style="width:8px;height:8px;border-radius:2px;background:${m.color};flex-shrink:0"></div>
-    <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);flex:1">${m.label}</span>
-    <span style="font-family:var(--font-mono);font-size:11px;color:${m.color}">${m.pct}%</span>
-  </div>
-`).join('');
-
-    // ── FR-OM-009 (d) Green Index trend ──
-    const days30 = Array.from({length:30},(_,i)=>{
-        const d=new Date(2026,4,1); d.setDate(d.getDate()+i);
-        return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    });
-    const giRaw=[65,63,66,68,67,70,69,71,70,72,71,73,74,72,73,75,74,76,73,75,76,75,77,76,78,77,79,78,80,81];
-    const giMA=giRaw.map((_,i,a)=>{
-        if(i<6) return null;
-        return (a.slice(i-6,i+1).reduce((s,v)=>s+v,0)/7).toFixed(1);
-    });
-    const giCtx=document.getElementById('chartGreenIndex').getContext('2d');
-    const giGrad=giCtx.createLinearGradient(0,0,0,140);
-    giGrad.addColorStop(0,'rgba(0,229,160,.35)');
-    giGrad.addColorStop(1,'rgba(0,229,160,0)');
-    new Chart(giCtx,{
-        type:'line',
-        data:{
-            labels:days30,
-            datasets:[
-                {label:'Daily Avg',data:giRaw,borderColor:'rgba(0,229,160,.25)',backgroundColor:'transparent',pointRadius:0,tension:.3,borderWidth:1},
-                {label:'7-day MA',data:giMA,borderColor:'#00e5a0',backgroundColor:giGrad,pointRadius:0,tension:.4,fill:true,borderWidth:2}
-            ]
-        },
-        options:{
-            responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{labels:{color:'#7a9ab8',font:{family:'Share Tech Mono',size:9},boxWidth:8}}},
-            scales:{
-                x:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:8},maxTicksLimit:6},grid:{color:'#1e3348'}},
-                y:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:9}},grid:{color:'#1e3348'},min:55,max:90}
-            }
-        }
-    });
-
-    // ── FR-OM-009 (c) Heatmap ──
-    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    const heatData={
-        Mon:[2,1,1,1,2,4,8,12,10,7,6,7,8,7,6,5,7,10,8,5,4,3,2,1],
-        Tue:[2,1,1,1,2,4,9,13,11,8,6,7,9,8,6,5,8,11,8,5,3,3,2,1],
-        Wed:[2,1,1,1,2,5,9,14,12,8,7,8,9,8,6,5,8,11,9,5,4,3,2,1],
-        Thu:[2,1,1,1,3,5,10,14,12,9,7,8,10,8,7,6,9,12,9,6,4,3,2,1],
-        Fri:[3,1,1,2,3,5,10,13,11,8,7,8,10,9,8,7,10,14,12,8,6,5,3,2],
-        Sat:[1,1,1,1,1,2,4,7,9,10,9,9,10,10,9,8,7,6,5,4,3,2,2,1],
-        Sun:[1,1,1,1,1,2,3,5,7,8,8,8,9,9,8,7,6,5,4,3,2,2,1,1],
-    };
-    function heatColor(v,max){
-        const t=v/max;
-        if(t<.15) return `rgba(30,51,72,${0.4+t*2})`;
-        if(t<.35) return `rgba(0,207,255,${0.2+t*.6})`;
-        if(t<.60) return `rgba(0,229,160,${0.4+t*.4})`;
-        if(t<.80) return `rgba(245,166,35,${0.5+t*.3})`;
-        return `rgba(255,69,96,${0.6+t*.4})`;
-    }
-    const allVals=Object.values(heatData).flat();
-    const maxVal=Math.max(...allVals);
-    const hours=Array.from({length:24},(_,i)=>i);
-    const container=document.getElementById('heatmapContainer');
-    let html='<div class="heatmap-grid">';
-    html+='<div></div>';
-    hours.forEach(h=>{
-        html+=`<div class="heatmap-header">${h%6===0?h+'h':''}</div>`;
-    });
-    days.forEach(day=>{
-        html+=`<div class="heatmap-label">${day}</div>`;
-        heatData[day].forEach((v,h)=>{
-            const col=heatColor(v,maxVal);
-            const pct=Math.round(v/maxVal*100);
-            html+=`<div class="heatmap-cell" style="background:${col}" title="${day} ${h}:00 — ${pct}% of peak"></div>`;
-        });
-    });
-    html+='</div>';
-    container.innerHTML=html;
-
     // ── FR-OM-009 (e) Preference trend ──
     const weeks=['W1','W2','W3','W4'];
     new Chart(document.getElementById('chartPrefTrend'),{
@@ -1247,6 +1109,190 @@
 
     // ── Close modal on overlay click ──
     document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+    // ── Analytics: carga datos reales de InfluxDB ──────────────────────────
+    let modeChart = null;
+    let greenChart = null;
+
+    async function loadAnalytics() {
+        try {
+            const r = await apiFetch('/admin/analytics');
+            if (!r.ok) { console.warn('Analytics endpoint error', r.status); return; }
+            const data = await r.json();
+
+            updateKpis(data.kpis);
+            updateModeChart(data.modeDistribution);
+            updateModeByHourChart(data.modeByHour);
+            updateGreenIndexChart(data.greenIndexTrend);
+
+        } catch(e) {
+            console.error('loadAnalytics error:', e);
+        }
+    }
+
+    function updateKpis(kpis) {
+        if (!kpis) return;
+        // Actualiza los stat-pills del pane de stats
+        const pills = document.querySelectorAll('#pane-stats .stat-pill');
+        if (pills[0]) pills[0].querySelector('.value').textContent =
+            Number(kpis.totalSearches).toLocaleString('it-IT');
+        if (pills[3]) {
+            pills[3].querySelector('.value').textContent = kpis.avgGreenIndex;
+            document.querySelector('.green-index-value').textContent = kpis.avgGreenIndex;
+        }
+    }
+
+    function updateModeChart(dist) {
+        if (!dist || Object.keys(dist).length === 0) return;
+
+        const colorMap = {
+            BUS:'#00cfff', BIKE:'#00e5a0',
+            SCOOTER:'#3a8eff', WALK:'#7a9ab8', TRAIN:'#a855f7'
+        };
+        const labelMap = {
+            BUS:'Bus', BIKE:'Shared Bike',
+            SCOOTER:'E-Scooter', WALK:'Walking', TRAIN:'Train'
+        };
+
+        const total = Object.values(dist).reduce((a,b) => a + Number(b), 0) || 1;
+        const entries = Object.entries(dist).sort((a,b) => b[1]-a[1]);
+        const labels  = entries.map(([k]) => labelMap[k] || k);
+        const values  = entries.map(([,v]) => Number(v));
+        const colors  = entries.map(([k]) => colorMap[k] || '#7a9ab8');
+        const pcts    = values.map(v => Math.round(v/total*100));
+
+        if (modeChart) modeChart.destroy();
+        modeChart = new Chart(document.getElementById('chartMode'), {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderColor: '#131f2b',
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                cutout: '64%'
+            }
+        });
+
+        document.getElementById('modeList').innerHTML = entries.map(([k], i) => `
+        <div style="display:flex;align-items:center;gap:7px">
+            <div style="width:8px;height:8px;border-radius:2px;background:${colors[i]};flex-shrink:0"></div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);flex:1">${labels[i]}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:${colors[i]}">${pcts[i]}%</span>
+        </div>
+    `).join('');
+    }
+
+    function updateModeByHourChart(modeByHour) {
+        if (!modeByHour) return;
+
+        const colorMap = {
+            BUS:'#00cfff', BIKE:'#00e5a0', SCOOTER:'#3a8eff', WALK:'#7a9ab8'
+        };
+        const labelMap = {
+            BUS:'Bus', BIKE:'Shared Bike', SCOOTER:'E-Scooter', WALK:'Walking'
+        };
+
+        const labels = Array.from({length:24}, (_,i) => `${i}h`);
+        const datasets = Object.entries(modeByHour).map(([mode, hours]) => ({
+            label: labelMap[mode] || mode,
+            data: Array.from(hours),           // long[] → array JS
+            backgroundColor: colorMap[mode] || '#7a9ab8',
+            stack: 'modes'
+        }));
+
+        const canvas = document.getElementById('chartModeByHour');
+        if (!canvas) return;
+
+        new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#7a9ab8',
+                            font: { family: 'Share Tech Mono', size: 10 },
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `Hour ${ctx[0].label}`,
+                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} trips`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        ticks: { color:'#3d5a74', font:{family:'Share Tech Mono',size:9} },
+                        grid: { color:'#1e3348' }
+                    },
+                    y: {
+                        stacked: true,
+                        ticks: { color:'#3d5a74', font:{family:'Share Tech Mono',size:9} },
+                        grid: { color:'#1e3348' },
+                        title: {
+                            display: true, text: 'Trips',
+                            color:'#3d5a74', font:{family:'Share Tech Mono',size:9}
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateGreenIndexChart(trend) {
+        if (!trend || trend.length === 0) return;
+
+        const labels = trend.map(p => p.time?.substring(5));  // MM-DD
+        const values = trend.map(p => p.value);
+
+        // 7-day moving average
+        const ma = values.map((_, i, a) => {
+            if (i < 6) return null;
+            return (a.slice(i-6, i+1).reduce((s,v) => s+v, 0) / 7).toFixed(1);
+        });
+
+        if (greenChart) greenChart.destroy();
+        const ctx = document.getElementById('chartGreenIndex').getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, 0, 140);
+        grad.addColorStop(0, 'rgba(0,229,160,.35)');
+        grad.addColorStop(1, 'rgba(0,229,160,0)');
+
+        greenChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label:'Daily Avg', data:values, borderColor:'rgba(0,229,160,.25)',
+                        backgroundColor:'transparent', pointRadius:0, tension:.3, borderWidth:1 },
+                    { label:'7-day MA',  data:ma, borderColor:'#00e5a0',
+                        backgroundColor:grad, pointRadius:0, tension:.4, fill:true, borderWidth:2 }
+                ]
+            },
+            options: {
+                responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{labels:{color:'#7a9ab8',font:{family:'Share Tech Mono',size:9},boxWidth:8}}},
+                scales:{
+                    x:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:8},maxTicksLimit:6},grid:{color:'#1e3348'}},
+                    y:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:9}},grid:{color:'#1e3348'},min:55,max:90}
+                }
+            }
+        });
+    }
+
+    // Lanza al cargar
+    loadAnalytics();
+
 </script>
 </body>
 </html>

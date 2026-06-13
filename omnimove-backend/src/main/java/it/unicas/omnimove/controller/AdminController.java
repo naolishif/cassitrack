@@ -6,6 +6,7 @@ import it.unicas.omnimove.dto.AdminCreateUserRequest;
 import it.unicas.omnimove.dto.UserDTO;
 import it.unicas.omnimove.model.User;
 import it.unicas.omnimove.repository.UserRepository;
+import it.unicas.omnimove.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,6 +29,7 @@ public class AdminController {
 
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
+    private final AnalyticsService analyticsService;
 
     // ── guard helper ──────────────────────────────────────────────────────
     private boolean isAdmin(UserDetails principal) {
@@ -140,5 +143,24 @@ public class AdminController {
                 "admins",     admins,
                 "travellers", travellers
         ));
+    }
+
+    // ── GET /api/v1/admin/analytics ───────────────────────────────────────
+    @GetMapping("/analytics")
+    @Operation(summary = "Transport mode analytics", description = "InfluxDB aggregates. ADMIN only.")
+    public ResponseEntity<?> analytics(
+            @AuthenticationPrincipal UserDetails principal) {
+
+        if (!isAdmin(principal))
+            return ResponseEntity.status(403)
+                    .body(Map.of("message", "Forbidden: ADMIN role required"));
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("kpis",            analyticsService.getSummaryKpis());
+        payload.put("modeDistribution",analyticsService.getModeDistribution());
+        payload.put("modeByHour",      analyticsService.getModeByHour());
+        payload.put("greenIndexTrend", analyticsService.getGreenIndexTrend());
+
+        return ResponseEntity.ok(payload);
     }
 }
