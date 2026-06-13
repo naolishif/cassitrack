@@ -479,7 +479,7 @@ cassitrack-fresh/
             ├── application.yml           ← All configuration
             └── db/migration/
                 ├── V1__initial_schema.sql ← Tables
-                └── V2__scheduled_stops.sql ← Bus 16 timetable
+                └── V2__seed_master_data.sql ← Bus 16 timetable
 ```
 
 ---

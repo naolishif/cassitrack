@@ -54,4 +54,40 @@ public class MqttPositionPayload {
 
     @JsonProperty("firmware_version")
     private String firmwareVersion;
+
+    @JsonProperty("trip_id")
+    private String tripId;
+
+    @JsonProperty("delay")
+    private Integer delay;
+
+    @JsonProperty("last_stop_registered")
+    private String lastStopRegistered;
+
+    @JsonProperty("targa")
+    private String targa;
+
+    @JsonProperty("passengers")
+    private Integer passengers;
+
+    @JsonProperty("capacity")
+    private Integer capacity;
+
+    @JsonProperty("delay_minutes")
+    private Integer delayMinutes;
+
+    @JsonProperty("nearest_stop")
+    private String nearestStop;
+
+    @JsonProperty("nearest_stop_id")
+    private String nearestStopId;
+
+    @JsonProperty("route_id")
+    private String routeId;
+
+    @JsonProperty("route_name")
+    private String routeName;
+
+    @JsonProperty("route_color")
+    private String routeColor;
 }

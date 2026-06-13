@@ -11,6 +11,7 @@ import it.unicas.cassitrack.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,23 +35,22 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user account")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
+
         try {
-            // 1. Delegate business logic and saving to UserService
-            User registeredUser = userService.registerUser(req);
+            // FIXED: We now delegate the registration to registerUser(req) which matches perfectly!
+            User saved = userService.registerUser(req);
+            log.info("New user registered successfully via public flow: {}", saved.getEmail());
 
-            // 2. Generate a REAL token using the newly created user's email
-            String token = jwtUtil.generateTokenFromUsername(registeredUser.getEmail());
-
-            // 3. Return the response
-            return ResponseEntity.ok(AuthResponse.builder()
-                    .token(token)
-                    .email(registeredUser.getEmail())
-                    .name(registeredUser.getName())
-                    .role(registeredUser.getRole())
-                    .expiresInMs(86400000L) // 24 hours
-                    .message("Registration successful")
-                    .build());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(AuthResponse.builder()
+                            .token("MOCK_TOKEN_UNTIL_LOGIN")
+                            .email(saved.getEmail())
+                            .name(saved.getName())
+                            .role(saved.getRole())
+                            .expiresInMs(86400000L)
+                            .message("Registration successful")
+                            .build());
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -60,9 +60,12 @@ public class AuthController {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // LOGIN ACCOUNT
+    // ─────────────────────────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        // ... (Keep your existing login logic, but change userRepository to userService if you prefer)
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -72,8 +75,6 @@ public class AuthController {
             );
 
             String token = jwtUtil.generateToken(authentication);
-
-            // It's cleaner to use the service here too!
             User user = userService.getUserByEmail(loginRequest.getEmail());
 
             LoginResponse response = new LoginResponse();

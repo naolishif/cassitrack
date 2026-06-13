@@ -691,6 +691,20 @@
         box.innerText = '';
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // PASSWORD VALIDATION FUNCTION
+    // ─────────────────────────────────────────────────────────────────
+    function isPasswordSecure(password) {
+        // Validation Criteria:
+        // - Min 8 characters: (?=.{8,})
+        // - At least one uppercase letter: (?=.*[A-Z])
+        // - At least one lowercase letter: (?=.*[a-z])
+        // - At least one number: (?=.*[0-9])
+        // - At least one special character/symbol: (?=.*[!@#$%^&*(),.?":{}|<>_+\-*\/])
+        const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>_+\-*\/])(?=.{8,})/;
+        return regex.test(password);
+    }
+
     async function saveUser(){
 
         const taxId = document.getElementById('modalTaxId').value.trim();
@@ -701,9 +715,9 @@
         const password = document.getElementById('modalPassword').value.trim();
         const role = document.getElementById('modalRole').value;
 
-        // ─────────────────────────────
-        // VALIDATION
-        // ─────────────────────────────
+        // ─────────────────────────────────────────────────────────────────
+        // GENERAL VALIDATION
+        // ─────────────────────────────────────────────────────────────────
 
         if(
             !taxId ||
@@ -717,20 +731,33 @@
             return;
         }
 
-        // PASSWORD REQUIRED ONLY FOR NEW USER
-        if(!selectedUser && !password){
+        // ─────────────────────────────────────────────────────────────────
+        // PASSWORD VALIDATION RULES
+        // ─────────────────────────────────────────────────────────────────
 
-            showError('Password is required');
-
-            return;
+        if (!selectedUser) {
+            // CASE 1: Creating a new user -> Password is strictly required AND must be secure
+            if (!password) {
+                showError('Password is required');
+                return;
+            }
+            if (!isPasswordSecure(password)) {
+                showError('Password must be at least 8 characters long, including an uppercase letter, a lowercase letter, a number, and a special character.');
+                return;
+            }
+        } else {
+            // CASE 2: Editing an existing user -> Password change is optional, but IF typed, it MUST be secure
+            if (password && !isPasswordSecure(password)) {
+                showError('New password must be at least 8 characters long, including an uppercase letter, a lowercase letter, a number, and a special character.');
+                return;
+            }
         }
 
-        // ─────────────────────────────
+        // ─────────────────────────────────────────────────────────────────
         // USER OBJECT
-        // ─────────────────────────────
+        // ─────────────────────────────────────────────────────────────────
 
         const userData = {
-
             taxId,
             name,
             surname,
@@ -741,7 +768,6 @@
 
         // ONLY SEND PASSWORD IF WRITTEN
         if(password){
-
             userData.passwordHash = password;
         }
 
@@ -749,57 +775,45 @@
 
             const token = localStorage.getItem('cassitrack_token');
 
-            // ─────────────────────────────
-            // UPDATE
-            // ─────────────────────────────
+            // ─────────────────────────────────────────────────────────────────
+            // UPDATE EXISTING USER
+            // ─────────────────────────────────────────────────────────────────
 
             if(selectedUser){
 
                 const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
-
                     method:'PUT',
-
                     headers:{
                         'Content-Type':'application/json',
                         'Authorization': 'Bearer ' + token
                     },
-
                     body:JSON.stringify(userData)
                 });
 
                 if(!response.ok){
-
                     const errorMessage = await response.text();
-
                     showError(errorMessage);
-
                     return;
                 }
 
             }else{
 
-                // ─────────────────────────────
-                // CREATE
-                // ─────────────────────────────
+                // ─────────────────────────────────────────────────────────────────
+                // CREATE NEW USER
+                // ─────────────────────────────────────────────────────────────────
 
                 const response = await fetch('/api/v1/users', {
-
                     method:'POST',
-
                     headers:{
                         'Content-Type':'application/json',
                         'Authorization': 'Bearer ' + token
                     },
-
                     body:JSON.stringify(userData)
                 });
 
                 if(!response.ok){
-
                     const errorMessage = await response.text();
-
                     showError(errorMessage);
-
                     return;
                 }
             }
@@ -812,8 +826,7 @@
             );
 
             setTimeout(() => {
-
-                // RELOAD USERS
+                // RELOAD USERS FROM BACKEND
                 loadUsers();
 
                 selectedUser = null;
@@ -822,15 +835,12 @@
                 document.getElementById('editBtn').disabled = true;
                 document.getElementById('deleteBtn').disabled = true;
 
-                // CLOSE MODAL
+                // CLOSE MODAL WINDOW
                 closeModal();
-
             }, 1000);
 
         }catch(error){
-
             console.error(error);
-
             showError('Error saving user');
         }
     }

@@ -54,22 +54,20 @@ public class VehicleService {
      * computation once those services are built.
      */
     private VehicleStatusDTO toStatusDTO(VehiclePosition pos) {
-        boolean active = vehicleStateCache.isActive(
-                pos.getVehicleId()
-        );
+        boolean active = vehicleStateCache.isActive(pos.getVehicleId());
 
+        // Passengers: prefer direct count from simulator,
+        // fall back to BLE estimate
         Integer estimatedPassengers = null;
         String  crowdingLevel       = null;
-        if (pos.getBleDeviceCount() != null) {
-            estimatedPassengers =
-                    (int)(pos.getBleDeviceCount() * 0.6);
-            crowdingLevel =
-                    estimateCrowdingLevel(estimatedPassengers);
+        if (pos.getPassengers() != null) {
+            estimatedPassengers = pos.getPassengers();
+            crowdingLevel = estimateCrowdingLevel(estimatedPassengers);
+        } else if (pos.getBleDeviceCount() != null) {
+            estimatedPassengers = (int)(pos.getBleDeviceCount() * 0.6);
+            crowdingLevel = estimateCrowdingLevel(estimatedPassengers);
         }
 
-        // Schedule status is now computed by
-        // ScheduleAdherenceService every 30 seconds
-        // and stored directly on the VehiclePosition object
         VehiclePosition.ScheduleStatus status =
                 pos.getScheduleStatus() != null
                         ? pos.getScheduleStatus()
@@ -78,19 +76,20 @@ public class VehicleService {
         return VehicleStatusDTO.builder()
                 .vehicleId(pos.getVehicleId())
                 .busId(pos.getBusId())
-                .numeroPosti(pos.getNumeroPosti())       // 🚌
+                .numeroPosti(pos.getNumeroPosti())
                 .postoDisabili(pos.getPostoDisabili())
                 .lat(pos.getLat())
                 .lon(pos.getLon())
                 .speedKmh(pos.getSpeedKmh())
                 .headingDeg(pos.getHeadingDeg())
-                .routeId(pos.getMatchedRouteId() != null
-                        ? pos.getMatchedRouteId() : "LINEA-16")
-                .routeName("Linea 16 — Campus Folcara")
+                .routeId(pos.getRouteId() != null
+                        ? pos.getRouteId() : "LINEA-16")
+                .routeName(pos.getRouteName() != null
+                        ? pos.getRouteName() : "Linea 16")
                 .scheduleStatus(status)
-                .delayMinutes(null)   // TODO: ScheduleAdherenceService
-                .nextStopId(null)
-                .nextStopName(null)
+                .delayMinutes(pos.getDelayMinutes())
+                .nextStopId(pos.getNearestStopId())
+                .nextStopName(pos.getNearestStop())
                 .etaSeconds(null)
                 .estimatedPassengers(estimatedPassengers)
                 .crowdingLevel(crowdingLevel)

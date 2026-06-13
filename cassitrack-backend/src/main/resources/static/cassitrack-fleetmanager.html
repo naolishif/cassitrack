@@ -105,7 +105,7 @@
         .stat{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:6px;padding:7px 9px}
         .stat-val{font-size:20px;font-weight:700;color:var(--accent);line-height:1}
         .stat-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px}
-        #vehicle-list{display:flex;flex-direction:column;gap:5px;padding:12px 14px}
+        #vehicle-list{display:flex;flex-direction:column;gap:5px;padding:12px 14px;flex:1;overflow-y:auto}
         .vcard{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;transition:border-color .2s,background .2s;position:relative;overflow:hidden}
         .vcard:hover{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.04)}
         .vcard.selected{border-color:var(--accent);background:rgba(59,130,246,.07)}
@@ -232,11 +232,11 @@
             background:rgba(255,255,255,.03);
             border:1px solid var(--border);
             border-radius:8px;
-            padding:12px;
+            padding:8px 10px;
         }
 
         .analytics-value{
-            font-size:22px;
+            font-size:18px;
             font-weight:700;
             font-family:var(--mono);
             letter-spacing:-1px;
@@ -767,22 +767,12 @@
             <div id="tab-fleet" style="display:flex;flex-direction:column;height:100%;">
             <div class="section">
                 <div class="analytics-box">
-                    <div class="analytics-title">FLEET ANALYTICS</div>
+                    <div class="analytics-title">FLEET OVERVIEW</div>
 
                     <div class="analytics-grid">
                         <div class="analytics-card">
                             <div class="analytics-value" id="anActiveRatio">0/0</div>
                             <div class="analytics-label">BUSES ACTIVE</div>
-                        </div>
-
-                        <div class="analytics-card">
-                            <div class="analytics-value" id="anPunctuality">0%</div>
-                            <div class="analytics-label">PUNCTUALITY</div>
-                        </div>
-
-                        <div class="analytics-card">
-                            <div class="analytics-value" id="anKm">0</div>
-                            <div class="analytics-label">KM TODAY</div>
                         </div>
 
                         <div class="analytics-card">
@@ -1060,60 +1050,8 @@
                         </div>
                     </div>
 
-                    <div class="route-list">
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 16</span>
-                                <span>542 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:92%"></div>
-                            </div>
-
-                        </div>
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 03</span>
-                                <span>381 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:68%"></div>
-                            </div>
-
-                        </div>
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 07</span>
-                                <span>244 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:48%"></div>
-                            </div>
-
-                        </div>
-
-                        <div class="route-item">
-
-                            <div class="route-top">
-                                <span>Linea 11</span>
-                                <span>179 riders</span>
-                            </div>
-
-                            <div class="route-bar">
-                                <div class="route-fill" style="width:31%"></div>
-                            </div>
-
-                        </div>
-
+                    <div class="route-list" id="route-list-container">
+                        <div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Loading...</div>
                     </div>
 
                 </div>
@@ -1244,44 +1182,38 @@
             }
         ).addTo(map);
 
-        const STOPS=[
-            {id:'CASSINO-STAZIONE',name:'Cassino Stazione FS',lat:41.4892,lon:13.8282},
-            {id:'CASSINO-CENTRO',name:'Cassino Centro',lat:41.4917,lon:13.8314},
-            {id:'CASSINO-OSPEDALE',name:'Ospedale S. Scolastica',lat:41.4955,lon:13.8330},
-            {id:'FOLCARA-VIA',name:'Via Folcara',lat:41.5020,lon:13.8200},
-            {id:'FOLCARA-CAMPUS',name:'Campus UNICAS Folcara',lat:41.5041,lon:13.8189},
+        const RUTA1=[
+            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4892,lon:13.8282},
+            {id:'PIAZZA_GARIBALDI',name:'Piazza Garibaldi',lat:41.4915,lon:13.831},
+            {id:'OSPEDALE_CIVILE',name:'Ospedale Civile',lat:41.4955,lon:13.833},
+            {id:'PARCO_COMUNALE',name:'Parco Comunale',lat:41.4995,lon:13.826},
+            {id:'UNIVERSITA',name:'Universita di Cassino',lat:41.5041,lon:13.8189},
         ];
-        STOPS.forEach(s=>{
+        const RUTA2=[
+            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4892,lon:13.8282},
+            {id:'MUSEO_CITTADINO',name:'Museo Cittadino',lat:41.4905,lon:13.835},
+            {id:'QUARTIERE_NORD',name:'Quartiere Nord',lat:41.4965,lon:13.841},
+            {id:'CENTRO_COMMERCIALE',name:'Centro Commerciale',lat:41.5015,lon:13.847},
+            {id:'ZONA_INDUSTRIALE',name:'Zona Industriale',lat:41.507,lon:13.854},
+        ];
+
+        // Polyline RUTA 1 (blu) e RUTA 2 (cyan)
+        L.polyline(RUTA1.map(s=>[s.lat,s.lon]),{color:'#3B82F6',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
+        L.polyline(RUTA2.map(s=>[s.lat,s.lon]),{color:'#06B6D4',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
+
+        // Stop markers
+        [...RUTA1,...RUTA2].forEach((s,i,arr)=>{
+            // Stazione Centrale è condivisa — colore viola
+            const shared=RUTA1.find(r=>r.id===s.id)&&RUTA2.find(r=>r.id===s.id);
+            const col=shared?'#8B5CF6':arr.indexOf(s)<RUTA1.length?'#3B82F6':'#06B6D4';
             L.circleMarker([s.lat,s.lon],{
-                radius:7,
-                fillColor:'#0f1623',
-                color:'#3B82F6',
-                weight:2,
-                opacity:1,
-                fillOpacity:1
-            })
-                .addTo(map)
-                .bindPopup(`
-        <div style="padding:10px;min-width:150px">
-
-            <div style="font-family:Syne,sans-serif;
-                        font-weight:700;
-                        color:#3B82F6;
-                        margin-bottom:5px">
-                🚏 ${s.name}
-            </div>
-
-            <div style="font-family:'DM Mono',monospace;
-                        font-size:10px;
-                        color:#4B5563">
-                Linea 16 · Magni Autoservizi
-            </div>
-
-        </div>
-    `);
+                radius:7,fillColor:'#0f1623',color:col,weight:2,opacity:1,fillOpacity:1
+            }).addTo(map).bindPopup(`
+                <div style="padding:10px;min-width:150px">
+                    <div style="font-family:Syne,sans-serif;font-weight:700;color:${col};margin-bottom:5px">🚏 ${s.name}</div>
+                    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4B5563">${shared?'RUTA 1 + RUTA 2':arr.indexOf(s)<RUTA1.length?'RUTA 1':'RUTA 2'} · Magni Autoservizi</div>
+                </div>`);
         });
-        L.polyline(STOPS.map(s=>[s.lat,s.lon]),{color:'#1e3a6e',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
-
 
         setTimeout(() => {
             map.invalidateSize();
@@ -1301,12 +1233,33 @@
     async function fetchVehicles(){
         try{
             const r=await fetch(`${API}/vehicles`);
-            if(!r.ok)throw new Error(r.status);
-            const data=await r.json();
+            if(!r.ok) throw new Error(r.status);
+
+            let data=await r.json();
+
+            // Calcular schedule_status desde delay_minutes
+            data=data.map(v=>{
+                const d=v.delay_minutes || 0;
+
+                v.schedule_status =
+                    d <= 1 ? 'ON_TIME' :
+                        d <= 5 ? 'SLIGHTLY_LATE' :
+                            'SIGNIFICANTLY_LATE';
+
+                return v;
+            });
+
             lastUpdate=new Date();
+
             document.getElementById('hDot').className='dot dot-green';
-            document.getElementById('hStatus').textContent=data.length>0?`${data.length} bus${data.length>1?'es':''} active`:'Connected — no buses';
-            updateMap(data);updateFleet(data);
+            document.getElementById('hStatus').textContent=
+                data.length>0
+                    ? `${data.length} bus${data.length>1?'es':''} active`
+                    : 'Connected — no buses';
+
+            updateMap(data);
+            updateFleet(data);
+
         }catch(e){
             document.getElementById('hDot').className='dot dot-red';
             document.getElementById('hStatus').textContent='Backend offline';
@@ -1324,45 +1277,27 @@
     }
 
     function popupV(v){
-        const c=SC[v.schedule_status]||SC.UNKNOWN,
-            l=SL[v.schedule_status]||'LIVE';
-
+        const c=SC[v.schedule_status]||SC.UNKNOWN,l=SL[v.schedule_status]||'LIVE';
+        const routeCol=v.route_id&&v.route_id.startsWith('RUTA_2')?'#06B6D4':'#3B82F6';
+        const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
+        const delayTxt=v.delay_minutes>0?`+${v.delay_minutes}m`:'In orario';
         return `
-    <div style="padding:11px;min-width:185px">
-
+    <div style="padding:11px;min-width:200px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
-            <div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:${c}">
-                🚌 ${v.vehicle_id}
-            </div>
-
-            <div style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;background:${c}22;color:${c};border:1px solid ${c}44">
-                ${l}
-            </div>
+            <div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:${c}">🚌 ${v.vehicle_id}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;background:${c}22;color:${c};border:1px solid ${c}44">${l}</div>
         </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-family:'DM Mono',monospace;font-size:11px">
-
-            <div>
-                <div style="color:#4B5563;font-size:9px">SPEED</div>
-                ${v.speed_kmh ? v.speed_kmh.toFixed(1)+' km/h' : '—'}
-            </div>
-
-            <div>
-                <div style="color:#4B5563;font-size:9px">ROUTE</div>
-                Linea 16
-            </div>
-
-            <div>
-                <div style="color:#4B5563;font-size:9px">PASSENGERS</div>
-                ${v.estimated_passengers ? '~'+v.estimated_passengers : '—'}
-            </div>
-
-            <div>
-                <div style="color:#4B5563;font-size:9px">CROWDING</div>
-                ${v.crowding_level || '—'}
-            </div>
-
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-family:'DM Mono',monospace;font-size:11px;margin-bottom:8px">
+            <div><div style="color:#4B5563;font-size:9px">SPEED</div>${v.speed_kmh?v.speed_kmh.toFixed(1)+' km/h':'—'}</div>
+            <div><div style="color:#4B5563;font-size:9px">ROUTE</div><span style="color:${routeCol}">${v.route_name||'—'}</span></div>
+            <div><div style="color:#4B5563;font-size:9px">DELAY</div><span style="color:${c}">${delayTxt}</span></div>
+            <div><div style="color:#4B5563;font-size:9px">PASSENGERS</div>${v.estimated_passengers?'~'+v.estimated_passengers:'—'}</div>
+            <div style="grid-column:span 2"><div style="color:#4B5563;font-size:9px">LAST STOP</div>${v.next_stop_name||'—'}</div>
         </div>
+        <div style="height:4px;background:#1A2744;border-radius:2px;overflow:hidden">
+            <div style="width:${cp}%;height:100%;background:${cc};border-radius:2px"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4B5563;margin-top:3px">Crowding: ${v.crowding_level||'—'}</div>
     </div>`;
     }
 
@@ -1370,7 +1305,7 @@
         const onTime=vehicles.filter(v=>v.schedule_status==='ON_TIME'||v.schedule_status==='EARLY').length;
         const late=vehicles.filter(v=>v.schedule_status==='SLIGHTLY_LATE'||v.schedule_status==='SIGNIFICANTLY_LATE').length;
         // Analytics
-        const totalFleet = 10; // cambia esto si tienes más buses reales
+        const totalFleet = 4; // cambia esto si tienes más buses reales
         const punctuality = vehicles.length
             ? Math.round((onTime / vehicles.length) * 100)
             : 0;
@@ -1384,12 +1319,6 @@
 // Update analytics UI
         document.getElementById('anActiveRatio').textContent =
             `${vehicles.length}/${totalFleet}`;
-
-        document.getElementById('anPunctuality').textContent =
-            `${punctuality}%`;
-
-        document.getElementById('anKm').textContent =
-            Math.round(totalKm);
 
         document.getElementById('anPassengers').textContent =
             totalPassengers;
@@ -1411,7 +1340,7 @@
             const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
             const d=document.createElement('div');
             d.className='vcard'+(selectedVeh===v.vehicle_id?' selected':'');
-            d.innerHTML=`<div class="vcard-stripe" style="background:${c}"></div><div class="vcard-top"><div class="vcard-id" style="color:${c}">${v.vehicle_id}</div><div class="chip" style="color:${c};border-color:${c}44;background:${c}18;font-size:9px">${l}</div></div><div class="vcard-grid"><div class="vitem"><div class="vitem-lbl">Speed</div><div class="vitem-val">${spd} km/h</div></div><div class="vitem"><div class="vitem-lbl">Passengers</div><div class="vitem-val">${pax}</div></div><div class="vitem"><div class="vitem-lbl">Crowding</div><div class="vitem-val">${v.crowding_level||'—'}</div></div><div class="vitem"><div class="vitem-lbl">Route</div><div class="vitem-val">Linea 16</div></div></div><div class="cbar"><div class="cbar-fill" style="width:${cp}%;background:${cc}"></div></div>`;
+            d.innerHTML=`<div class="vcard-stripe" style="background:${c}"></div><div class="vcard-top"><div class="vcard-id" style="color:${c}">${v.vehicle_id}</div><div class="chip" style="color:${c};border-color:${c}44;background:${c}18;font-size:9px">${l}</div></div><div class="vcard-grid"><div class="vitem"><div class="vitem-lbl">Speed</div><div class="vitem-val">${spd} km/h</div></div><div class="vitem"><div class="vitem-lbl">Passengers</div><div class="vitem-val">${pax}</div></div><div class="vitem"><div class="vitem-lbl">Crowding</div><div class="vitem-val">${v.crowding_level||'—'}</div></div><div class="vitem"><div class="vitem-lbl">Route</div><div class="vitem-val" style="color:${v.route_id&&v.route_id.startsWith('RUTA_2')?'#06B6D4':'#3B82F6'}">${v.route_name||'—'}</div></div></div><div class="cbar"><div class="cbar-fill" style="width:${cp}%;background:${cc}"></div></div>`;
             d.addEventListener('click',()=>selV(v.vehicle_id));
             list.appendChild(d);
         });
@@ -1471,6 +1400,64 @@
         setInterval(fetchVehicles, REFRESH);
 
     });
+
+    // ── ANALYTICS: passengers by trip ─────────────────────────────
+    async function loadPassengersByRoute() {
+        const container = document.getElementById('route-list-container');
+        if (!container) return;
+
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/passengers-by-route`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!r.ok) throw new Error(r.status);
+            const data = await r.json();
+
+            const trips = Object.keys(data);
+            if (trips.length === 0) {
+                container.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
+                return;
+            }
+
+            // Total passengers per trip (suma de todas las horas)
+            const totals = trips.map(t => ({
+                id: t,
+                total: Object.values(data[t]).reduce((a, b) => a + b, 0)
+            })).sort((a, b) => b.total - a.total);
+
+            const max = totals[0].total || 1;
+
+            const COLORS = ['#3B82F6','#06B6D4','#8B5CF6','#22C55E','#F59E0B','#EF4444'];
+
+            container.innerHTML = totals.map((item, i) => {
+                const pct = Math.round((item.total / max) * 100);
+                const col = COLORS[i % COLORS.length];
+                return `
+            <div class="route-item">
+                <div class="route-top">
+                    <span style="color:${col}">${item.id}</span>
+                    <span>${item.total} pax</span>
+                </div>
+                <div class="route-bar">
+                    <div class="route-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}99)"></div>
+                </div>
+            </div>`;
+            }).join('');
+
+        } catch(e) {
+            console.error('Failed to load passengers by route', e);
+            if (container) container.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
+        }
+    }
+
+    // Cargar al abrir Analytics
+    document.querySelectorAll('.top-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.textContent.trim() === 'Analytics') loadPassengersByRoute();
+        });
+    });
+
 </script>
 </body>
 </html>

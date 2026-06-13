@@ -10,6 +10,6 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
 
     // 💡 Sostituisci il vecchio metodo con questo:
     // Sfruttiamo il "Property Path" di Spring: TripRouteId (trip -> route -> id) e TripServiceType (trip -> serviceType)
-    List<ScheduledStop> findByTripRouteIdAndTripServiceTypeOrderByStopSequenceAsc(String routeId, String serviceType);
-    List<ScheduledStop> findByTripId(String tripId);
+    List<ScheduledStop> findByTripRouteIdAndTripServiceTypeOrderByStopSequenceAsc(String routeId, String serviceType); // Second argument might not be needed
+    List<ScheduledStop> findByTripId(String tripId); // This might be removed (put here just for the merge, came from an old version)
 }

@@ -44,7 +44,7 @@ public class VehicleController {
      * This is the endpoint OMNIMOVE polls every 30 seconds to
      * update the map with live bus positions.
      */
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @Operation(
         summary = "Get all active vehicles",
         description = "Returns real-time position and status of all active MAGNI buses in Cassino.",
@@ -64,7 +64,7 @@ public class VehicleController {
      * Returns the current status of a single vehicle.
      * Returns 404 if the vehicle is not in the cache (never seen or too old).
      */
-    @GetMapping("/{id}")
+    @GetMapping(value="/{id}",  produces = "application/json")
     @Operation(
         summary = "Get a single vehicle",
         description = "Returns real-time status of a specific vehicle by its ID (e.g. MAGNI-001).",
@@ -88,7 +88,7 @@ public class VehicleController {
      * Quick health check: how many vehicles are currently tracked?
      * Useful for the fleet dashboard header.
      */
-    @GetMapping("/count")
+    @GetMapping(value = "/count", produces = "application/json")
     @Operation(summary = "Get count of tracked vehicles")
     public ResponseEntity<Map<String, Integer>> getVehicleCount() {
         return ResponseEntity.ok(Map.of(

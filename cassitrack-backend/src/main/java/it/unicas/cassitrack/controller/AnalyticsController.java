@@ -44,4 +44,10 @@ public class AnalyticsController {
     public ResponseEntity<Map<String, Object>> getBusiestHours() {
         return ResponseEntity.ok(analyticsService.getBusiestHours());
     }
+
+    @GetMapping("/passengers-by-route")
+    @Operation(summary = "Passengers per route per hour (last 24h)")
+    public ResponseEntity<Map<String, Object>> getPassengersByRoute() {
+        return ResponseEntity.ok(analyticsService.getPassengersByRouteAndHour());
+    }
 }
