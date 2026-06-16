@@ -57,6 +57,8 @@ public class TelemetrySyncService {
         this.objectMapper = objectMapper;
     }
 
+    // TO FIX: this
+    /*
     @Scheduled(fixedRate = 60000)
     public void fetchTelemetryFromCassitrack() {
         log.info("Avvio sincronizzazione telemetria da Cassitrack...");
@@ -97,7 +99,7 @@ public class TelemetrySyncService {
         } catch (Exception e) {
             log.error("Errore durante il processo di sincronizzazione: {}", e.getMessage());
         }
-    }
+    }*/
 
     @EventListener(ApplicationReadyEvent.class)
     public void startStreamingSubscription() {

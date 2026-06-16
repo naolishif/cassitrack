@@ -19,9 +19,13 @@ public class Trip {
     @JoinColumn(name = "route_id", nullable = false)
     private Route route; // Relazione Molti-a-Uno verso la tabella 'routes'
 
-    @Column(name = "service_type", nullable = false)
-    private String serviceType; // Es: "WEEKDAY"
+    //@Column(name = "service_type", nullable = false)
+    //private String serviceType; // Es: "WEEKDAY"
 
-    @Column(name = "headsign")
-    private String headsign; // Es: "Campus Folcara"
+    //@Column(name = "headsign")
+    //private String headsign; // Es: "Campus Folcara"
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bus_id", nullable = false)
+    private Bus bus;
 }
