@@ -39,6 +39,7 @@ public class JourneyPlannerService {
     private final GreenIndexService greenIndex;
     private final WeatherService    weatherService;
     private final GoogleMapsService googleMapsService;
+    private final it.unicas.omnimove.repository.StopRepository stopRepository;
 
     private static final double SPEED_WALK    = 5.0;
     private static final double SPEED_BIKE    = 15.0;
@@ -53,11 +54,6 @@ public class JourneyPlannerService {
     private double scooterUnlock;
     @Value("${elerent.scooter.per-minute:0.25}")
     private double scooterPerMin;
-
-    private static final String[] STOP_IDS = {
-        "CASSINO-STAZIONE","CASSINO-CENTRO",
-        "CASSINO-OSPEDALE","FOLCARA-VIA","FOLCARA-CAMPUS"
-    };
 
     public JourneyResponse plan(JourneyRequest req) {
         log.info("Planning: {} → {}", req.getOriginName(), req.getDestName());
@@ -295,28 +291,38 @@ public class JourneyPlannerService {
     }
 
     private String findNearestStopId(double lat, double lon) {
-        double min = Double.MAX_VALUE; String nearest = "CASSINO-STAZIONE";
-        for (String id : STOP_IDS) {
-            double d = haversineMetres(lat, lon, getStopLat(id), getStopLon(id));
-            if (d < min) { min = d; nearest = id; }
+        double min = Double.MAX_VALUE;
+        String nearest = null;
+        for (it.unicas.omnimove.model.Stop stop : stopRepository.findAll()) {
+            if (stop.getLat() == null || stop.getLon() == null) continue;
+            double d = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
+            if (d < min) { min = d; nearest = stop.getId(); }
         }
         return nearest;
     }
 
-    private double getStopLat(String id) { return switch(id) {
-        case "CASSINO-STAZIONE"->41.4892; case "CASSINO-CENTRO"->41.4917;
-        case "CASSINO-OSPEDALE"->41.4955; case "FOLCARA-VIA"->41.5020;
-        case "FOLCARA-CAMPUS"->41.5041; default->41.4917; }; }
+    private double getStopLat(String id) {
+        if (id == null) return 41.4925;
+        return stopRepository.findById(id)
+                .filter(s -> s.getLat() != null)
+                .map(it.unicas.omnimove.model.Stop::getLat)
+                .orElse(41.4925);
+    }
 
-    private double getStopLon(String id) { return switch(id) {
-        case "CASSINO-STAZIONE"->13.8282; case "CASSINO-CENTRO"->13.8314;
-        case "CASSINO-OSPEDALE"->13.8330; case "FOLCARA-VIA"->13.8200;
-        case "FOLCARA-CAMPUS"->13.8189; default->13.8314; }; }
+    private double getStopLon(String id) {
+        if (id == null) return 13.8306;
+        return stopRepository.findById(id)
+                .filter(s -> s.getLon() != null)
+                .map(it.unicas.omnimove.model.Stop::getLon)
+                .orElse(13.8306);
+    }
 
-    private String fmtStop(String id) { return switch(id) {
-        case "CASSINO-STAZIONE"->"Cassino Stazione FS"; case "CASSINO-CENTRO"->"Cassino Centro";
-        case "CASSINO-OSPEDALE"->"Ospedale S. Scolastica"; case "FOLCARA-VIA"->"Via Folcara";
-        case "FOLCARA-CAMPUS"->"Campus UNICAS Folcara"; default->id; }; }
+    private String fmtStop(String id) {
+        if (id == null) return "Unknown stop";
+        return stopRepository.findById(id)
+                .map(it.unicas.omnimove.model.Stop::getName)
+                .orElse(id);
+    }
 
     private String fmtDist(double m) {
         return m<1000 ? (int)m+"m" : String.format("%.1f km", m/1000); }
