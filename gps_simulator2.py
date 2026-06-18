@@ -272,11 +272,15 @@ class BusSimulator:
         return datetime.now(rome).strftime("%H:%M:%S")
 
     def _reload_if_trip_ended(self):
-        """Check if the current trip is over and reload."""
+        """Check if the current trip is over, based on real elapsed time, and reload."""
         if not self.active:
             self._load_current_trip()
             return
-        if self.wp_index >= len(self.waypoints) - 1:
+
+        now_seconds  = self._now_seconds()
+        last_arrival = self.waypoints[-1]["arrival_seconds"]
+
+        if now_seconds > last_arrival:
             print(f"  🔄 {self.vehicle_id}: trip {self.trip_id} finished, loading next...")
             self._load_current_trip()
 
@@ -294,6 +298,9 @@ class BusSimulator:
 
         if not self.active:
             return None
+
+        now_seconds = self._now_seconds()
+        self.wp_index = find_waypoint_index_for_time(self.waypoints, now_seconds)
 
         wp      = self.waypoints[self.wp_index]
         next_wp = self.waypoints[min(self.wp_index + 1, len(self.waypoints) - 1)]
@@ -328,8 +335,6 @@ class BusSimulator:
         occupancy = self._simulate_passengers(at_stop)
         occupancy_pct = round(occupancy / self.capacity * 100, 1)
 
-        # Advance position
-        self.wp_index = min(self.wp_index + 1, len(self.waypoints) - 1)
 
         return {
             # ── Identity ──────────────────────────────────────────

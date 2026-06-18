@@ -50,7 +50,7 @@ public class AnalyticsService {
         long totalReports = 0L;
         String fluxCount = String.format(
                 "from(bucket: \"%s\") " +
-                        "|> range(start: -24h) " +
+                        "|> range(start: today()) " +
                         "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
                         "|> filter(fn: (r) => r[\"_field\"] == \"delay\") " +
                         "|> count()", bucket
@@ -193,7 +193,7 @@ public class AnalyticsService {
         // INFLUXDB: Historial de pasajeros agregados por tramos horarios
         String fluxBusiest = String.format(
                 "from(bucket: \"%s\") " +
-                        "|> range(start: -24h) " +
+                        "|> range(start: today()) " +
                         "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
                         "|> filter(fn: (r) => r[\"_field\"] == \"ble_device_count\") " +
                         "|> aggregateWindow(every: 1h, fn: mean, createEmpty: false)", bucket
@@ -236,18 +236,18 @@ public class AnalyticsService {
         return out;
     }
 
-    public Map<String, Object> getPassengersByRouteAndHour() {
+    private Map<String, Object> getMetricByRouteAndHour(String fieldName) {
         Map<String, Object> result = new LinkedHashMap<>();
 
         String fluxQuery = String.format(
                 "from(bucket: \"%s\") " +
-                        "|> range(start: -24h) " +
+                        "|> range(start: today()) " +
                         "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
-                        "|> filter(fn: (r) => r[\"_field\"] == \"passengers\")",
-                bucket
+                        "|> filter(fn: (r) => r[\"_field\"] == \"%s\")",
+                bucket, fieldName
         );
 
-        Map<String, List<Double>> passengersByTrip = new LinkedHashMap<>();
+        Map<String, List<Double>> valuesByTrip = new LinkedHashMap<>();
         Map<String, Instant> firstSeenByTrip = new LinkedHashMap<>();
 
         try {
@@ -260,40 +260,59 @@ public class AnalyticsService {
                     Instant time = record.getTime();
                     if (tripId == null || val == null || time == null) continue;
 
-                    passengersByTrip.computeIfAbsent(tripId, k -> new ArrayList<>()).add(val.doubleValue());
+                    valuesByTrip.computeIfAbsent(tripId, k -> new ArrayList<>()).add(val.doubleValue());
                     firstSeenByTrip.merge(tripId, time, (a, b) -> a.isBefore(b) ? a : b);
                 }
             }
         } catch (Exception e) {
-            log.error("Error fetching passengers by route and hour: {}", e.getMessage());
+            log.error("Error fetching '{}' by route and hour: {}", fieldName, e.getMessage());
             return result;
         }
 
-        if (passengersByTrip.isEmpty()) return result;
+        if (valuesByTrip.isEmpty()) return result;
 
-        Map<String, Trip> tripsById = tripRepository.findAllByIdInWithRouteAndBus(new ArrayList<>(passengersByTrip.keySet()))
+        Map<String, Trip> tripsById = tripRepository.findAllByIdInWithRouteAndBus(new ArrayList<>(valuesByTrip.keySet()))
                 .stream()
                 .collect(Collectors.toMap(Trip::getId, t -> t));
 
-        for (String tripId : passengersByTrip.keySet()) {
+        Map<String, Map<String, List<Double>>> grouped = new LinkedHashMap<>();
+
+        for (String tripId : valuesByTrip.keySet()) {
             Trip trip = tripsById.get(tripId);
             if (trip == null) continue;
 
-            double avg = passengersByTrip.get(tripId).stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            double tripAvg = valuesByTrip.get(tripId).stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
             ZonedDateTime zdt = firstSeenByTrip.get(tripId).atZone(ZoneId.systemDefault());
             int hour = zdt.getHour();
             if (hour < 6 || hour >= 22) continue;
 
-            String slotLabel = String.format("%02d:%02d", hour, zdt.getMinute() < 30 ? 0 : 30);
-            String routeKey = trip.getRoute().getId() + " · " + trip.getBus().getCurrentVehicleId();
+            String slotLabel = String.format("%02d:00", hour);
+            String routeKey = trip.getRoute().getId();
 
-            @SuppressWarnings("unchecked")
-            Map<String, Double> bySlot = (Map<String, Double>)
-                    result.computeIfAbsent(routeKey, k -> new LinkedHashMap<String, Double>());
-            bySlot.put(slotLabel, Math.round(avg * 10) / 10.0);
+            grouped
+                    .computeIfAbsent(routeKey, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(slotLabel, k -> new ArrayList<>())
+                    .add(tripAvg);
+        }
+
+        for (Map.Entry<String, Map<String, List<Double>>> routeEntry : grouped.entrySet()) {
+            Map<String, Double> bySlot = new LinkedHashMap<>();
+            for (Map.Entry<String, List<Double>> slotEntry : routeEntry.getValue().entrySet()) {
+                double avg = slotEntry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+                bySlot.put(slotEntry.getKey(), Math.round(avg * 10) / 10.0);
+            }
+            result.put(routeEntry.getKey(), bySlot);
         }
 
         return result;
+    }
+
+    public Map<String, Object> getPassengersByRouteAndHour() {
+        return getMetricByRouteAndHour("passengers");
+    }
+
+    public Map<String, Object> getDelayByRouteAndHour() {
+        return getMetricByRouteAndHour("delay");
     }
 }

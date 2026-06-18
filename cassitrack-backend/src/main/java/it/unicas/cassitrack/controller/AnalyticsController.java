@@ -50,4 +50,10 @@ public class AnalyticsController {
     public ResponseEntity<Map<String, Object>> getPassengersByRoute() {
         return ResponseEntity.ok(analyticsService.getPassengersByRouteAndHour());
     }
+
+    @GetMapping("/delay-by-route")
+    @Operation(summary = "Average delay per route per hour (last 24h)")
+    public ResponseEntity<Map<String, Object>> getDelayByRoute() {
+        return ResponseEntity.ok(analyticsService.getDelayByRouteAndHour());
+    }
 }
