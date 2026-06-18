@@ -21,8 +21,8 @@ VALUES
     (
         'RUTA_1_OUT',
         'RUTA_1',
-        'Stazione → Universita',
-        'Linea principale verso Universita',
+        'Piazza Corte → Universita',
+        'Linea principale: centro storico verso Universita',
         '1976D2',
         'FFFFFF'
     ),
@@ -30,7 +30,7 @@ VALUES
     (
         'RUTA_1_IN',
         'RUTA_1',
-        'Universita → Stazione',
+        'Universita → Piazza Corte',
         'Linea principale ritorno',
         '1976D2',
         'FFFFFF'
@@ -39,8 +39,8 @@ VALUES
     (
         'RUTA_2_OUT',
         'RUTA_2',
-        'Stazione → Zona Industriale',
-        'Linea industriale andata',
+        'Villa Comunale → Centro Commerciale',
+        'Linea commerciale: parco verso centro commerciale',
         'E67E22',
         'FFFFFF'
     ),
@@ -48,8 +48,8 @@ VALUES
     (
         'RUTA_2_IN',
         'RUTA_2',
-        'Zona Industriale → Stazione',
-        'Linea industriale ritorno',
+        'Centro Commerciale → Villa Comunale',
+        'Linea commerciale ritorno',
         'E67E22',
         'FFFFFF'
     )
@@ -68,73 +68,73 @@ INSERT INTO stops (
 )
 VALUES
 
--- PARADA COMPARTIDA
+-- PARADA COMPARTIDA (cruce de las dos rutas)
 
 (
     'STAZIONE_CENTRALE',
     'Stazione Centrale',
-    41.4892,
-    13.8282
+    41.4845,
+    13.8320
 ),
 
--- RUTA 1
+-- RUTA 1 (Piazza Corte ↔ Universita)
 
 (
-    'PIAZZA_GARIBALDI',
-    'Piazza Garibaldi',
-    41.4915,
-    13.8310
-),
-
-(
-    'OSPEDALE_CIVILE',
-    'Ospedale Civile',
-    41.4955,
-    13.8330
+    'PIAZZA_CORTE',
+    'Piazza Corte (Duomo)',
+    41.4937,
+    13.8281
 ),
 
 (
-    'PARCO_COMUNALE',
-    'Parco Comunale',
-    41.4995,
-    13.8260
+    'CORSO_REPUBBLICA',
+    'Corso della Repubblica',
+    41.4910,
+    13.8312
+),
+
+(
+    'VIA_SANTANGELO',
+    'Via Sant''Angelo',
+    41.4795,
+    13.8305
 ),
 
 (
     'UNIVERSITA',
     'Universita di Cassino',
-    41.5041,
-    13.8189
+    41.4719,
+    13.8283
 ),
 
--- RUTA 2
+-- RUTA 2 (Villa Comunale ↔ Centro Commerciale)
 
 (
-    'MUSEO_CITTADINO',
-    'Museo Cittadino',
-    41.4905,
-    13.8350
+    'VILLA_COMUNALE',
+    'Villa Comunale',
+    41.4895,
+    13.8262
 ),
 
 (
-    'QUARTIERE_NORD',
-    'Quartiere Nord',
-    41.4965,
-    13.8410
+    'LARGO_TESCIONE',
+    'Largo Tescione',
+    41.4870,
+    13.8290
+),
+
+(
+    'VIA_CASILINA_EST',
+    'Via Casilina Est',
+    41.4835,
+    13.8420
 ),
 
 (
     'CENTRO_COMMERCIALE',
     'Centro Commerciale',
-    41.5015,
-    13.8470
-),
-
-(
-    'ZONA_INDUSTRIALE',
-    'Zona Industriale',
-    41.5070,
-    13.8540
+    41.4829,
+    13.8559
 )
 
     ON CONFLICT (id) DO NOTHING;

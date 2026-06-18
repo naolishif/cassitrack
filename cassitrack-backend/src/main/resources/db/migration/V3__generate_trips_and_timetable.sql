@@ -59,22 +59,20 @@ IF route_id = 'RUTA_1_OUT' THEN
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
-            (trip_id,'STAZIONE_CENTRALE',1,departure_seconds),
-            (trip_id,'PIAZZA_GARIBALDI',2,departure_seconds+450),
-            (trip_id,'OSPEDALE_CIVILE',3,departure_seconds+900),
-            (trip_id,'PARCO_COMUNALE',4,departure_seconds+1350),
+            (trip_id,'PIAZZA_CORTE',1,departure_seconds),
+            (trip_id,'CORSO_REPUBBLICA',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'VIA_SANTANGELO',4,departure_seconds+1350),
             (trip_id,'UNIVERSITA',5,departure_seconds+1800);
-
 ELSE
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
             (trip_id,'UNIVERSITA',1,departure_seconds),
-            (trip_id,'PARCO_COMUNALE',2,departure_seconds+450),
-            (trip_id,'OSPEDALE_CIVILE',3,departure_seconds+900),
-            (trip_id,'PIAZZA_GARIBALDI',4,departure_seconds+1350),
-            (trip_id,'STAZIONE_CENTRALE',5,departure_seconds+1800);
-
+            (trip_id,'VIA_SANTANGELO',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'CORSO_REPUBBLICA',4,departure_seconds+1350),
+            (trip_id,'PIAZZA_CORTE',5,departure_seconds+1800);
 END IF;
 
         ------------------------------------------------------------------
@@ -96,22 +94,20 @@ IF route_id = 'RUTA_1_OUT' THEN
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
-            (trip_id,'STAZIONE_CENTRALE',1,departure_seconds),
-            (trip_id,'PIAZZA_GARIBALDI',2,departure_seconds+450),
-            (trip_id,'OSPEDALE_CIVILE',3,departure_seconds+900),
-            (trip_id,'PARCO_COMUNALE',4,departure_seconds+1350),
+            (trip_id,'PIAZZA_CORTE',1,departure_seconds),
+            (trip_id,'CORSO_REPUBBLICA',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'VIA_SANTANGELO',4,departure_seconds+1350),
             (trip_id,'UNIVERSITA',5,departure_seconds+1800);
-
 ELSE
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
             (trip_id,'UNIVERSITA',1,departure_seconds),
-            (trip_id,'PARCO_COMUNALE',2,departure_seconds+450),
-            (trip_id,'OSPEDALE_CIVILE',3,departure_seconds+900),
-            (trip_id,'PIAZZA_GARIBALDI',4,departure_seconds+1350),
-            (trip_id,'STAZIONE_CENTRALE',5,departure_seconds+1800);
-
+            (trip_id,'VIA_SANTANGELO',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'CORSO_REPUBBLICA',4,departure_seconds+1350),
+            (trip_id,'PIAZZA_CORTE',5,departure_seconds+1800);
 END IF;
 
         ------------------------------------------------------------------
@@ -133,22 +129,20 @@ IF route_id = 'RUTA_2_OUT' THEN
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
-            (trip_id,'STAZIONE_CENTRALE',1,departure_seconds),
-            (trip_id,'MUSEO_CITTADINO',2,departure_seconds+450),
-            (trip_id,'QUARTIERE_NORD',3,departure_seconds+900),
-            (trip_id,'CENTRO_COMMERCIALE',4,departure_seconds+1350),
-            (trip_id,'ZONA_INDUSTRIALE',5,departure_seconds+1800);
-
+            (trip_id,'VILLA_COMUNALE',1,departure_seconds),
+            (trip_id,'LARGO_TESCIONE',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'VIA_CASILINA_EST',4,departure_seconds+1350),
+            (trip_id,'CENTRO_COMMERCIALE',5,departure_seconds+1800);
 ELSE
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
-            (trip_id,'ZONA_INDUSTRIALE',1,departure_seconds),
-            (trip_id,'CENTRO_COMMERCIALE',2,departure_seconds+450),
-            (trip_id,'QUARTIERE_NORD',3,departure_seconds+900),
-            (trip_id,'MUSEO_CITTADINO',4,departure_seconds+1350),
-            (trip_id,'STAZIONE_CENTRALE',5,departure_seconds+1800);
-
+            (trip_id,'CENTRO_COMMERCIALE',1,departure_seconds),
+            (trip_id,'VIA_CASILINA_EST',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'LARGO_TESCIONE',4,departure_seconds+1350),
+            (trip_id,'VILLA_COMUNALE',5,departure_seconds+1800);
 END IF;
 
         ------------------------------------------------------------------
@@ -170,22 +164,20 @@ IF route_id = 'RUTA_2_OUT' THEN
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
-            (trip_id,'STAZIONE_CENTRALE',1,departure_seconds),
-            (trip_id,'MUSEO_CITTADINO',2,departure_seconds+450),
-            (trip_id,'QUARTIERE_NORD',3,departure_seconds+900),
-            (trip_id,'CENTRO_COMMERCIALE',4,departure_seconds+1350),
-            (trip_id,'ZONA_INDUSTRIALE',5,departure_seconds+1800);
-
+            (trip_id,'VILLA_COMUNALE',1,departure_seconds),
+            (trip_id,'LARGO_TESCIONE',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'VIA_CASILINA_EST',4,departure_seconds+1350),
+            (trip_id,'CENTRO_COMMERCIALE',5,departure_seconds+1800);
 ELSE
 
             INSERT INTO scheduled_stops(trip_id,stop_id,stop_sequence,arrival_seconds)
             VALUES
-            (trip_id,'ZONA_INDUSTRIALE',1,departure_seconds),
-            (trip_id,'CENTRO_COMMERCIALE',2,departure_seconds+450),
-            (trip_id,'QUARTIERE_NORD',3,departure_seconds+900),
-            (trip_id,'MUSEO_CITTADINO',4,departure_seconds+1350),
-            (trip_id,'STAZIONE_CENTRALE',5,departure_seconds+1800);
-
+            (trip_id,'CENTRO_COMMERCIALE',1,departure_seconds),
+            (trip_id,'VIA_CASILINA_EST',2,departure_seconds+450),
+            (trip_id,'STAZIONE_CENTRALE',3,departure_seconds+900),
+            (trip_id,'LARGO_TESCIONE',4,departure_seconds+1350),
+            (trip_id,'VILLA_COMUNALE',5,departure_seconds+1800);
 END IF;
 
 v_time := v_time + INTERVAL '30 minutes';
