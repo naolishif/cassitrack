@@ -65,6 +65,8 @@ public class InfluxService {
                             .timestamp(record.getTime())
                             .numeroPosti(record.getValueByKey("numero_posti") != null ? ((Number) record.getValueByKey("numero_posti")).intValue() : 0)
                             .postoDisabili(record.getValueByKey("posto_disabili") != null ? (Boolean) record.getValueByKey("posto_disabili") : false)
+                            .capacity(record.getValueByKey("capacity") != null ? ((Number) record.getValueByKey("capacity")).intValue() : 0)
+                            .passengers(record.getValueByKey("passengers") != null ? ((Number) record.getValueByKey("passengers")).intValue() : 0)
                             .build();
 
                     telemetryList.add(dto);

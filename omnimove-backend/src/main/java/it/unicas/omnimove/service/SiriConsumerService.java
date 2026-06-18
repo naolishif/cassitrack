@@ -37,6 +37,7 @@ public class SiriConsumerService {
 
                 List<BusTelemetryDTO> dtoList = new ArrayList<>();
 
+                System.out.println("[SIRI-AUTOMATIC] Ricevuto pacchetto SIRI con " + activities.size() + " attività. Inizio elaborazione...");
                 for (Siri.VehicleActivity activity : activities) {
                     Siri.MonitoredVehicleJourney journey = activity.getMonitoredVehicleJourney();
 
@@ -47,7 +48,7 @@ public class SiriConsumerService {
                     double speed = journey.getVelocity();
                     String timestampStr = activity.getRecordedAtTime();
 
-                    System.out.println("[SIRI-AUTOMATIC] Ricevuto e in elaborazione Bus: " + busId);
+                    //System.out.println("[SIRI-AUTOMATIC] Ricevuto e in elaborazione Bus: " + busId);
 
                     // 🚌 Gestiamo la conversione del flag disabili da Stringa SIRI ("true"/"false") a Boolean
                     Boolean postoDisabili = null;
@@ -67,6 +68,11 @@ public class SiriConsumerService {
                             // 🚌 ECCO LE DUE RIGHE AGGIUNTE:
                             .numeroPosti(journey.getNumberOfSeats())
                             .postoDisabili(postoDisabili)
+                            .delay(journey.getDelay())
+                            .lastStopRegistered(journey.getLastStopRef())
+                            .tripId(journey.getFramedVehicleJourneyRef())
+                            .passengers(journey.getPassengers())
+                            .capacity(journey.getCapacity())
 
                             .build();
 
