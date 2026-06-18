@@ -29,6 +29,7 @@ services:
       POSTGRES_DB: cassitrack
       POSTGRES_USER: cassitrack
       POSTGRES_PASSWORD: cassitrack_dev
+
     ports:
       - "5433:5432"
     volumes:
@@ -130,6 +131,8 @@ services:
       MQTT_BROKER_URL: tcp://mosquitto:1883
       # JWT
       JWT_SECRET: cassitrack-jwt-secret-change-in-production-must-be-long
+      # SEE API TOKEN
+      SSE_API_TOKEN: ${SSE_API_TOKEN}
     ports:
       - "8080:8080"
     # NOTE: comment out the 'build' block and use 'image' below

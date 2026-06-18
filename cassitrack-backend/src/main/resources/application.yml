@@ -70,6 +70,10 @@ jwt:
   secret: ${JWT_SECRET:cassitrack-jwt-secret-change-in-production-must-be-long}
   expiration-ms: 86400000    # 24 hours
 
+# ── SSE API token    ──────────────────────────────────────────────
+sse:
+  api-token: ${SSE_API_TOKEN:dev-only-insecure-token}
+
 # ── OpenAPI / Swagger UI ──────────────────────────────────────────
 springdoc:
   api-docs:

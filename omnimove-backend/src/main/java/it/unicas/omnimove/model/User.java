@@ -1,6 +1,9 @@
 package it.unicas.omnimove.model;
+
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 @Entity @Table(name="users")
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class User {
@@ -8,7 +11,7 @@ public class User {
     private Long id;
     @Column(unique=true, nullable=false)
     private String email;
-    @Column(nullable=false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     @Column(nullable=false)
     private String name;

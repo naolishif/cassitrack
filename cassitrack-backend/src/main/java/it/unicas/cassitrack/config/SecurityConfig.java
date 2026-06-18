@@ -71,7 +71,8 @@ public class SecurityConfig {
                                 "/api/v1/siri/**",
                                 "/api/v1/feed/**",
                                 "/api/v1/journeys/**",
-                                "/api/v1/telemetry/**"
+                                "/api/v1/telemetry/latest",
+                                "/api/v1/telemetry/stream"
                          ).permitAll()
 
                         .requestMatchers( // Dev tools
@@ -96,7 +97,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/cassitrack-admin.html",
                                 "/api/v1/users/**",
-                                "/api/v1/telemetry/**",
                                 "/api/v1/ai/**",
                                 "/api/v1/auth/register"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")

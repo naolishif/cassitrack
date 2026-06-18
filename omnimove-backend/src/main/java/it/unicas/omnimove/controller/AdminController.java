@@ -117,6 +117,10 @@ public class AdminController {
                 return ResponseEntity.badRequest()
                         .<Object>body(Map.of("message", "Cannot delete your own account"));
 
+            if ("ADMIN".equalsIgnoreCase(target.getRole()))
+                return ResponseEntity.status(403)
+                        .<Object>body(Map.of("message", "Cannot delete another admin"));
+
             userRepo.delete(target);
             log.warn("Admin {} deleted user {} ({})", principal.getUsername(), id, target.getEmail());
             return ResponseEntity.ok().<Object>body(Map.of("message", "User deleted", "id", id));

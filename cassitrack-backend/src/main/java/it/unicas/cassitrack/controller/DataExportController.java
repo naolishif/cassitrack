@@ -15,12 +15,21 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.RequestHeader;
+
 @RestController
 @RequestMapping("/api/v1/telemetry")
 public class DataExportController {
 
-    @Autowired
+    //@Autowired
     private InfluxService influxService;
+
+    @Value("${sse.api-token}")
+    private String expectedToken;
 
     // Lista speciale thread-safe per memorizzare i client connessi (es. Omnimove)
     private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
@@ -40,7 +49,16 @@ public class DataExportController {
     }
 
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamTelemetry() {
+    public SseEmitter streamTelemetry(@RequestHeader(value = "X-Api-Key", required = false) String receivedToken,
+                                      HttpServletResponse response) {
+
+        if (!MessageDigest.isEqual(
+                expectedToken.getBytes(StandardCharsets.UTF_8),
+                (receivedToken != null ? receivedToken : "").getBytes(StandardCharsets.UTF_8))) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return null;
+        }
+
         // Creiamo un Emitter senza timeout (-1L) così la connessione resta aperta indefinitamente
         SseEmitter emitter = new SseEmitter(-1L);
         this.emitters.add(emitter);

@@ -44,6 +44,7 @@ server:
 cassitrack:
   api:
     base-url: ${CASSITRACK_URL:http://localhost:8080/api/v1}
+    token: ${CASSITRACK_API_TOKEN:dev-only-insecure-token}
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:
@@ -93,7 +94,7 @@ jwt:
 influx:
   url: ${INFLUX_URL:http://localhost:8087}
   # Paste here your InfluxDB generated token:
-  token: ${INFLUX_TOKEN:N6uXRH7MpS-PQfePmPwkiEHvLeRLQK95f_arx-tVysM3RjSgWyZ645pVL3MhoKUyqSyqDEIH3ok_mgPiA3IXJw==}
+  token: ${INFLUX_TOKEN:L0aWvFlZoPGtLHgXEXpcf5MMaYP9lzgGqd_DkqBMq7HJS_vf3mMqT8RlKoFDoUx2_5SCVipx5V4fAvHCve8WfA==}
   org: omnimove_org
   bucket: omnimove_bucket
 

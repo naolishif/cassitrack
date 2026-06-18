@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+
 @Slf4j
 @Service
 public class UserService {
@@ -31,6 +33,15 @@ public class UserService {
     public List<User> getAllUsers() {
         log.info("Fetching all users");
         return userRepository.findAll();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // GET ACTIVE USER
+    // ─────────────────────────────────────────────────────────────────
+    private User getCurrentAuthenticatedUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found"));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -118,8 +129,20 @@ public class UserService {
     // ─────────────────────────────────────────────────────────────────
     public User updateUser(Long id, RegisterRequest req) {
 
-        User user = userRepository.findById(id)
+        // This prevents BOLA (Broken Object Level Authorization - the admin could update any user, including other admins): we check if the admin is updating themself or a fleet manager, otherwise we throw an error)
+        User caller = getCurrentAuthenticatedUser();
+        User user= userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        boolean callerIsUpdatingThemself = caller.getId().equals(user.getId());
+        boolean targetIsFleetManager = "FLEET_MANAGER".equals(user.getRole());
+
+        if (!callerIsUpdatingThemself && !targetIsFleetManager) {
+            throw new SecurityException("Not authorized to update this user");
+        }
+
+        //User user = userRepository.findById(id)
+        //        .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (!user.getEmail().equals(req.getEmail()) &&
                 userRepository.existsByEmail(req.getEmail())) {
@@ -158,9 +181,19 @@ public class UserService {
     // DELETE USER
     // ─────────────────────────────────────────────────────────────────
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("User not found");
+
+        // This prevents BOLA (Broken Object Level Authorization - the admin could delete any): user, including other admins)
+        User caller = getCurrentAuthenticatedUser();
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!("FLEET_MANAGER".equals(target.getRole()))) {
+            throw new SecurityException("Admins can only delete fleet managers");
         }
+
+        //if (!userRepository.existsById(id)) {
+        //    throw new IllegalArgumentException("User not found");
+        //}
         userRepository.deleteById(id);
         log.info("User deleted: id={}", id);
     }

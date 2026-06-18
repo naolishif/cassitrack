@@ -45,6 +45,9 @@ public class TelemetrySyncService {
     @Value("${influx.bucket}")
     private String bucket;
 
+    @Value("${cassitrack.api.token}") // Added this token to authenticate in the SSE connection with Cassitrack
+    private String cassitrackApiToken;
+
     // 🛠️ Costruttore aggiornato per iniettare i componenti di Redis e Jackson
     public TelemetrySyncService(
             @Value("${cassitrack.api.base-url}") String cassitrackBaseUrl,
@@ -107,6 +110,7 @@ public class TelemetrySyncService {
 
         Flux<ServerSentEvent<List<BusTelemetryDTO>>> telemetryStream = webClient.get()
                 .uri("/telemetry/stream")
+                .header("X-Api-Key", cassitrackApiToken) // The SEE API key is passed here in the header of the GET telemetry Stream.
                 .retrieve()
                 .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<List<BusTelemetryDTO>>>() {});
 
