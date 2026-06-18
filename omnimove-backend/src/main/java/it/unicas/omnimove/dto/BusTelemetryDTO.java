@@ -15,4 +15,9 @@ public class BusTelemetryDTO {
     private Instant timestamp;
     private Boolean postoDisabili;
     private Integer numeroPosti;
+    private Integer delay;
+    private String lastStopRegistered;
+    private String tripId;
+    private Integer passengers;
+    private Integer capacity;
 }

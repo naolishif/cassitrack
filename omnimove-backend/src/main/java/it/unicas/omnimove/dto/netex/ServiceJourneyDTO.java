@@ -2,6 +2,7 @@ package it.unicas.omnimove.dto.netex;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import jakarta.xml.bind.annotation.XmlElement;
 import lombok.Data;
 
 import java.util.List;
@@ -19,4 +20,7 @@ public class ServiceJourneyDTO {
     @JacksonXmlElementWrapper(localName = "calls")
     @JacksonXmlProperty(localName = "Call")
     private List<CallDTO> calls;
+
+    @XmlElement(name = "BusRef")
+    private RefDTO busRef; // <- aggiunge il campo
 }

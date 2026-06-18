@@ -4,7 +4,7 @@
 
 DO $$
 DECLARE
-    v_time TIME;
+v_time TIME;
     trip_id TEXT;
     departure_seconds INTEGER;
     route_id TEXT;
@@ -16,23 +16,23 @@ DECLARE
 
 BEGIN
 
-    SELECT bus_id INTO b1
-    FROM buses
-    WHERE current_vehicle_id = 'MAGNI-001';
+SELECT bus_id INTO b1
+FROM buses
+WHERE current_vehicle_id = 'MAGNI-001';
 
-    SELECT bus_id INTO b2
-    FROM buses
-    WHERE current_vehicle_id = 'MAGNI-002';
+SELECT bus_id INTO b2
+FROM buses
+WHERE current_vehicle_id = 'MAGNI-002';
 
-    SELECT bus_id INTO b3
-    FROM buses
-    WHERE current_vehicle_id = 'MAGNI-003';
+SELECT bus_id INTO b3
+FROM buses
+WHERE current_vehicle_id = 'MAGNI-003';
 
-    SELECT bus_id INTO b4
-    FROM buses
-    WHERE current_vehicle_id = 'MAGNI-004';
+SELECT bus_id INTO b4
+FROM buses
+WHERE current_vehicle_id = 'MAGNI-004';
 
-    v_time := TIME '06:00';
+v_time := TIME '06:00';
 
     WHILE v_time < TIME '22:00' LOOP
 

@@ -16,19 +16,21 @@ public class NetexImportService {
     private final RouteRepository routeRepository;
     private final TripRepository tripRepository;
     private final ScheduledStopRepository scheduledStopRepository;
+    private final BusRepository busRepository; // ← AGGIUNTO
 
     private final RestClient restClient;
 
     public NetexImportService(StopRepository stopRepository,
                               RouteRepository routeRepository,
                               TripRepository tripRepository,
-                              ScheduledStopRepository scheduledStopRepository) {
+                              ScheduledStopRepository scheduledStopRepository,
+                              BusRepository busRepository) { // ← AGGIUNTO
         this.stopRepository = stopRepository;
         this.routeRepository = routeRepository;
         this.tripRepository = tripRepository;
         this.scheduledStopRepository = scheduledStopRepository;
+        this.busRepository = busRepository; // ← AGGIUNTO
 
-        // Inizializziamo il client HTTP di Spring
         this.restClient = RestClient.builder()
                 .messageConverters(converters -> {
                     converters.add(new org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter());
@@ -38,7 +40,7 @@ public class NetexImportService {
 
     @Transactional
     public void importDataFromCassitrack() {
-        String cassitrackUrl = "http://localhost:8080/api/static/netex"; // Modifica la porta se necessario
+        String cassitrackUrl = "http://localhost:8080/api/static/netex";
 
         System.out.println("Inizio scaricamento dati NeTEx da Cassitrack...");
 
@@ -47,8 +49,8 @@ public class NetexImportService {
         tripRepository.deleteAll();
         routeRepository.deleteAll();
         stopRepository.deleteAll();
+        busRepository.deleteAll(); // ← AGGIUNTO
 
-        // 1. Chiamata HTTP e conversione automatica da XML a DTO Java grazie a Jackson
         PublicationDeliveryDTO netexData = restClient.get()
                 .uri(cassitrackUrl)
                 .accept(org.springframework.http.MediaType.APPLICATION_XML)
@@ -62,7 +64,7 @@ public class NetexImportService {
 
         CompositeFrameDTO frame = netexData.getDataObjects().getCompositeFrame();
 
-        // 2. IMPORTAZIONE DELLE FERMATE (Stops)
+        // 2. IMPORTAZIONE DELLE FERMATE
         if (frame.getSiteFrames() != null) {
             for (SiteFrameDTO siteFrame : frame.getSiteFrames()) {
                 if (siteFrame.getStopPoints() != null) {
@@ -72,15 +74,13 @@ public class NetexImportService {
                         stop.setName(stopDto.getName());
                         stop.setLat(stopDto.getLatitude());
                         stop.setLon(stopDto.getLongitude());
-                        stop.setActive(true); // Impostiamo di default ad attivo
-
-                        stopRepository.save(stop); // Salva o aggiorna nel DB di Omnimove
+                        stop.setActive(true);
+                        stopRepository.save(stop);
                     }
                 }
             }
         }
 
-        // 3. IMPORTAZIONE DELLE LINEE (Routes) E DELLE CORSE (Trips)
         if (frame.getServiceFrames() != null) {
             for (ServiceFrameDTO serviceFrame : frame.getServiceFrames()) {
 
@@ -91,37 +91,52 @@ public class NetexImportService {
                         route.setId(lineDto.getId());
                         route.setLongName(lineDto.getName());
                         route.setShortName(lineDto.getShortName());
-                        //route.setColor(lineDto.getColor());
                         route.setActive(true);
-
                         routeRepository.save(route);
                     }
                 }
 
-                // 3b. Salva le Corse e i loro passaggi orari
+                // 3b. Salva i Bus ← AGGIUNTO
+                if (serviceFrame.getBuses() != null) {
+                    for (BusDTO busDto : serviceFrame.getBuses()) {
+                        Bus bus = new Bus();
+                        bus.setBusId(busDto.getId());
+                        bus.setTarga(busDto.getTarga());
+                        bus.setNumeroPosti(busDto.getNumeroPosti());
+                        bus.setPostoDisabili(busDto.getPostoDisabili());
+                        bus.setDisponibile(busDto.getDisponibile());
+                        bus.setCurrentVehicleId(busDto.getCurrentVehicleId());
+                        busRepository.save(bus);
+                    }
+                }
+
+                // 3c. Salva le Corse
                 if (serviceFrame.getServiceJourneys() != null) {
                     for (ServiceJourneyDTO journeyDto : serviceFrame.getServiceJourneys()) {
                         Trip trip = new Trip();
                         trip.setId(journeyDto.getId());
 
-                        // Recuperiamo la rotta salvata un attimo fa per collegarla al Trip
                         String routeId = journeyDto.getLineRef().getRef();
                         Route associatedRoute = routeRepository.findById(routeId).orElse(null);
                         trip.setRoute(associatedRoute);
 
-                        trip.setServiceType("WEEKDAY"); // Valore di esempio o mappato se presente
+                        // Collegamento al Bus ← AGGIUNTO
+                        if (journeyDto.getBusRef() != null) {
+                            Integer busId = Integer.parseInt(journeyDto.getBusRef().getRef());
+                            Bus associatedBus = busRepository.findById(busId).orElse(null);
+                            trip.setBus(associatedBus);
+                        }
+
+                        //trip.setServiceType("WEEKDAY");
                         tripRepository.save(trip);
 
-                        // Salva la sequenza delle fermate per questo Trip
                         if (journeyDto.getCalls() != null) {
                             for (CallDTO callDto : journeyDto.getCalls()) {
                                 ScheduledStop sStop = new ScheduledStop();
                                 sStop.setTrip(trip);
                                 sStop.setStopId(callDto.getScheduledStopPointRef().getRef());
                                 sStop.setStopSequence(callDto.getOrder());
-
                                 sStop.setArrivalSeconds(callDto.getArrivalSeconds());
-
                                 scheduledStopRepository.save(sStop);
                             }
                         }

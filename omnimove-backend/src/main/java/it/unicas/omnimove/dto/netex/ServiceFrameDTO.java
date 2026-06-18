@@ -3,6 +3,8 @@ package it.unicas.omnimove.dto.netex;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import it.unicas.omnimove.dto.netex.ServiceJourneyDTO;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElementWrapper;
 import lombok.Data;
 
 import java.util.List;
@@ -22,4 +24,8 @@ public class ServiceFrameDTO {
     @JacksonXmlElementWrapper(localName = "serviceJourneys")
     @JacksonXmlProperty(localName = "ServiceJourney")
     private List<ServiceJourneyDTO> serviceJourneys;
+
+    @XmlElementWrapper(name = "Buses")
+    @XmlElement(name = "Bus")
+    private List<BusDTO> buses;
 }

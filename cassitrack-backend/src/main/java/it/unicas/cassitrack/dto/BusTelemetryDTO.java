@@ -18,4 +18,6 @@ public class BusTelemetryDTO {
     private Integer delay;
     private String lastStopRegistered;
     private String tripId;
+    private Integer passengers;
+    private Integer capacity;
 }
