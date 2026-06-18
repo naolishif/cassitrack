@@ -17,6 +17,9 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import it.unicas.cassitrack.model.Trip;
+import it.unicas.cassitrack.repository.TripRepository;
+
 /**
  * Fleet analytics data for the manager dashboard.
  * Sistema híbrido real: Datos instantáneos desde Redis y agregaciones históricas desde InfluxDB.
@@ -29,6 +32,7 @@ public class AnalyticsService {
     private final VehiclePositionRepository positionRepo;
     private final VehicleService            vehicleService;
     private final InfluxDBClient            influxDBClient; // Conexión directa a InfluxDB
+    private final TripRepository            tripRepository;
 
     @Value("${spring.influx.bucket:vehicle_telemetry}")
     private String bucket;
@@ -239,34 +243,55 @@ public class AnalyticsService {
                 "from(bucket: \"%s\") " +
                         "|> range(start: -24h) " +
                         "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
-                        "|> filter(fn: (r) => r[\"_field\"] == \"passengers\") " +
-                        "|> aggregateWindow(every: 1h, fn: mean, createEmpty: false)",
+                        "|> filter(fn: (r) => r[\"_field\"] == \"passengers\")",
                 bucket
         );
+
+        Map<String, List<Double>> passengersByTrip = new LinkedHashMap<>();
+        Map<String, Instant> firstSeenByTrip = new LinkedHashMap<>();
 
         try {
             List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxQuery);
             for (FluxTable table : tables) {
                 for (FluxRecord record : table.getRecords()) {
-                    // Usar trip_id como clave (que sí está guardado como tag)
                     String tripId = record.getValueByKey("trip_id") != null
-                            ? record.getValueByKey("trip_id").toString()
-                            : "UNKNOWN";
-                    Instant time = record.getTime();
+                            ? record.getValueByKey("trip_id").toString() : null;
                     Number val = record.getValue() != null ? (Number) record.getValue() : null;
-                    if (time == null || val == null) continue;
+                    Instant time = record.getTime();
+                    if (tripId == null || val == null || time == null) continue;
 
-                    String hourLabel = String.format("%02d:00",
-                            time.atZone(ZoneId.systemDefault()).getHour());
-
-                    @SuppressWarnings("unchecked")
-                    Map<String, Integer> byHour = (Map<String, Integer>)
-                            result.computeIfAbsent(tripId, k -> new LinkedHashMap<String, Integer>());
-                    byHour.merge(hourLabel, val.intValue(), Integer::sum);
+                    passengersByTrip.computeIfAbsent(tripId, k -> new ArrayList<>()).add(val.doubleValue());
+                    firstSeenByTrip.merge(tripId, time, (a, b) -> a.isBefore(b) ? a : b);
                 }
             }
         } catch (Exception e) {
             log.error("Error fetching passengers by route and hour: {}", e.getMessage());
+            return result;
+        }
+
+        if (passengersByTrip.isEmpty()) return result;
+
+        Map<String, Trip> tripsById = tripRepository.findAllByIdInWithRouteAndBus(new ArrayList<>(passengersByTrip.keySet()))
+                .stream()
+                .collect(Collectors.toMap(Trip::getId, t -> t));
+
+        for (String tripId : passengersByTrip.keySet()) {
+            Trip trip = tripsById.get(tripId);
+            if (trip == null) continue;
+
+            double avg = passengersByTrip.get(tripId).stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+
+            ZonedDateTime zdt = firstSeenByTrip.get(tripId).atZone(ZoneId.systemDefault());
+            int hour = zdt.getHour();
+            if (hour < 6 || hour >= 22) continue;
+
+            String slotLabel = String.format("%02d:%02d", hour, zdt.getMinute() < 30 ? 0 : 30);
+            String routeKey = trip.getRoute().getId() + " · " + trip.getBus().getCurrentVehicleId();
+
+            @SuppressWarnings("unchecked")
+            Map<String, Double> bySlot = (Map<String, Double>)
+                    result.computeIfAbsent(routeKey, k -> new LinkedHashMap<String, Double>());
+            bySlot.put(slotLabel, Math.round(avg * 10) / 10.0);
         }
 
         return result;
