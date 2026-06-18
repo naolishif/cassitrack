@@ -829,13 +829,15 @@
             <button class="search-btn" onclick="swapStops()" style="background:var(--bg-app);color:var(--text-dark);border-left:1px solid var(--border-mid);padding:10px 14px;font-size:16px" title="Swap">⇄</button>
             <button class="search-btn" onclick="doSearch()">Search →</button>
         </div>
-        <div class="cats">
-            <div class="cat-chip active" onclick="setCat(this)">🌱 Eco</div>
-            <div class="cat-chip" onclick="setCat(this)">💸 Budget</div>
-            <div class="cat-chip" onclick="setCat(this)">⚡ Fast</div>
-            <div class="cat-chip" onclick="setCat(this)">🚌 Bus</div>
-            <div class="cat-chip" onclick="setCat(this)">🚲 Bike</div>
-            <div class="cat-chip" onclick="setCat(this)">🛴 Scooter</div>
+        <div class="cats" id="sortChips">
+            <div class="cat-chip active" data-sort="eco" onclick="setSort(this)">🌱 Eco</div>
+            <div class="cat-chip" data-sort="budget" onclick="setSort(this)">💸 Budget</div>
+            <div class="cat-chip" data-sort="fast" onclick="setSort(this)">⚡ Fast</div>
+        </div>
+        <div class="cats" id="modeChips">
+            <div class="cat-chip" data-mode="BUS" onclick="toggleModeChip(this)">🚌 Bus</div>
+            <div class="cat-chip" data-mode="BIKE" onclick="toggleModeChip(this)">🚲 Bike</div>
+            <div class="cat-chip" data-mode="SCOOTER" onclick="toggleModeChip(this)">🛴 Scooter</div>
         </div>
     </div>
 
@@ -1499,6 +1501,37 @@
         return { ...STOPS[val], isGPS: false };
     }
 
+    // ── Filter / sort state ──────────────────────────────────────────
+    let activeSort  = 'eco';   // 'eco' | 'budget' | 'fast'  — always exactly one
+    let activeModes = [];      // [] = all modes; otherwise subset of BUS/BIKE/SCOOTER (WALK always included)
+
+    function setSort(el) {
+        document.querySelectorAll('#sortChips .cat-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        activeSort = el.dataset.sort;
+        if (window._lastSearchData) renderRoutes(window._lastSearchData);
+    }
+
+    function toggleModeChip(el) {
+        el.classList.toggle('active');
+        activeModes = Array.from(document.querySelectorAll('#modeChips .cat-chip.active'))
+            .map(c => c.dataset.mode);
+        // Mode filter changes what was actually computed server-side, so re-search.
+        doSearch();
+    }
+
+    function sortOptions(options) {
+        const sorted = [...options];
+        if (activeSort === 'eco') {
+            sorted.sort((a, b) => b.green_index - a.green_index);
+        } else if (activeSort === 'budget') {
+            sorted.sort((a, b) => a.cost_euros - b.cost_euros);
+        } else if (activeSort === 'fast') {
+            sorted.sort((a, b) => a.duration_minutes - b.duration_minutes);
+        }
+        return sorted;
+    }
+
     // ── Search ────────────────────────────────────────────────────────
     async function doSearch() {
         const destId = document.getElementById('destSelect').value;
@@ -1529,17 +1562,24 @@
             + '</div>';
 
         try {
+            const payload = {
+                origin_lat: origin.lat, origin_lon: origin.lon, origin_name: origin.name,
+                dest_lat:   dest.lat,   dest_lon:   dest.lon,   dest_name:   dest.name
+            };
+            // Only constrain modes when the traveler picked specific ones via the
+            // Bus/Bike/Scooter chips.
+            if (activeModes.length > 0) {
+                payload.modes = [...activeModes];
+            }
             const r = await apiFetch('/journeys/search', {
                 method: 'POST',
-                body: JSON.stringify({
-                    origin_lat: origin.lat, origin_lon: origin.lon, origin_name: origin.name,
-                    dest_lat:   dest.lat,   dest_lon:   dest.lon,   dest_name:   dest.name
-                })
+                body: JSON.stringify(payload)
             });
             if (!r.ok) throw new Error('Search failed');
             const data = await r.json();
             window._currentOrigin = origin;
             window._currentDest   = dest;
+            window._lastSearchData = data;
             renderRoutes(data);
         } catch (e) {
             document.querySelector('.routes-list').innerHTML =
@@ -1575,7 +1615,8 @@
             list.innerHTML = '<div style="padding:20px;color:var(--text-soft);font-size:13px">No routes found.</div>';
             return;
         }
-        list.innerHTML = data.options.map(opt => {
+        const orderedOptions = sortOptions(data.options);
+        list.innerHTML = orderedOptions.map(opt => {
             const icon = MODE_ICONS[opt.mode] || '🚗';
             const btn  = MODE_BTNS[opt.mode]  || { label: 'Select', cls: 'btn-dark' };
             const cost = opt.cost_euros === 0 ? 'Free' : '€' + opt.cost_euros.toFixed(2);
@@ -1831,11 +1872,6 @@
             if (pane === 'map') setTimeout(() => map.invalidateSize(), 50);
         });
     });
-
-    function setCat(el) {
-        document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-        el.classList.add('active');
-    }
 
     function showTicketType(type, el) {
         document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
