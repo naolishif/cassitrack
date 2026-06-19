@@ -6,6 +6,7 @@
     <title>CASSITRACK — Live Bus Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -428,17 +429,7 @@
         .h5{height:82%}
         .h6{height:74%}
 
-        .chart-hours{
-            position:absolute;
-            bottom:-24px;
-            left:0;
-            right:0;
-            display:flex;
-            justify-content:space-around;
-            font-family:var(--mono);
-            font-size:10px;
-            color:var(--dim);
-        }
+
 
         .bottom-grid{
             display:grid;
@@ -475,53 +466,6 @@
             font-family:var(--mono);
             font-size:10px;
             color:var(--dim);
-        }
-
-        .critical-list{
-            margin-top:20px;
-            display:flex;
-            flex-direction:column;
-            gap:12px;
-        }
-
-        .critical-item{
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            padding:14px;
-            border-radius:12px;
-            background:rgba(255,255,255,.03);
-            border:1px solid rgba(255,255,255,.05);
-        }
-
-        .critical-name{
-            font-size:13px;
-            font-weight:600;
-        }
-
-        .critical-sub{
-            margin-top:4px;
-            font-family:var(--mono);
-            font-size:10px;
-            color:var(--dim);
-        }
-
-        .critical-delay{
-            padding:7px 10px;
-            border-radius:8px;
-            font-family:var(--mono);
-            font-size:11px;
-            font-weight:700;
-        }
-
-        .critical-delay.red{
-            background:rgba(239,68,68,.12);
-            color:#EF4444;
-        }
-
-        .critical-delay.amber{
-            background:rgba(245,158,11,.12);
-            color:#F59E0B;
         }
 
         .fleet-status{
@@ -649,31 +593,9 @@
             padding-left:42px;
         }
 
-        .y-axis{
-            position:absolute;
-            left:0;
-            top:0;
-            bottom:0;
 
-            display:flex;
-            flex-direction:column;
-            justify-content:space-between;
 
-            padding:4px 0;
 
-            font-family:var(--mono);
-            font-size:10px;
-            color:var(--dim);
-        }
-
-        .chart-grid-lines{
-            position:absolute;
-            inset:0;
-            background:
-                    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
-            background-size:100% 52px;
-            pointer-events:none;
-        }
 
         .line-svg{
             width:100%;
@@ -803,37 +725,22 @@
             <!-- KPI GRID -->
             <div class="kpi-grid compact-kpis">
 
-                <div class="kpi-card">
-                    <div class="kpi-label">Fleet Efficiency</div>
 
-                    <div class="kpi-row">
-                        <div class="kpi-value">98%</div>
-                        <div class="trend up">↑ 2.1%</div>
-                    </div>
-
-                    <div class="kpi-sub">vs yesterday</div>
-                </div>
 
                 <div class="kpi-card">
                     <div class="kpi-label">Average Delay</div>
-
                     <div class="kpi-row">
-                        <div class="kpi-value">2.4m</div>
-                        <div class="trend down">↓ 0.8m</div>
+                        <div class="kpi-value" id="kpiDelay">—</div>
                     </div>
-
-                    <div class="kpi-sub">network-wide</div>
+                    <div class="kpi-sub">mean across all day's registers</div>
                 </div>
 
                 <div class="kpi-card">
-                    <div class="kpi-label">Passengers Today</div>
-
+                    <div class="kpi-label">Average Occupancy</div>
                     <div class="kpi-row">
-                        <div class="kpi-value">1,248</div>
-                        <div class="trend up">↑ 14%</div>
+                        <div class="kpi-value" id="kpiPassengers">—</div>
                     </div>
-
-                    <div class="kpi-sub">active riders</div>
+                    <div class="kpi-sub">mean across all day's registers</div>
                 </div>
 
                 <div class="kpi-card">
@@ -841,7 +748,6 @@
 
                     <div class="kpi-row">
                         <div class="kpi-value">382kg</div>
-                        <div class="trend up">↑ 9%</div>
                     </div>
 
                     <div class="kpi-sub">vs private cars</div>
@@ -866,7 +772,7 @@
 
                     <div class="donut-wrapper">
                         <div class="fake-donut">
-                            <span>72%</span>
+                            <span id="kpiOnTime">—</span>
                         </div>
                     </div>
 
@@ -907,127 +813,13 @@
                         </div>
 
                         <div class="chart-subtitle">
-                            24-hour operational trend
+                            Delay by line per hour
                         </div>
                     </div>
                 </div>
 
-                <div class="real-chart">
-
-                    <div class="chart-grid-lines"></div>
-
-                    <div class="y-axis">
-
-                        <span>100%</span>
-                        <span>80%</span>
-                        <span>60%</span>
-                        <span>40%</span>
-                        <span>20%</span>
-
-                    </div>
-
-                    <svg viewBox="0 0 1200 300" class="line-svg">
-
-                        <defs>
-
-                            <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.45"/>
-                                <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
-                            </linearGradient>
-
-                        </defs>
-
-                        <!-- Area -->
-                        <path
-                                d="
-                            M0 250
-                            L0 210
-                            L50 200
-                            L100 180
-                            L150 120
-                            L200 90
-                            L250 80
-                            L300 110
-                            L350 130
-                            L400 150
-                            L450 140
-                            L500 90
-                            L550 70
-                            L600 60
-                            L650 85
-                            L700 120
-                            L750 150
-                            L800 110
-                            L850 95
-                            L900 75
-                            L950 100
-                            L1000 130
-                            L1050 150
-                            L1100 170
-                            L1150 190
-                            L1200 210
-                            L1200 300
-                            L0 300
-                            Z
-                        "
-                                fill="url(#areaFill)"
-                        />
-
-                        <!-- Main line -->
-                        <path
-                                d="
-                            M0 210
-                            L50 200
-                            L100 180
-                            L150 120
-                            L200 90
-                            L250 80
-                            L300 110
-                            L350 130
-                            L400 150
-                            L450 140
-                            L500 90
-                            L550 70
-                            L600 60
-                            L650 85
-                            L700 120
-                            L750 150
-                            L800 110
-                            L850 95
-                            L900 75
-                            L950 100
-                            L1000 130
-                            L1050 150
-                            L1100 170
-                            L1150 190
-                            L1200 210
-                        "
-                                fill="none"
-                                stroke="#3B82F6"
-                                stroke-width="5"
-                                stroke-linecap="round"
-                                filter="url(#glow)"
-                        />
-
-                    </svg>
-
-                    <div class="chart-hours full-hours">
-
-                        <span>00</span>
-                        <span>02</span>
-                        <span>04</span>
-                        <span>06</span>
-                        <span>08</span>
-                        <span>10</span>
-                        <span>12</span>
-                        <span>14</span>
-                        <span>16</span>
-                        <span>18</span>
-                        <span>20</span>
-                        <span>22</span>
-
-                    </div>
-
+                <div id="delay-chart-wrap" style="overflow-x:auto;">
+                    <canvas id="delayChart" height="260"></canvas>
                 </div>
 
             </div>
@@ -1041,78 +833,17 @@
                     <div class="chart-header">
                         <div>
                             <div class="chart-title">
-                                Most Used Routes
+                                Network Occupancy
                             </div>
 
                             <div class="chart-subtitle">
-                                Passenger demand by line
+                                Passenger demand by line per hour
                             </div>
                         </div>
                     </div>
 
-                    <div class="route-list" id="route-list-container">
-                        <div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Loading...</div>
-                    </div>
-
-                </div>
-
-                <!-- CRITICAL STOPS -->
-                <div class="chart-card">
-
-                    <div class="chart-title">
-                        Critical Stops
-                    </div>
-
-                    <div class="critical-list">
-
-                        <div class="critical-item">
-                            <div>
-                                <div class="critical-name">
-                                    Cassino Station
-                                </div>
-
-                                <div class="critical-sub">
-                                    Route Linea 16
-                                </div>
-                            </div>
-
-                            <div class="critical-delay red">
-                                +4.1m
-                            </div>
-                        </div>
-
-                        <div class="critical-item">
-                            <div>
-                                <div class="critical-name">
-                                    UNICAS Campus
-                                </div>
-
-                                <div class="critical-sub">
-                                    Route Linea 16
-                                </div>
-                            </div>
-
-                            <div class="critical-delay amber">
-                                +2.6m
-                            </div>
-                        </div>
-
-                        <div class="critical-item">
-                            <div>
-                                <div class="critical-name">
-                                    Ospedale Stop
-                                </div>
-
-                                <div class="critical-sub">
-                                    Route Linea 03
-                                </div>
-                            </div>
-
-                            <div class="critical-delay red">
-                                +5.2m
-                            </div>
-                        </div>
-
+                    <div id="routes-chart-wrap" style="overflow-x:auto;">
+                        <canvas id="routesChart" height="260"></canvas>
                     </div>
 
                 </div>
@@ -1183,18 +914,18 @@
         ).addTo(map);
 
         const RUTA1=[
-            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4892,lon:13.8282},
-            {id:'PIAZZA_GARIBALDI',name:'Piazza Garibaldi',lat:41.4915,lon:13.831},
-            {id:'OSPEDALE_CIVILE',name:'Ospedale Civile',lat:41.4955,lon:13.833},
-            {id:'PARCO_COMUNALE',name:'Parco Comunale',lat:41.4995,lon:13.826},
-            {id:'UNIVERSITA',name:'Universita di Cassino',lat:41.5041,lon:13.8189},
+            {id:'PIAZZA_CORTE',name:'Piazza Corte (Duomo)',lat:41.4937,lon:13.8281},
+            {id:'CORSO_REPUBBLICA',name:'Corso della Repubblica',lat:41.4910,lon:13.8312},
+            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4845,lon:13.8320},
+            {id:'VIA_SANTANGELO',name:'Via Sant\'Angelo',lat:41.4795,lon:13.8305},
+            {id:'UNIVERSITA',name:'Universita di Cassino',lat:41.4719,lon:13.8283},
         ];
         const RUTA2=[
-            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4892,lon:13.8282},
-            {id:'MUSEO_CITTADINO',name:'Museo Cittadino',lat:41.4905,lon:13.835},
-            {id:'QUARTIERE_NORD',name:'Quartiere Nord',lat:41.4965,lon:13.841},
-            {id:'CENTRO_COMMERCIALE',name:'Centro Commerciale',lat:41.5015,lon:13.847},
-            {id:'ZONA_INDUSTRIALE',name:'Zona Industriale',lat:41.507,lon:13.854},
+            {id:'VILLA_COMUNALE',name:'Villa Comunale',lat:41.4895,lon:13.8262},
+            {id:'LARGO_TESCIONE',name:'Largo Tescione',lat:41.4870,lon:13.8290},
+            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4845,lon:13.8320},
+            {id:'VIA_CASILINA_EST',name:'Via Casilina Est',lat:41.4835,lon:13.8420},
+            {id:'CENTRO_COMMERCIALE',name:'Centro Commerciale',lat:41.4829,lon:13.8559},
         ];
 
         // Polyline RUTA 1 (blu) e RUTA 2 (cyan)
@@ -1242,8 +973,8 @@
                 const d=v.delay_minutes || 0;
 
                 v.schedule_status =
-                    d <= 1 ? 'ON_TIME' :
-                        d <= 5 ? 'SLIGHTLY_LATE' :
+                    d <= 3 ? 'ON_TIME' :
+                        d <= 6 ? 'SLIGHTLY_LATE' :
                             'SIGNIFICANTLY_LATE';
 
                 return v;
@@ -1402,9 +1133,11 @@
     });
 
     // ── ANALYTICS: passengers by trip ─────────────────────────────
+    let routesChartInstance = null;
+
     async function loadPassengersByRoute() {
-        const container = document.getElementById('route-list-container');
-        if (!container) return;
+        const canvas = document.getElementById('routesChart');
+        if (!canvas) return;
 
         try {
             const token = localStorage.getItem('cassitrack_token');
@@ -1414,47 +1147,221 @@
             if (!r.ok) throw new Error(r.status);
             const data = await r.json();
 
-            const trips = Object.keys(data);
-            if (trips.length === 0) {
-                container.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
+            const routeKeys = Object.keys(data);
+            if (routeKeys.length === 0) {
+                canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
                 return;
             }
 
-            // Total passengers per trip (suma de todas las horas)
-            const totals = trips.map(t => ({
-                id: t,
-                total: Object.values(data[t]).reduce((a, b) => a + b, 0)
-            })).sort((a, b) => b.total - a.total);
+            // Franjas horarias: 06:00 -> 21:00 (1 por hora, coincide con el backend)
+            const labels = [];
+            for (let h = 6; h < 22; h++) {
+                labels.push(`${String(h).padStart(2, '0')}:00`);
+            }
 
-            const max = totals[0].total || 1;
+            const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#22C55E', '#F59E0B', '#EF4444'];
 
-            const COLORS = ['#3B82F6','#06B6D4','#8B5CF6','#22C55E','#F59E0B','#EF4444'];
+            const datasets = routeKeys.sort().map((key, i) => ({
+                label: key,
+                data: labels.map(slot => data[key][slot] ?? null),
+                backgroundColor: COLORS[i % COLORS.length],
+                borderRadius: 4,
+                maxBarThickness: 14
+            }));
 
-            container.innerHTML = totals.map((item, i) => {
-                const pct = Math.round((item.total / max) * 100);
-                const col = COLORS[i % COLORS.length];
-                return `
-            <div class="route-item">
-                <div class="route-top">
-                    <span style="color:${col}">${item.id}</span>
-                    <span>${item.total} pax</span>
-                </div>
-                <div class="route-bar">
-                    <div class="route-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}99)"></div>
-                </div>
-            </div>`;
-            }).join('');
+            // Ancho dinámico (scroll horizontal) para que las 34 franjas no se aplasten
+            // Ahora son solo 4 rutas (sin bus) y 16 franjas, ya no hace falta tanto ancho
+            canvas.width = Math.max(700, labels.length * 90);
 
-        } catch(e) {
+            if (routesChartInstance) routesChartInstance.destroy();
+
+            routesChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: false,
+                    plugins: {
+                        legend: { labels: { color: '#E2E8F0', font: { family: 'DM Mono', size: 10 } } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0} pax` } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
+                            grid: { color: 'rgba(255,255,255,.04)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Passengers', color: '#4B5563', font: { family: 'DM Mono', size: 10 } },
+                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
+                            grid: { color: 'rgba(255,255,255,.04)' }
+                        }
+                    }
+                }
+            });
+
+        } catch (e) {
             console.error('Failed to load passengers by route', e);
-            if (container) container.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
+            canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
         }
     }
 
     // Cargar al abrir Analytics
+    let delayChartInstance = null;
+
+    function buildHourlyLabels() {
+        const labels = [];
+        for (let h = 6; h < 22; h++) labels.push(`${String(h).padStart(2, '0')}:00`);
+        return labels;
+    }
+
+    async function loadDelayByRoute() {
+        const canvas = document.getElementById('delayChart');
+        if (!canvas) return;
+
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/delay-by-route`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!r.ok) throw new Error(r.status);
+            const data = await r.json();
+
+            const routeKeys = Object.keys(data);
+            if (routeKeys.length === 0) {
+                canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
+                return;
+            }
+
+            const labels = buildHourlyLabels();
+            const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#22C55E', '#F59E0B', '#EF4444'];
+
+            const datasets = routeKeys.sort().map((key, i) => ({
+                label: key,
+                data: labels.map(slot => data[key][slot] ?? null),
+                backgroundColor: COLORS[i % COLORS.length],
+                borderRadius: 4,
+                maxBarThickness: 14
+            }));
+
+            canvas.width = Math.max(700, labels.length * 90);
+
+            if (delayChartInstance) delayChartInstance.destroy();
+
+            delayChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: false,
+                    plugins: {
+                        legend: { labels: { color: '#E2E8F0', font: { family: 'DM Mono', size: 10 } } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0} min` } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
+                            grid: { color: 'rgba(255,255,255,.04)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Delay (min)', color: '#4B5563', font: { family: 'DM Mono', size: 10 } },
+                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
+                            grid: { color: 'rgba(255,255,255,.04)' }
+                        }
+                    }
+                }
+            });
+
+        } catch (e) {
+            console.error('Failed to load delay by route', e);
+            canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
+        }
+    }
+
+
+
+    async function loadSummaryKPIs() {
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+
+            // ── Average Delay: media de todos los valores del delayChart ──
+            const rDelay = await fetch(`${API}/analytics/delay-by-route`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (rDelay.ok) {
+                const data = await rDelay.json();
+                const allValues = [];
+                Object.values(data).forEach(bySlot => {
+                    Object.values(bySlot).forEach(v => {
+                        if (v != null) allValues.push(v);
+                    });
+                });
+                const avg = allValues.length > 0
+                    ? (allValues.reduce((a, b) => a + b, 0) / allValues.length).toFixed(1)
+                    : 0;
+                document.getElementById('kpiDelay').textContent = avg > 0 ? `+${avg}m` : '0m';
+            }
+
+            // ── Avg Occupancy: media de todos los valores del routesChart ──
+            const rPax = await fetch(`${API}/analytics/passengers-by-route`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (rPax.ok) {
+                const data = await rPax.json();
+                const allValues = [];
+                Object.values(data).forEach(bySlot => {
+                    Object.values(bySlot).forEach(v => {
+                        if (v != null) allValues.push(v);
+                    });
+                });
+                const avg = allValues.length > 0
+                    ? Math.round(allValues.reduce((a, b) => a + b, 0) / allValues.length)
+                    : null;
+                document.getElementById('kpiPassengers').textContent =
+                    avg != null ? `${avg}` : '—';
+            }
+
+            // ── Fleet Status donut: 4 cuadrantes, uno por bus ──
+            const rVeh = await fetch(`${API}/vehicles`);
+            if (rVeh.ok) {
+                const vehs = await rVeh.json();
+                updateFleetDonut(vehs);
+            }
+
+        } catch (e) {
+            console.error('Error loading summary KPIs', e);
+        }
+    }
+
+    function updateFleetDonut(vehicles) {
+        const donut = document.querySelector('.fake-donut');
+        const kpiSpan = document.getElementById('kpiOnTime');
+        if (!donut || !vehicles.length) return;
+
+        kpiSpan.textContent = '';
+
+        const total = vehicles.length;
+        const onTime   = vehicles.filter(v => (v.delay_minutes || 0) <= 3).length;
+        const slight   = vehicles.filter(v => (v.delay_minutes || 0) > 3 && (v.delay_minutes || 0) <= 6).length;
+        const late     = vehicles.filter(v => (v.delay_minutes || 0) > 6).length;
+
+        const onTimePct  = (onTime  / total) * 100;
+        const slightPct  = (slight  / total) * 100;
+        const latePct    = (late    / total) * 100;
+
+        donut.style.background = `conic-gradient(
+        #22C55E 0% ${onTimePct}%,
+        #F59E0B ${onTimePct}% ${onTimePct + slightPct}%,
+        #EF4444 ${onTimePct + slightPct}% 100%
+    )`;
+    }
+
     document.querySelectorAll('.top-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            if (btn.textContent.trim() === 'Analytics') loadPassengersByRoute();
+            if (btn.textContent.trim() === 'Analytics') {
+                loadPassengersByRoute();
+                loadDelayByRoute();
+                loadSummaryKPIs();
+            }
         });
     });
 
