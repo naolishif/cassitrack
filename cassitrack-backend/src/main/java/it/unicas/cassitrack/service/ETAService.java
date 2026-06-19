@@ -1,7 +1,9 @@
 package it.unicas.cassitrack.service;
 
 import it.unicas.cassitrack.dto.StopArrivalDTO;
+import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.model.VehiclePosition;
+import it.unicas.cassitrack.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class ETAService {
 
     private final VehicleStateCache     vehicleStateCache;
     private final RouteMatchingService  routeMatchingService;
+    private final StopRepository        stopRepository;
 
     private static final ZoneId ITALY_TZ =
             ZoneId.of("Europe/Rome");
@@ -164,18 +167,9 @@ public class ETAService {
      * Returns null if the stop ID is not recognised.
      */
     private double[] getStopCoords(String stopId) {
-        return switch (stopId) {
-            case "CASSINO-STAZIONE"  ->
-                    new double[]{41.4892, 13.8282};
-            case "CASSINO-CENTRO"    ->
-                    new double[]{41.4917, 13.8314};
-            case "CASSINO-OSPEDALE"  ->
-                    new double[]{41.4955, 13.8330};
-            case "FOLCARA-VIA"       ->
-                    new double[]{41.5020, 13.8200};
-            case "FOLCARA-CAMPUS"    ->
-                    new double[]{41.5041, 13.8189};
-            default -> null;
-        };
+        return stopRepository.findById(stopId)
+                .filter(s -> s.getLat() != null && s.getLon() != null)
+                .map(s -> new double[]{s.getLat(), s.getLon()})
+                .orElse(null);
     }
 }

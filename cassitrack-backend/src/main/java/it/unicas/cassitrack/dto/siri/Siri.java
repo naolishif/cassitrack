@@ -14,7 +14,6 @@ public class Siri {
     @JacksonXmlProperty(localName = "ServiceDelivery")
     private ServiceDelivery serviceDelivery;
 
-    // --- Costruttore vuoto necessario per Jackson ---
     public Siri() {}
 
     public Siri(ServiceDelivery serviceDelivery) {
@@ -24,10 +23,6 @@ public class Siri {
     public ServiceDelivery getServiceDelivery() { return serviceDelivery; }
     public void setServiceDelivery(ServiceDelivery serviceDelivery) { this.serviceDelivery = serviceDelivery; }
 
-    // ==========================================
-    // CLASSI INTERNE PER LA GERARCHIA XML
-    // ==========================================
-
     public static class ServiceDelivery {
         @JacksonXmlProperty(localName = "ResponseTimestamp")
         private String responseTimestamp;
@@ -36,7 +31,7 @@ public class Siri {
         private VehicleMonitoringDelivery vehicleMonitoringDelivery;
 
         public ServiceDelivery() {
-            this.responseTimestamp = Instant.now().toString(); // Genera il timestamp in automatico
+            this.responseTimestamp = Instant.now().toString();
         }
 
         public String getResponseTimestamp() { return responseTimestamp; }
@@ -46,13 +41,10 @@ public class Siri {
     }
 
     public static class VehicleMonitoringDelivery {
-
-        // Questo tag "useWrapping = false" evita che Jackson crei un brutto tag <VehicleActivityList>
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "VehicleActivity")
         private List<VehicleActivity> vehicleActivity = new ArrayList<>();
 
-        // Getters e Setters
         public List<VehicleActivity> getVehicleActivity() { return vehicleActivity; }
         public void setVehicleActivity(List<VehicleActivity> vehicleActivity) { this.vehicleActivity = vehicleActivity; }
     }
@@ -68,14 +60,12 @@ public class Siri {
             this.recordedAtTime = Instant.now().toString();
         }
 
-        // Getters e Setters
         public String getRecordedAtTime() { return recordedAtTime; }
         public void setRecordedAtTime(String recordedAtTime) { this.recordedAtTime = recordedAtTime; }
         public MonitoredVehicleJourney getMonitoredVehicleJourney() { return monitoredVehicleJourney; }
         public void setMonitoredVehicleJourney(MonitoredVehicleJourney monitoredVehicleJourney) { this.monitoredVehicleJourney = monitoredVehicleJourney; }
     }
 
-    // ── HERE IS THE SUBCLASS TO MODIFY ─────────────────────────────────
     public static class MonitoredVehicleJourney {
         @JacksonXmlProperty(localName = "VehicleRef")
         private String vehicleRef;
@@ -86,26 +76,49 @@ public class Siri {
         @JacksonXmlProperty(localName = "Velocity")
         private double velocity;
 
-        // 🚌 NUOVI CAMPI INSERITI QUI DENTRO PER IL PROTOCOLLO SIRI
         @JacksonXmlProperty(localName = "WheelchairAccessible")
         private String wheelchairAccessible;
 
         @JacksonXmlProperty(localName = "NumberOfSeats")
         private Integer numberOfSeats;
 
-        // Getters e Setters esistenti
+        // ← I TRE NUOVI CAMPI, QUI DENTRO
+        @JacksonXmlProperty(localName = "Delay")
+        private Integer delay;
+
+        @JacksonXmlProperty(localName = "LastStopRef")
+        private String lastStopRef;
+
+        @JacksonXmlProperty(localName = "FramedVehicleJourneyRef")
+        private String framedVehicleJourneyRef;
+
+        @JacksonXmlProperty(localName = "Passengers")
+        private Integer passengers;
+
+        @JacksonXmlProperty(localName = "Capacity")
+        private Integer capacity;
+
         public String getVehicleRef() { return vehicleRef; }
         public void setVehicleRef(String vehicleRef) { this.vehicleRef = vehicleRef; }
         public VehicleLocation getVehicleLocation() { return vehicleLocation; }
         public void setVehicleLocation(VehicleLocation vehicleLocation) { this.vehicleLocation = vehicleLocation; }
         public double getVelocity() { return velocity; }
         public void setVelocity(double velocity) { this.velocity = velocity; }
-
-        // 🚌 NUOVI Getters e Setters aggiunti dentro la classe
         public String getWheelchairAccessible() { return wheelchairAccessible; }
         public void setWheelchairAccessible(String wheelchairAccessible) { this.wheelchairAccessible = wheelchairAccessible; }
         public Integer getNumberOfSeats() { return numberOfSeats; }
         public void setNumberOfSeats(Integer numberOfSeats) { this.numberOfSeats = numberOfSeats; }
+        public Integer getDelay() { return delay; }
+        public void setDelay(Integer delay) { this.delay = delay; }
+        public String getLastStopRef() { return lastStopRef; }
+        public void setLastStopRef(String lastStopRef) { this.lastStopRef = lastStopRef; }
+        public String getFramedVehicleJourneyRef() { return framedVehicleJourneyRef; }
+        public void setFramedVehicleJourneyRef(String framedVehicleJourneyRef) { this.framedVehicleJourneyRef = framedVehicleJourneyRef; }
+        public Integer getPassengers() {return passengers;}
+        public void setPassengers(Integer passengers) {this.passengers = passengers;}
+        public Integer getCapacity() {return capacity;}
+        public void setCapacity(Integer capacity) {this.capacity = capacity;}
+
     }
 
     public static class VehicleLocation {
@@ -122,7 +135,6 @@ public class Siri {
             this.latitude = latitude;
         }
 
-        // Getters e Setters
         public double getLongitude() { return longitude; }
         public void setLongitude(double longitude) { this.longitude = longitude; }
         public double getLatitude() { return latitude; }

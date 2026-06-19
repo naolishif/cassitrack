@@ -1,6 +1,8 @@
 package it.unicas.cassitrack.service;
 
+import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.repository.ScheduledStopRepository;
+import it.unicas.cassitrack.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -9,7 +11,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Matches a bus GPS position to:
@@ -25,19 +26,10 @@ import java.util.Map;
 public class RouteMatchingService {
 
     private final ScheduledStopRepository scheduledStopRepo;
+    private final StopRepository stopRepository;
 
     private static final ZoneId ITALY_TZ =
             ZoneId.of("Europe/Rome");
-
-    // Known stop coordinates
-    // stopId → [latitude, longitude]
-    private static final Map<String, double[]> STOP_COORDS = Map.of(
-            "CASSINO-STAZIONE",  new double[]{41.4892, 13.8282},
-            "CASSINO-CENTRO",    new double[]{41.4917, 13.8314},
-            "CASSINO-OSPEDALE",  new double[]{41.4955, 13.8330},
-            "FOLCARA-VIA",       new double[]{41.5020, 13.8200},
-            "FOLCARA-CAMPUS",    new double[]{41.5041, 13.8189}
-    );
 
     // Only match if the bus is within this many metres of a stop
     private static final double MAX_MATCH_METRES = 300.0;
@@ -50,20 +42,21 @@ public class RouteMatchingService {
         String nearestId  = null;
         double nearestDist = Double.MAX_VALUE;
 
-        for (Map.Entry<String, double[]> entry
-                : STOP_COORDS.entrySet()) {
-            double[] coords = entry.getValue();
+        for (Stop stop : stopRepository.findAll()) {
+            if (stop.getLat() == null || stop.getLon() == null) {
+                continue;
+            }
             double dist = haversineMetres(
-                    lat, lon, coords[0], coords[1]
+                    lat, lon, stop.getLat(), stop.getLon()
             );
 
             if (dist < nearestDist) {
                 nearestDist = dist;
-                nearestId   = entry.getKey();
+                nearestId   = stop.getId();
             }
         }
 
-        if (nearestDist > MAX_MATCH_METRES) {
+        if (nearestId != null && nearestDist > MAX_MATCH_METRES) {
             // Bus is between stops — return closest anyway
             // for schedule computation purposes
             log.debug("Bus is {}m from nearest stop {}",

@@ -18,6 +18,13 @@ public class SiriMapper {
             journey.setVehicleRef(bus.getBusId());
             journey.setVehicleLocation(location);
             journey.setVelocity(bus.getSpeed());
+            System.out.println(
+                    "[SIRI] bus=" + bus.getBusId() +
+                            " passengers=" + bus.getPassengers() +
+                            " capacity=" + bus.getCapacity()
+            );
+            journey.setPassengers(bus.getPassengers());
+            journey.setCapacity(bus.getCapacity());
 
             // 🚌 ── COSTRUIAMO I NUOVI DATI DA INVIARE A OMNIMOVE ──
 
@@ -32,6 +39,20 @@ public class SiriMapper {
 
             // 2. Passiamo il numero di posti totale
             journey.setNumberOfSeats(bus.getNumeroPosti());
+            // 3. Delay in secondi
+            if (bus.getDelay() != null) {
+                journey.setDelay(bus.getDelay());
+            }
+
+            // 4. Ultima fermata registrata
+            if (bus.getLastStopRegistered() != null) {
+                journey.setLastStopRef(bus.getLastStopRegistered());
+            }
+
+            // 5. Trip ID corrente
+            if (bus.getTripId() != null) {
+                journey.setFramedVehicleJourneyRef(bus.getTripId());
+            }
 
             Siri.VehicleActivity activity = new Siri.VehicleActivity();
             // Inseriamo il timestamp reale di quando il bus ha inviato il dato!

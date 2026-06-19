@@ -93,6 +93,22 @@ public class Siri {
         @JacksonXmlProperty(localName = "NumberOfSeats")
         private Integer numberOfSeats;
 
+        // ← AGGIUNGI QUESTI TRE CAMPI
+        @JacksonXmlProperty(localName = "Delay")
+        private Integer delay;
+
+        @JacksonXmlProperty(localName = "LastStopRef")
+        private String lastStopRef;
+
+        @JacksonXmlProperty(localName = "FramedVehicleJourneyRef")
+        private String framedVehicleJourneyRef;
+
+        @JacksonXmlProperty(localName = "Passengers")
+        private Integer passengers;
+
+        @JacksonXmlProperty(localName = "Capacity")
+        private Integer capacity;
+
         // Getters e Setters esistenti
         public String getVehicleRef() { return vehicleRef; }
         public void setVehicleRef(String vehicleRef) { this.vehicleRef = vehicleRef; }
@@ -106,6 +122,17 @@ public class Siri {
         public void setWheelchairAccessible(String wheelchairAccessible) { this.wheelchairAccessible = wheelchairAccessible; }
         public Integer getNumberOfSeats() { return numberOfSeats; }
         public void setNumberOfSeats(Integer numberOfSeats) { this.numberOfSeats = numberOfSeats; }
+        // ← I TRE NUOVI getter/setter
+        public Integer getDelay() { return delay; }
+        public void setDelay(Integer delay) { this.delay = delay; }
+        public String getLastStopRef() { return lastStopRef; }
+        public void setLastStopRef(String lastStopRef) { this.lastStopRef = lastStopRef; }
+        public String getFramedVehicleJourneyRef() { return framedVehicleJourneyRef; }
+        public void setFramedVehicleJourneyRef(String framedVehicleJourneyRef) { this.framedVehicleJourneyRef = framedVehicleJourneyRef; }
+        public Integer getPassengers() {return passengers;}
+        public void setPassengers(Integer passengers) {this.passengers = passengers;}
+        public Integer getCapacity() {return capacity;}
+        public void setCapacity(Integer capacity) {this.capacity = capacity;}
     }
 
     public static class VehicleLocation {

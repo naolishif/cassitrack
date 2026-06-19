@@ -6,5 +6,5 @@ import lombok.Data;
 @Data
 public class DataObjects {
     @JacksonXmlProperty(localName = "CompositeFrame")
-    private CompositeFrameDTO compositeFrame; // Nota: ho aggiunto "DTO" al nome per coerenza
+    private CompositeFrameDTO compositeFrame;
 }

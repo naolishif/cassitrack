@@ -11,13 +11,22 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * OMNIMOVE Journey Planner.
  *
  * Gets live bus data from CASSITRACK via REST API.
  * Never accesses CASSITRACK database directly.
- * Weather-aware: each option gets a weather warning.
+ *
+ * BUS option now uses Google Maps Distance Matrix API to compute
+ * the real travel time from the bus current GPS position to the
+ * destination stop, accounting for live traffic.
+ *
+ * Fallback chain:
+ *   1. Google Maps with bus GPS position (best accuracy)
+ *   2. Google Maps with nearest stop as origin (if no bus available)
+ *   3. distKm / 25 km/h estimate (if Google Maps unavailable)
  */
 @Service
 @RequiredArgsConstructor
@@ -26,9 +35,11 @@ public class JourneyPlannerService {
     private static final Logger log =
         LoggerFactory.getLogger(JourneyPlannerService.class);
 
-    private final CassitrackClient cassitrackClient;
+    private final CassitrackClient  cassitrackClient;
     private final GreenIndexService greenIndex;
-    private final WeatherService weatherService;
+    private final WeatherService    weatherService;
+    private final GoogleMapsService googleMapsService;
+    private final it.unicas.omnimove.repository.StopRepository stopRepository;
 
     private static final double SPEED_WALK    = 5.0;
     private static final double SPEED_BIKE    = 15.0;
@@ -43,11 +54,6 @@ public class JourneyPlannerService {
     private double scooterUnlock;
     @Value("${elerent.scooter.per-minute:0.25}")
     private double scooterPerMin;
-
-    private static final String[] STOP_IDS = {
-        "CASSINO-STAZIONE","CASSINO-CENTRO",
-        "CASSINO-OSPEDALE","FOLCARA-VIA","FOLCARA-CAMPUS"
-    };
 
     public JourneyResponse plan(JourneyRequest req) {
         log.info("Planning: {} → {}", req.getOriginName(), req.getDestName());
@@ -96,7 +102,15 @@ public class JourneyPlannerService {
             WeatherService.WeatherData weather) {
 
         String nearestStop = findNearestStopId(req.getOriginLat(), req.getOriginLon());
-        int waitMin = 5;
+        String destStop    = findNearestStopId(req.getDestLat(), req.getDestLon());
+
+        // --- Step 1: walk to bus stop ---
+        double walkMetres = haversineMetres(req.getOriginLat(), req.getOriginLon(),
+            getStopLat(nearestStop), getStopLon(nearestStop));
+        int walkMin = (int) Math.ceil(walkMetres / 1000.0 / SPEED_WALK * 60);
+
+        // --- Step 2: wait for bus (ETA from cassitrack) ---
+        int waitMin = 5; // default
         try {
             var arrivals = cassitrackClient.getArrivalsAtStop(nearestStop);
             if (!arrivals.isEmpty()) {
@@ -104,13 +118,15 @@ public class JourneyPlannerService {
                     - System.currentTimeMillis() / 1000;
                 waitMin = (int) Math.max(0, etaSec / 60);
             }
-        } catch (Exception e) { log.debug("ETA unavailable"); }
+        } catch (Exception e) {
+            log.debug("ETA from cassitrack unavailable: {}", e.getMessage());
+        }
 
-        double walkMetres = haversineMetres(req.getOriginLat(), req.getOriginLon(),
-            getStopLat(nearestStop), getStopLon(nearestStop));
-        int walkMin = (int) Math.ceil(walkMetres / 1000.0 / SPEED_WALK * 60);
-        int busMin  = (int) Math.ceil(distKm / 25.0 * 60);
-        int total   = walkMin + waitMin + busMin;
+        // --- Step 3: bus travel time via Google Maps ---
+        // Try to get the GPS position of the nearest active bus
+        int busMin = computeBusTravelTime(nearestStop, destStop, distKm);
+
+        int total = walkMin + waitMin + busMin;
 
         List<JourneyLeg> legs = new ArrayList<>();
         if (walkMin > 0) legs.add(JourneyLeg.builder().mode("WALK")
@@ -137,6 +153,74 @@ public class JourneyPlannerService {
             .weatherWarning(weatherService.getModeWarning(weather.condition, "BUS"))
             .weatherSuggestion(weather.suggestion)
             .legs(legs).build();
+    }
+
+    /**
+     * Compute bus travel time from the bus current position to the destination stop.
+     *
+     * Strategy:
+     *   1. Get active vehicles from CASSITRACK
+     *   2. Find the nearest bus to the origin stop (most likely to serve the user)
+     *   3. Call Google Maps with bus GPS coordinates → destination stop
+     *   4. Fallback: Google Maps from origin stop → destination stop
+     *   5. Fallback: distKm / 25 km/h estimate
+     */
+    private int computeBusTravelTime(String originStop, String destStop, double distKm) {
+
+        double destLat = getStopLat(destStop);
+        double destLon = getStopLon(destStop);
+
+        // Try to find nearest active bus GPS position
+        try {
+            List<VehicleDTO> vehicles = cassitrackClient.getActiveVehicles();
+            if (!vehicles.isEmpty()) {
+                // Find the bus closest to the origin stop
+                double stopLat = getStopLat(originStop);
+                double stopLon = getStopLon(originStop);
+
+                VehicleDTO nearestBus = vehicles.stream()
+                    .filter(v -> v.getLat() != null && v.getLon() != null)
+                    .min(Comparator.comparingDouble(v ->
+                        haversineMetres(v.getLat(), v.getLon(), stopLat, stopLon)))
+                    .orElse(null);
+
+                if (nearestBus != null) {
+                    // Google Maps: bus current position → destination stop
+                    Optional<GoogleMapsService.TrafficResult> trafficOpt =
+                        googleMapsService.getTravelTime(
+                            nearestBus.getLat(), nearestBus.getLon(),
+                            destLat, destLon);
+
+                    if (trafficOpt.isPresent()) {
+                        int busMin = (int) Math.ceil(
+                            trafficOpt.get().durationInTrafficSeconds() / 60.0);
+                        log.info("Bus travel time (Google Maps, bus GPS [{},{}] → {}): {} min",
+                            nearestBus.getLat(), nearestBus.getLon(), destStop, busMin);
+                        return busMin;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not get vehicles from CASSITRACK: {}", e.getMessage());
+        }
+
+        // Fallback: Google Maps from origin stop → destination stop
+        Optional<GoogleMapsService.TrafficResult> fallbackOpt =
+            googleMapsService.getTravelTime(
+                getStopLat(originStop), getStopLon(originStop),
+                destLat, destLon);
+
+        if (fallbackOpt.isPresent()) {
+            int busMin = (int) Math.ceil(
+                fallbackOpt.get().durationInTrafficSeconds() / 60.0);
+            log.info("Bus travel time (Google Maps, stop → stop): {} min", busMin);
+            return busMin;
+        }
+
+        // Final fallback: simple speed estimate
+        int busMin = (int) Math.ceil(distKm / 25.0 * 60);
+        log.debug("Bus travel time (fallback estimate): {} min", busMin);
+        return busMin;
     }
 
     private JourneyOption planBike(JourneyRequest req, double distMetres,
@@ -207,28 +291,38 @@ public class JourneyPlannerService {
     }
 
     private String findNearestStopId(double lat, double lon) {
-        double min = Double.MAX_VALUE; String nearest = "CASSINO-STAZIONE";
-        for (String id : STOP_IDS) {
-            double d = haversineMetres(lat, lon, getStopLat(id), getStopLon(id));
-            if (d < min) { min = d; nearest = id; }
+        double min = Double.MAX_VALUE;
+        String nearest = null;
+        for (it.unicas.omnimove.model.Stop stop : stopRepository.findAll()) {
+            if (stop.getLat() == null || stop.getLon() == null) continue;
+            double d = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
+            if (d < min) { min = d; nearest = stop.getId(); }
         }
         return nearest;
     }
 
-    private double getStopLat(String id) { return switch(id) {
-        case "CASSINO-STAZIONE"->41.4892; case "CASSINO-CENTRO"->41.4917;
-        case "CASSINO-OSPEDALE"->41.4955; case "FOLCARA-VIA"->41.5020;
-        case "FOLCARA-CAMPUS"->41.5041; default->41.4917; }; }
+    private double getStopLat(String id) {
+        if (id == null) return 41.4925;
+        return stopRepository.findById(id)
+                .filter(s -> s.getLat() != null)
+                .map(it.unicas.omnimove.model.Stop::getLat)
+                .orElse(41.4925);
+    }
 
-    private double getStopLon(String id) { return switch(id) {
-        case "CASSINO-STAZIONE"->13.8282; case "CASSINO-CENTRO"->13.8314;
-        case "CASSINO-OSPEDALE"->13.8330; case "FOLCARA-VIA"->13.8200;
-        case "FOLCARA-CAMPUS"->13.8189; default->13.8314; }; }
+    private double getStopLon(String id) {
+        if (id == null) return 13.8306;
+        return stopRepository.findById(id)
+                .filter(s -> s.getLon() != null)
+                .map(it.unicas.omnimove.model.Stop::getLon)
+                .orElse(13.8306);
+    }
 
-    private String fmtStop(String id) { return switch(id) {
-        case "CASSINO-STAZIONE"->"Cassino Stazione FS"; case "CASSINO-CENTRO"->"Cassino Centro";
-        case "CASSINO-OSPEDALE"->"Ospedale S. Scolastica"; case "FOLCARA-VIA"->"Via Folcara";
-        case "FOLCARA-CAMPUS"->"Campus UNICAS Folcara"; default->id; }; }
+    private String fmtStop(String id) {
+        if (id == null) return "Unknown stop";
+        return stopRepository.findById(id)
+                .map(it.unicas.omnimove.model.Stop::getName)
+                .orElse(id);
+    }
 
     private String fmtDist(double m) {
         return m<1000 ? (int)m+"m" : String.format("%.1f km", m/1000); }

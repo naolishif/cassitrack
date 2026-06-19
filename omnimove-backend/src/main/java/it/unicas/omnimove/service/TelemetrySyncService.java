@@ -60,6 +60,8 @@ public class TelemetrySyncService {
         this.objectMapper = objectMapper;
     }
 
+    // TO FIX: this
+    /*
     @Scheduled(fixedRate = 60000)
     public void fetchTelemetryFromCassitrack() {
         log.info("Avvio sincronizzazione telemetria da Cassitrack...");
@@ -100,7 +102,7 @@ public class TelemetrySyncService {
         } catch (Exception e) {
             log.error("Errore durante il processo di sincronizzazione: {}", e.getMessage());
         }
-    }
+    }*/
 
     @EventListener(ApplicationReadyEvent.class)
     public void startStreamingSubscription() {
@@ -154,6 +156,11 @@ public class TelemetrySyncService {
                         .addField("ble_device_count", bus.getBleDeviceCount())
                         .addField("numero_posti", bus.getNumeroPosti() != null ? bus.getNumeroPosti() : 0)
                         .addField("posto_disabili", bus.getPostoDisabili() != null ? bus.getPostoDisabili() : false)
+                        .addField("delay", bus.getDelay() != null ? bus.getDelay() : 0)
+                        .addField("last_stop_registered", bus.getLastStopRegistered() != null ? bus.getLastStopRegistered() : "")
+                        .addField("trip_id", bus.getTripId() != null ? bus.getTripId() : "")
+                        .addField("passengers", bus.getPassengers() != null ? bus.getPassengers() : 0)
+                        .addField("capacity", bus.getCapacity() != null ? bus.getCapacity() : 0)
                         .time(bus.getTimestamp(), WritePrecision.MS);
 
                 writeApi.writePoint(point);

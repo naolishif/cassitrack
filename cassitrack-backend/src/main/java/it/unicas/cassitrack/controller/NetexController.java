@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,22 +21,25 @@ public class NetexController {
     private final RouteRepository routeRepository;
     private final TripRepository tripRepository;
     private final ScheduledStopRepository scheduledStopRepository;
+    private final BusRepository busRepository; // ← AGGIUNTO
 
-    // Injection dei tuoi reali repository tramite costruttore
     public NetexController(StopRepository stopRepository,
                            RouteRepository routeRepository,
-                           TripRepository tripRepository, ScheduledStopRepository scheduledStopRepository) {
+                           TripRepository tripRepository,
+                           ScheduledStopRepository scheduledStopRepository,
+                           BusRepository busRepository) { // ← AGGIUNTO
         this.stopRepository = stopRepository;
         this.routeRepository = routeRepository;
         this.tripRepository = tripRepository;
         this.scheduledStopRepository = scheduledStopRepository;
+        this.busRepository = busRepository; // ← AGGIUNTO
     }
 
     @GetMapping(value = "/netex", produces = MediaType.APPLICATION_XML_VALUE)
     public PublicationDeliveryDTO getNetexData() {
 
         // ==========================================
-        // 1. POPOLIAMO IL SITE FRAME (Le Fermate)
+        // 1. SITE FRAME (Fermate)
         // ==========================================
         List<Stop> dbStops = stopRepository.findAll();
         List<ScheduledStopPointDTO> netexStops = dbStops.stream().map(stop -> {
@@ -53,59 +55,63 @@ public class NetexController {
         siteFrame.setStopPoints(netexStops);
 
         // ==========================================
-        // 2. POPOLIAMO IL SERVICE FRAME (Linee e Corse)
+        // 2. SERVICE FRAME (Linee, Bus e Corse)
         // ==========================================
 
-        // 2a. Mappatura delle Linee (dalla tabella routes)
+        // 2a. Linee
         List<Route> dbRoutes = routeRepository.findAll();
         List<LineDTO> netexLines = dbRoutes.stream().map(route -> {
             LineDTO dto = new LineDTO();
             dto.setId(route.getId());
-            dto.setName(route.getLongName());      // o il campo che hai per il nome lungo
-            dto.setShortName(route.getShortName());  // o il campo per il nome corto
-            //dto.setColor(route.getColor());
+            dto.setName(route.getLongName());
+            dto.setShortName(route.getShortName());
             return dto;
         }).collect(Collectors.toList());
 
-        // 2b. Mappatura delle Corse (dalla tabella trips) + Fermate intermedie
-            List<Trip> dbTrips = tripRepository.findAll();
-            List<ServiceJourneyDTO> netexJourneys = dbTrips.stream().map(trip -> {
-                ServiceJourneyDTO journeyDto = new ServiceJourneyDTO();
-                journeyDto.setId(trip.getId());
+        // 2b. Bus ← AGGIUNTO
+        List<Bus> dbBuses = busRepository.findAll();
+        List<BusDTO> netexBuses = dbBuses.stream().map(bus -> {
+            BusDTO dto = new BusDTO();
+            dto.setId(bus.getBusId());
+            dto.setTarga(bus.getTarga());
+            dto.setNumeroPosti(bus.getNumeroPosti());
+            dto.setPostoDisabili(bus.getPostoDisabili());
+            dto.setDisponibile(bus.getDisponibile());
+            dto.setCurrentVehicleId(bus.getCurrentVehicleId());
+            return dto;
+        }).collect(Collectors.toList());
 
-                // Attenzione: adatta il nome del getter (getRouteId o getRoute_id)
-                // in base a come lo hai scritto in Trip.java
-                journeyDto.setLineRef(new RefDTO(trip.getRoute().getId()));
+        // 2c. Corse
+        List<Trip> dbTrips = tripRepository.findAll();
+        List<ServiceJourneyDTO> netexJourneys = dbTrips.stream().map(trip -> {
+            ServiceJourneyDTO journeyDto = new ServiceJourneyDTO();
+            journeyDto.setId(trip.getId());
+            journeyDto.setLineRef(new RefDTO(trip.getRoute().getId()));
+            journeyDto.setBusRef(new RefDTO(String.valueOf(trip.getBus().getBusId()))); // ← AGGIUNTO
 
-                // Facciamo la query per prendere le fermate di questo specifico trip
-                // Attenzione: adatta il nome del getter (getId o altro)
-                List<ScheduledStop> stopsForThisTrip = scheduledStopRepository.findByTripId(trip.getId());
+            List<ScheduledStop> stopsForThisTrip = scheduledStopRepository.findByTripId(trip.getId());
+            if (!stopsForThisTrip.isEmpty()) {
+                List<CallDTO> netexCalls = stopsForThisTrip.stream().map(sStop -> {
+                    CallDTO callDto = new CallDTO();
+                    callDto.setOrder(sStop.getStopSequence());
+                    callDto.setScheduledStopPointRef(new RefDTO(sStop.getStopId()));
+                    callDto.setArrivalSeconds(sStop.getArrivalSeconds());
+                    return callDto;
+                }).collect(Collectors.toList());
+                journeyDto.setCalls(netexCalls);
+            }
 
-                if (!stopsForThisTrip.isEmpty()) {
-                    List<CallDTO> netexCalls = stopsForThisTrip.stream().map(sStop -> {
-                        CallDTO callDto = new CallDTO();
+            return journeyDto;
+        }).collect(Collectors.toList());
 
-                        // Attenzione: adatta i getter (es. getStop_sequence() e getStop_id())
-                        callDto.setOrder(sStop.getStopSequence());
-                        callDto.setScheduledStopPointRef(new RefDTO(sStop.getStopId()));
-                        callDto.setArrivalSeconds(sStop.getArrivalSeconds());
-
-                        return callDto;
-                    }).collect(Collectors.toList());
-
-                    journeyDto.setCalls(netexCalls);
-                }
-
-                return journeyDto;
-            }).collect(Collectors.toList());
-
-        // Impacchettiamo tutto nel ServiceFrame
+        // Assemblaggio ServiceFrame
         ServiceFrameDTO serviceFrame = new ServiceFrameDTO();
         serviceFrame.setLines(netexLines);
+        serviceFrame.setBuses(netexBuses); // ← AGGIUNTO
         serviceFrame.setServiceJourneys(netexJourneys);
 
         // ==========================================
-        // 3. ASSEMBLAGGIO FINALE DEL DOCUMENTO
+        // 3. ASSEMBLAGGIO FINALE
         // ==========================================
         CompositeFrameDTO compositeFrame = new CompositeFrameDTO();
         compositeFrame.setSiteFrames(List.of(siteFrame));

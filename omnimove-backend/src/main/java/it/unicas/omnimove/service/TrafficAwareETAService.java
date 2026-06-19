@@ -2,13 +2,14 @@ package it.unicas.omnimove.service;
 
 import it.unicas.omnimove.client.CassitrackClient;
 import it.unicas.omnimove.dto.StopArrivalDTO;
+import it.unicas.omnimove.model.Stop;
+import it.unicas.omnimove.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -17,9 +18,9 @@ import java.util.Optional;
  * Fetches bus arrival data from CASSITRACK via REST, then enriches
  * each arrival with real-time traffic data from Google Maps.
  *
- * The origin used for the Google Maps query is the first stop of the
- * route (CASSINO-STAZIONE), so no user coordinates are needed.
- * Google Maps computes the traffic along the bus route itself.
+ * The origin used for the Google Maps query is the start stop of the
+ * lines (Piazza San Benedetto), read from the DB, so no user coordinates
+ * are needed. Google Maps computes the traffic along the bus route itself.
  *
  * dataSource values:
  *   "GOOGLE_MAPS" → real-time traffic data available
@@ -32,19 +33,12 @@ public class TrafficAwareETAService {
 
     private final CassitrackClient  cassitrackClient;
     private final GoogleMapsService googleMapsService;
+    private final StopRepository    stopRepository;
 
-    // Coordinates of all known stops
-    private static final Map<String, double[]> STOP_COORDS = Map.of(
-            "CASSINO-STAZIONE",  new double[]{41.4892, 13.8282},
-            "CASSINO-CENTRO",    new double[]{41.4917, 13.8314},
-            "CASSINO-OSPEDALE",  new double[]{41.4955, 13.8330},
-            "FOLCARA-VIA",       new double[]{41.5020, 13.8200},
-            "FOLCARA-CAMPUS",    new double[]{41.5041, 13.8189}
-    );
-
-    // Route start: used as origin for Google Maps when no position available
-    private static final double ROUTE_START_LAT = 41.4892;
-    private static final double ROUTE_START_LON = 13.8282;
+    // ID of the stop used as origin for the Google Maps traffic query
+    // (start of the lines — Piazza San Benedetto in the real Cassino network).
+    // Falls back gracefully if this stop is not present in the DB.
+    private static final String ROUTE_START_STOP_ID = "PSB";
 
     /**
      * Result enriched with Google Maps traffic data.
@@ -66,14 +60,15 @@ public class TrafficAwareETAService {
      * No user coordinates needed — Google Maps query uses
      * the route start as origin and the requested stop as destination.
      *
-     * @param stopId  the stop to query (e.g. "FOLCARA-CAMPUS")
+     * @param stopId  the stop to query (e.g. "UNI" for Università Folcara)
      * @return list of enriched ETA results, sorted by estimated arrival
      */
     public List<TrafficEtaResult> getEnrichedArrivals(String stopId) {
 
-        double[] stopCoords = STOP_COORDS.get(stopId);
-        if (stopCoords == null) {
-            log.warn("Unknown stopId: {}", stopId);
+        // Destination stop coordinates from DB
+        Stop destStop = stopRepository.findById(stopId).orElse(null);
+        if (destStop == null || destStop.getLat() == null || destStop.getLon() == null) {
+            log.warn("Unknown or incomplete stopId: {}", stopId);
             return List.of();
         }
 
@@ -90,11 +85,16 @@ public class TrafficAwareETAService {
             return List.of();
         }
 
+        // Origin = route start stop (from DB), fallback to destination if absent
+        Stop originStop = stopRepository.findById(ROUTE_START_STOP_ID)
+                .filter(s -> s.getLat() != null && s.getLon() != null)
+                .orElse(destStop);
+
         // Query Google Maps once for this stop (route start → stop destination)
         Optional<GoogleMapsService.TrafficResult> trafficOpt =
                 googleMapsService.getTravelTime(
-                        ROUTE_START_LAT, ROUTE_START_LON,
-                        stopCoords[0], stopCoords[1]);
+                        originStop.getLat(), originStop.getLon(),
+                        destStop.getLat(),   destStop.getLon());
 
         // Enrich each arrival with the same traffic delta
         return arrivals.stream()

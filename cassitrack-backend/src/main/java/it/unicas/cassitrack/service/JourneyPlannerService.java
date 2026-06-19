@@ -30,6 +30,7 @@ public class JourneyPlannerService {
     private final ETAService           etaService;
     private final VehicleStateCache    vehicleCache;
     private final WeatherService       weatherService;
+    private final it.unicas.cassitrack.repository.StopRepository stopRepository;
 
     private static final double SPEED_WALK    = 5.0;
     private static final double SPEED_BIKE    = 15.0;
@@ -331,37 +332,24 @@ public class JourneyPlannerService {
 
     private String formatStopName(String stopId) {
         if (stopId == null) return "Unknown stop";
-        return switch (stopId) {
-            case "CASSINO-STAZIONE"  -> "Cassino Stazione FS";
-            case "CASSINO-CENTRO"    -> "Cassino Centro";
-            case "CASSINO-OSPEDALE"  -> "Ospedale S. Scolastica";
-            case "FOLCARA-VIA"       -> "Via Folcara";
-            case "FOLCARA-CAMPUS"    -> "Campus UNICAS Folcara";
-            default -> stopId;
-        };
+        return stopRepository.findById(stopId)
+                .map(it.unicas.cassitrack.model.Stop::getName)
+                .orElse(stopId);
     }
 
     private double getStopLat(String stopId) {
-        if (stopId == null) return 41.4917;
-        return switch (stopId) {
-            case "CASSINO-STAZIONE"  -> 41.4892;
-            case "CASSINO-CENTRO"    -> 41.4917;
-            case "CASSINO-OSPEDALE"  -> 41.4955;
-            case "FOLCARA-VIA"       -> 41.5020;
-            case "FOLCARA-CAMPUS"    -> 41.5041;
-            default -> 41.4917;
-        };
+        if (stopId == null) return 41.4925;
+        return stopRepository.findById(stopId)
+                .filter(s -> s.getLat() != null)
+                .map(it.unicas.cassitrack.model.Stop::getLat)
+                .orElse(41.4925);
     }
 
     private double getStopLon(String stopId) {
-        if (stopId == null) return 13.8314;
-        return switch (stopId) {
-            case "CASSINO-STAZIONE"  -> 13.8282;
-            case "CASSINO-CENTRO"    -> 13.8314;
-            case "CASSINO-OSPEDALE"  -> 13.8330;
-            case "FOLCARA-VIA"       -> 13.8200;
-            case "FOLCARA-CAMPUS"    -> 13.8189;
-            default -> 13.8314;
-        };
+        if (stopId == null) return 13.8306;
+        return stopRepository.findById(stopId)
+                .filter(s -> s.getLon() != null)
+                .map(it.unicas.cassitrack.model.Stop::getLon)
+                .orElse(13.8306);
     }
 }
