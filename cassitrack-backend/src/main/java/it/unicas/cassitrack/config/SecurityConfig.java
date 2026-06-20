@@ -82,7 +82,6 @@ public class SecurityConfig {
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html",
                                 "/ws/**",
-                                "/api/v1/auth/**",
                                 "/api/static/**"
                         ).permitAll()
 
@@ -90,7 +89,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/cassitrack-fleetmanager.html",
                                 "/api/v1/analytics/**",
-                                "cassitrack-analytics.html",
+                                "/cassitrack-analytics.html",
                                 "/api/v1/ai/**"
                         ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
 

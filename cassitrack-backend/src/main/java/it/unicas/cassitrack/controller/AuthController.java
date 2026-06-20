@@ -6,6 +6,7 @@ import it.unicas.cassitrack.dto.LoginRequest;
 import it.unicas.cassitrack.dto.LoginResponse;
 import it.unicas.cassitrack.dto.RegisterRequest;
 import it.unicas.cassitrack.model.User;
+import it.unicas.cassitrack.service.LoginAttemptService;
 import it.unicas.cassitrack.service.UserService;
 import it.unicas.cassitrack.security.JwtUtil;
 import jakarta.validation.Valid;
@@ -32,6 +33,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private LoginAttemptService loginAttemptService;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user account")
@@ -66,16 +70,21 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
 
+        String email = loginRequest.getEmail();
+
+        if (loginAttemptService.isBlocked(email)) {
+            return ResponseEntity.status(429)
+                .body("Too many failed login attempts. Please wait 15 minutes and try again.");
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
-                    )
+                    new UsernamePasswordAuthenticationToken(email, loginRequest.getPassword())
             );
 
+            loginAttemptService.resetAttempts(email);
             String token = jwtUtil.generateToken(authentication);
-            User user = userService.getUserByEmail(loginRequest.getEmail());
+            User user = userService.getUserByEmail(email);
 
             LoginResponse response = new LoginResponse();
             response.setToken(token);
@@ -86,6 +95,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (AuthenticationException e) {
+            loginAttemptService.recordFailure(email);
             return ResponseEntity.badRequest().body("Username or password incorrect!!");
         }
     }

@@ -26,36 +26,48 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
 
-                        // 1. Public UI and Auth APIs
-                        .requestMatchers("/", "/error", "/omnimove-login.html", "/api/v1/auth/**").permitAll()
+                        // Allow internal forwards and error routing to pass through
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+
+                        // ── 1. Public — login page, static assets, auth endpoints ──────
                         .requestMatchers(
-                                "/",
-                                "/*.html",
-                                "/*.css",
-                                "/*.js",
-                                "/favicon.ico",
-                                "/test-siri-pull",
-                                "/api/test/**",
-                                "/error"
+                                "/", "/error", "/omnimove-login.html",
+                                "/favicon.ico", "/*.css", "/*.js"
                         ).permitAll()
-
-                        // 2. Static HTML files — public (security enforced by JWT on all /api/** endpoints)
-                        .requestMatchers("/omnimove-traveller.html", "/omnimove-admin.html").permitAll()
-
-
-                        // 3. This is your existing public API configuration. It needs to be changed in future versions to protect the server.
                         .requestMatchers(
-                                "/api/v1/auth/**",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/verify"
+                        ).permitAll()
+                        .requestMatchers( // Dev tools
                                 "/h2-console/**",
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html",
                                 "/test-siri-pull",
-                                "/api/v1/traffic/**"
+                                "/api/test/**"
                         ).permitAll()
 
-                        // 4. Everything else requires authentication
+                        // ── 2. Admin only ────────────────────────────────────────────────
+                        .requestMatchers(
+                                "/omnimove-admin.html",
+                                "/api/v1/admin/**"
+                        ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+
+                        // ── 3. Traveller only ────────────────────────────────────────────
+                        .requestMatchers(
+                                "/omnimove-traveller.html",
+                                "/api/v1/traveller/**"
+                        ).hasAnyAuthority("TRAVELLER", "ROLE_TRAVELLER")
+
+                        // ── 4. Shared — any authenticated user (traveller or admin) ──────
+                        .requestMatchers(
+                                "/api/v1/journeys/**",
+                                "/api/v1/ai/**",
+                                "/api/v1/traffic/**"
+                        ).hasAnyAuthority("TRAVELLER", "ADMIN", "ROLE_TRAVELLER", "ROLE_ADMIN")
+
+                        // ── 5. Everything else requires authentication ────────────────────
                         .anyRequest().authenticated()
                 )
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()))
@@ -78,14 +90,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:8000",
-                "null",
-                "http://172.20.10.6:3000"
+                "http://localhost:8081",
+                "http://localhost:3000"
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false);  // JWT is sent in Authorization header, not cookies
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

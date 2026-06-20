@@ -68,7 +68,7 @@ mqtt:
 # ── JWT ───────────────────────────────────────────────────────────
 jwt:
   secret: ${JWT_SECRET:cassitrack-jwt-secret-change-in-production-must-be-long}
-  expiration-ms: 86400000    # 24 hours
+  expiration-ms: 3600000    # 1 hour
 
 # ── SSE API token    ──────────────────────────────────────────────
 sse:

@@ -5,6 +5,7 @@ import it.unicas.omnimove.dto.*;
 import it.unicas.omnimove.model.User;
 import it.unicas.omnimove.repository.UserRepository;
 import it.unicas.omnimove.security.JwtUtil;
+import it.unicas.omnimove.service.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ public class AuthController {
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
 
     @PostMapping("/register")
     @Operation(summary="Register a new passenger account",
@@ -55,23 +57,36 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary="Login with email and password",
-        description="Returns JWT token valid for 24 hours.")
+        description="Returns JWT token valid for 1 hour. Blocked after 100 consecutive failures.")
     public ResponseEntity<AuthResponse> login(
             @RequestBody LoginRequest req) {
 
-        return userRepo.findByEmail(req.getEmail())
+        String email = req.getEmail();
+
+        if (loginAttemptService.isBlocked(email)) {
+            return ResponseEntity.status(429)
+                .body(AuthResponse.builder()
+                    .message("Too many failed login attempts. Please wait 15 minutes and try again.")
+                    .build());
+        }
+
+        return userRepo.findByEmail(email)
             .filter(u -> passwordEncoder.matches(req.getPassword(), u.getPassword()))
             .map(u -> {
+                loginAttemptService.resetAttempts(email);
                 String token = jwtUtil.generateToken(u.getEmail());
-                log.info("Passenger logged in: {}", req.getEmail());
+                log.info("Passenger logged in: {}", email);
                 return ResponseEntity.ok(AuthResponse.builder()
                     .token(token).email(u.getEmail())
                     .name(u.getName()).role(u.getRole())
-                    .expiresInMs(86400000L)
+                    .expiresInMs(3600000L)
                     .message("Login successful").build());
             })
-            .orElse(ResponseEntity.status(401)
-                .body(AuthResponse.builder().message("Invalid email or password").build()));
+            .orElseGet(() -> {
+                loginAttemptService.recordFailure(email);
+                return ResponseEntity.status(401)
+                    .body(AuthResponse.builder().message("Invalid email or password").build());
+            });
     }
 
     @GetMapping("/me")
