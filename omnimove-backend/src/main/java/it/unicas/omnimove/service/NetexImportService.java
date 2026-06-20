@@ -7,8 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
-
 @Service
 public class NetexImportService {
 
@@ -101,10 +99,10 @@ public class NetexImportService {
                     for (BusDTO busDto : serviceFrame.getBuses()) {
                         Bus bus = new Bus();
                         bus.setBusId(busDto.getId());
-                        bus.setTarga(busDto.getTarga());
-                        bus.setNumeroPosti(busDto.getNumeroPosti());
-                        bus.setPostoDisabili(busDto.getPostoDisabili());
-                        bus.setDisponibile(busDto.getDisponibile());
+                        bus.setLicense_plate(busDto.getTarga());
+                        bus.setNumberSeats(busDto.getNumeroPosti());
+                        bus.setPlaceDisablePeople(busDto.getPostoDisabili());
+                        bus.setAvailable(busDto.getDisponibile());
                         bus.setCurrentVehicleId(busDto.getCurrentVehicleId());
                         busRepository.save(bus);
                     }

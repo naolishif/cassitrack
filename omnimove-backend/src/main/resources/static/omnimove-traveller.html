@@ -793,8 +793,8 @@
     <div class="sidebar-eco">
         <div class="eco-card">
             <div class="eco-label">Your Eco Score</div>
-            <div class="eco-points">1,240 pts</div>
-            <div class="eco-sub">🌱 12.5 kg CO₂ saved this month</div>
+            <div class="eco-points" id="sidebarEcoPoints">—</div>
+            <div class="eco-sub" id="sidebarEcoSub">—</div>
         </div>
     </div>
 </div>
@@ -808,22 +808,12 @@
             <div class="search-seg">
                 <span>📍</span>
                 <select id="originSelect" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;cursor:pointer;">
-                    <option value="GPS">📍 My Location</option>
-                    <option value="CASSINO-STAZIONE">Cassino Stazione FS</option>
-                    <option value="CASSINO-CENTRO">Cassino Centro</option>
-                    <option value="CASSINO-OSPEDALE">Ospedale S. Scolastica</option>
-                    <option value="FOLCARA-VIA">Via Folcara</option>
-                    <option value="FOLCARA-CAMPUS">Campus UNICAS Folcara</option>
+                    <option value="GPS"> My Location</option>
                 </select>
             </div>
             <div class="search-seg">
                 <span>🏁</span>
                 <select id="destSelect" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;cursor:pointer;">
-                    <option value="CASSINO-STAZIONE">Cassino Stazione FS</option>
-                    <option value="CASSINO-CENTRO">Cassino Centro</option>
-                    <option value="CASSINO-OSPEDALE">Ospedale S. Scolastica</option>
-                    <option value="FOLCARA-VIA">Via Folcara</option>
-                    <option value="FOLCARA-CAMPUS">Campus UNICAS Folcara</option>
                 </select>
             </div>
             <button class="search-btn" onclick="swapStops()" style="background:var(--bg-app);color:var(--text-dark);border-left:1px solid var(--border-mid);padding:10px 14px;font-size:16px" title="Swap">⇄</button>
@@ -856,69 +846,10 @@
                 </div>
                 <div class="routes-list">
 
-                    <div class="route-card">
-                        <div class="route-top">
-                            <div class="route-name">🚌 Linea 16 – Magni</div>
-                            <div class="route-time">6 min</div>
-                        </div>
-                        <div class="status-row">
-                            <span class="status-badge s-delay">⚠ 2 min delay</span>
-                            <span class="status-badge s-occ">👤 Med. occupancy</span>
-                        </div>
-                        <div class="metrics-row">
-                            <div class="metric-box"><div class="metric-label">Cost</div><div class="metric-value">€1.00</div></div>
-                            <div class="metric-box"><div class="metric-label">CO₂</div><div class="metric-value">107 g</div></div>
-                            <div class="metric-box"><div class="metric-label">Green</div><div class="metric-value" style="color:var(--primary)">80/100</div></div>
-                        </div>
-                        <button class="action-btn btn-dark">Purchase Ticket</button>
-                    </div>
-
-                    <div class="route-card">
-                        <div class="route-top">
-                            <div class="route-name">🚲 Elerent Bike Share</div>
-                            <div class="route-time">7 min</div>
-                        </div>
-                        <div class="status-row">
-                            <span class="status-badge s-ok">✓ Available · 91% battery</span>
-                        </div>
-                        <div class="metrics-row">
-                            <div class="metric-box"><div class="metric-label">Cost</div><div class="metric-value">€1.55</div></div>
-                            <div class="metric-box"><div class="metric-label">CO₂</div><div class="metric-value">0 g</div></div>
-                            <div class="metric-box"><div class="metric-label">Green</div><div class="metric-value" style="color:var(--primary)">100</div></div>
-                        </div>
-                        <button class="action-btn btn-blue">Unlock Bike</button>
-                    </div>
-
-                    <div class="route-card">
-                        <div class="route-top">
-                            <div class="route-name">🛴 E-Scooter · 3 nearby</div>
-                            <div class="route-time">9 min</div>
-                        </div>
-                        <div class="status-row">
-                            <span class="status-badge s-ok">✓ Available</span>
-                        </div>
-                        <div class="metrics-row">
-                            <div class="metric-box"><div class="metric-label">Cost</div><div class="metric-value">€2.30</div></div>
-                            <div class="metric-box"><div class="metric-label">CO₂</div><div class="metric-value">12 g</div></div>
-                            <div class="metric-box"><div class="metric-label">Green</div><div class="metric-value" style="color:var(--primary)">95</div></div>
-                        </div>
-                        <button class="action-btn btn-purple">Unlock Scooter</button>
-                    </div>
-
-                    <div class="route-card">
-                        <div class="route-top">
-                            <div class="route-name">🚶 Walking Route</div>
-                            <div class="route-time">18 min</div>
-                        </div>
-                        <div class="status-row">
-                            <span class="status-badge s-ok">✓ Always available</span>
-                        </div>
-                        <div class="metrics-row">
-                            <div class="metric-box"><div class="metric-label">Cost</div><div class="metric-value">Free</div></div>
-                            <div class="metric-box"><div class="metric-label">CO₂</div><div class="metric-value">0 g</div></div>
-                            <div class="metric-box"><div class="metric-label">Green</div><div class="metric-value" style="color:var(--primary)">100</div></div>
-                        </div>
-                        <button class="action-btn btn-green">Start Walking</button>
+                    <div style="text-align:center;padding:48px 20px;color:var(--text-soft)">
+                        <div style="font-size:36px;margin-bottom:12px">🧭</div>
+                        <div style="font-size:14px;font-weight:700;color:var(--text-dark)">Plan your trip</div>
+                        <div style="font-size:12px;margin-top:6px">Pick origin &amp; destination above, then tap Search.</div>
                     </div>
 
                 </div>
@@ -1060,19 +991,19 @@
                     </div>
                     <div class="profile-stats">
                         <div class="pstat">
-                            <div class="pstat-val">1,240</div>
+                            <div class="pstat-val" id="statEcoPoints">—</div>
                             <div class="pstat-lbl">Eco pts</div>
                         </div>
                         <div class="pstat">
-                            <div class="pstat-val">12.5 kg</div>
+                            <div class="pstat-val" id="statCo2Saved">—</div>
                             <div class="pstat-lbl">CO₂ saved</div>
                         </div>
                         <div class="pstat">
-                            <div class="pstat-val">87</div>
+                            <div class="pstat-val" id="statTrips">—</div>
                             <div class="pstat-lbl">Trips</div>
                         </div>
                         <div class="pstat">
-                            <div class="pstat-val">€34</div>
+                            <div class="pstat-val" id="statSpent">—</div>
                             <div class="pstat-lbl">Spent (30d)</div>
                         </div>
                     </div>
@@ -1087,142 +1018,16 @@
 
                 <div class="ptab-pane active" id="ptab-history">
                     <span class="section-label">Recent Trips</span>
-                    <div class="route-hist-grid">
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bus">🚌</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Linea 16 · Via Folcara → Stazione FS</div>
-                                <div class="route-hist-sub">Today, 08:24 · 12 min · €1.10</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Today</div>
-                                <div class="route-hist-green">🌱 80</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)" title="Add to favourites">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bike">🚲</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Elerent Bike · Università → Centro</div>
-                                <div class="route-hist-sub">Yesterday, 17:10 · 9 min · €1.55</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Yesterday</div>
-                                <div class="route-hist-green">🌱 100</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-scooter">🛴</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">E-Scooter · Ospedale → Stazione FS</div>
-                                <div class="route-hist-sub">Mon 12 May, 11:50 · 14 min · €3.10</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Mon 12</div>
-                                <div class="route-hist-green">🌱 95</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bus">🚌</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Linea 3 · Stazione FS → Ospedale</div>
-                                <div class="route-hist-sub">Fri 9 May, 09:05 · 8 min · €1.10</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Fri 9</div>
-                                <div class="route-hist-green">🌱 74</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-walk">🚶</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Walk · Campus → Università</div>
-                                <div class="route-hist-sub">Thu 8 May, 13:20 · 18 min · Free</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Thu 8</div>
-                                <div class="route-hist-green">🌱 100</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bike">🚲</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Elerent Bike · Centro → Abbazia</div>
-                                <div class="route-hist-sub">Wed 7 May, 15:45 · 22 min · €4.00</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Wed 7</div>
-                                <div class="route-hist-green">🌱 100</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bus">🚌</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Linea 5 · Abbazia → Campus</div>
-                                <div class="route-hist-sub">Tue 6 May, 07:40 · 10 min · €1.10</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Tue 6</div>
-                                <div class="route-hist-green">🌱 78</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-scooter">🛴</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">E-Scooter · Centro → Università</div>
-                                <div class="route-hist-sub">Mon 5 May, 16:30 · 11 min · €2.65</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-date">Mon 5</div>
-                                <div class="route-hist-green">🌱 93</div>
-                            </div>
-                            <span class="fav-star" onclick="toggleFav(this)">☆</span>
-                        </div>
+                    <div class="route-hist-grid" id="history-list">
+                        <!-- popolato da renderHistory() -->
                     </div>
                 </div>
 
                 <div class="ptab-pane" id="ptab-favorites">
                     <span class="section-label">Saved Favourite Routes</span>
                     <div class="route-hist-grid" id="favs-list">
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bus">🚌</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Linea 16 · Via Folcara → Stazione FS</div>
-                                <div class="route-hist-sub">Bus · 12 min · €1.10 · Used 34×</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-green">🌱 80</div>
-                            </div>
-                            <span class="fav-star starred" onclick="toggleFav(this)">★</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-bike">🚲</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">Elerent Bike · Università → Centro</div>
-                                <div class="route-hist-sub">E-Bike · 9 min · €1.55 · Used 18×</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-green">🌱 100</div>
-                            </div>
-                            <span class="fav-star starred" onclick="toggleFav(this)">★</span>
-                        </div>
-                        <div class="route-hist-card">
-                            <div class="route-hist-icon ri-scooter">🛴</div>
-                            <div class="route-hist-info">
-                                <div class="route-hist-name">E-Scooter · Campus → Stazione FS</div>
-                                <div class="route-hist-sub">Scooter · 14 min · ~€2.80 · Used 9×</div>
-                            </div>
-                            <div class="route-hist-meta">
-                                <div class="route-hist-green">🌱 95</div>
-                            </div>
-                            <span class="fav-star starred" onclick="toggleFav(this)">★</span>
-                        </div>
+                        <!-- popolato da renderFavorites() -->
+
                     </div>
                 </div>
 
@@ -1362,6 +1167,125 @@
 
     const API_BASE = '/api/v1';
 
+    async function loadEcoStats() {
+        try {
+            const r = await apiFetch('/traveller/stats');
+            if (!r.ok) throw new Error('stats ' + r.status);
+            const s = await r.json();
+
+            document.getElementById('sidebarEcoPoints').textContent = s.ecoPoints.toLocaleString() + ' pts';
+            document.getElementById('sidebarEcoSub').textContent = `🌱 ${s.co2SavedKg} kg CO₂ saved this month`;
+
+            document.getElementById('statEcoPoints').textContent = s.ecoPoints.toLocaleString();
+            document.getElementById('statCo2Saved').textContent  = s.co2SavedKg + ' kg';
+            document.getElementById('statTrips').textContent     = s.trips;
+            document.getElementById('statSpent').textContent     = '€' + s.spent30d;
+        } catch (e) {
+            console.warn('Could not load eco stats:', e);
+        }
+    }
+
+    function timeAgoLabel(dateStr) {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        const yest = new Date(now); yest.setDate(now.getDate() - 1);
+        const isYest = d.toDateString() === yest.toDateString();
+
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+
+        if (sameDay) return { date: 'Today', sub: `Today, ${hh}:${mm}` };
+        if (isYest)  return { date: 'Yesterday', sub: `Yesterday, ${hh}:${mm}` };
+        const opts = { weekday: 'short', day: 'numeric', month: 'short' };
+        const label = d.toLocaleDateString('en-GB', opts);
+        return { date: label, sub: `${label}, ${hh}:${mm}` };
+    }
+
+    const MODE_ICON = { BUS: ['ri-bus', '🚌'], BIKE: ['ri-bike', '🚲'], SCOOTER: ['ri-scooter', '🛴'], WALK: ['ri-walk', '🚶'] };
+
+    function renderHistory(items) {
+        const container = document.getElementById('history-list');
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="empty-state">No trips yet. Start your first journey!</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(j => {
+            const [iconClass, emoji] = MODE_ICON[j.mode] || ['ri-bus', '🚌'];
+            const { date, sub } = timeAgoLabel(j.createdAt);
+            const cost = (j.costEuros ?? 0).toFixed(2);
+            const origin = j.originName || 'My Location';
+            const dest = j.destName || '—';
+
+            return `
+            <div class="route-hist-card">
+                <div class="route-hist-icon ${iconClass}">${emoji}</div>
+                <div class="route-hist-info">
+                    <div class="route-hist-name">${origin} → ${dest}</div>
+                    <div class="route-hist-sub">${sub} · €${cost}</div>
+                </div>
+                <div class="route-hist-meta">
+                    <div class="route-hist-date">${date}</div>
+                    <div class="route-hist-green">🌱 ${j.greenIndex}</div>
+                </div>
+                <span class="fav-star ${j.isFavorite ? 'starred' : ''}"
+                      data-mode="${j.mode}" data-origin="${escAttr(origin)}" data-dest="${escAttr(dest)}"
+                      title="Add to favourites">${j.isFavorite ? '★' : '☆'}</span>
+            </div>`;
+        }).join('');
+    }
+
+    async function loadHistory() {
+        try {
+            const r = await apiFetch('/traveller/history');
+            if (!r.ok) throw new Error('history ' + r.status);
+            const items = await r.json();
+            renderHistory(items);
+        } catch (e) {
+            console.warn('Could not load history:', e);
+        }
+    }
+
+    function renderFavorites(items) {
+        const container = document.getElementById('favs-list');
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="empty-state">No favourites yet. Tap the ☆ on a trip to save its route here.</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(f => {
+            const [iconClass, emoji] = MODE_ICON[f.mode] || ['ri-bus', '🚌'];
+            return `
+            <div class="route-hist-card">
+                <div class="route-hist-icon ${iconClass}">${emoji}</div>
+                <div class="route-hist-info">
+                    <div class="route-hist-name">${f.originName} → ${f.destName}</div>
+                    <div class="route-hist-sub">${f.mode} · ~€${f.avgCost.toFixed(2)} · Used ${f.usedCount}×</div>
+                </div>
+                <div class="route-hist-meta">
+                    <div class="route-hist-green">🌱 ${f.greenIndex}</div>
+                </div>
+                <span class="fav-star starred" data-mode="${f.mode}" data-origin="${escAttr(f.originName)}" data-dest="${escAttr(f.destName)}">★</span>
+            </div>`;
+        }).join('');
+    }
+
+    async function loadFavorites() {
+        try {
+            const r = await apiFetch('/traveller/favorites');
+            if (!r.ok) throw new Error('favorites ' + r.status);
+            const items = await r.json();
+            renderFavorites(items);
+        } catch (e) {
+            console.warn('Could not load favourites:', e);
+        }
+    }
+
+    loadEcoStats();
+    loadHistory();
+
+
     async function apiFetch(path, options = {}) {
         const token = localStorage.getItem('omnimove_token');
         return fetch(API_BASE + path, {
@@ -1413,26 +1337,64 @@
     }
 
     // ── Stop markers (bus stops) ──────────────────────────────────────
-    const STOPS = {
-        'CASSINO-STAZIONE': { name: 'Cassino Stazione FS',   lat: 41.4892, lon: 13.8282 },
-        'CASSINO-CENTRO':   { name: 'Cassino Centro',         lat: 41.4917, lon: 13.8314 },
-        'CASSINO-OSPEDALE': { name: 'Ospedale S. Scolastica', lat: 41.4955, lon: 13.8330 },
-        'FOLCARA-VIA':      { name: 'Via Folcara',            lat: 41.5020, lon: 13.8200 },
-        'FOLCARA-CAMPUS':   { name: 'Campus UNICAS Folcara',  lat: 41.5041, lon: 13.8189 },
-    };
+    let STOPS = {};  // popolato dinamicamente da loadStops()
 
     window._stopMarkers = [];
 
-    Object.entries(STOPS).forEach(([id, stop]) => {
-        const stopIcon = L.divIcon({
-            html: '<div style="background:#10b981;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:11px;font-weight:800">M</div>',
-            className: '', iconSize: [28, 28]
-        });
-        const marker = L.marker([stop.lat, stop.lon], { icon: stopIcon })
-            .addTo(map)
-            .bindPopup('<b>' + stop.name + '</b><br>Linea 16 — Magni Autoservizi');
-        window._stopMarkers.push(marker);
+    const STOP_ICON = L.divIcon({
+        html: '<div style="background:#10b981;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:11px;font-weight:800">M</div>',
+        className: '', iconSize: [28, 28]
     });
+
+    function renderStopMarkers() {
+        window._stopMarkers.forEach(m => map.removeLayer(m));
+        window._stopMarkers = [];
+        Object.values(STOPS).forEach(stop => {
+            const marker = L.marker([stop.lat, stop.lon], { icon: STOP_ICON })
+                .addTo(map)
+                .bindPopup('<b>' + stop.name + '</b>');
+            window._stopMarkers.push(marker);
+        });
+    }
+
+    // ── Load stops from the backend → fill dropdowns + map markers ─────
+    async function loadStops() {
+        const originSel = document.getElementById('originSelect');
+        const destSel   = document.getElementById('destSelect');
+        try {
+            const r = await apiFetch('/journeys/stops');
+            if (!r.ok) throw new Error('stops ' + r.status);
+            const stops = await r.json();
+
+            if (!Array.isArray(stops) || stops.length === 0) {
+                showToast('Nessuna fermata disponibile', true);
+                return;
+            }
+
+            STOPS = {};
+            stops.forEach(s => { STOPS[s.id] = { id: s.id, name: s.name, lat: s.lat, lon: s.lon }; });
+
+            const optionsHtml = stops
+                .map(s => `<option value="${s.id}">${s.name}</option>`)
+                .join('');
+
+            // Origin keeps "My Location" (GPS) first, then every stop
+            originSel.innerHTML = '<option value="GPS">📍 My Location</option>' + optionsHtml;
+            destSel.innerHTML   = optionsHtml;
+
+            // Sensible defaults: first stop as origin, a different one as destination
+            originSel.value = stops[0].id;
+            destSel.value   = stops.length > 1 ? stops[1].id : stops[0].id;
+
+            renderStopMarkers();
+
+            const bounds = stops.map(s => [s.lat, s.lon]);
+            if (bounds.length) map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+        } catch (e) {
+            console.error('loadStops failed:', e);
+            showToast('Impossibile caricare le fermate dal backend', true);
+        }
+    }
 
     // ── GPS state ─────────────────────────────────────────────────────
     let userLat = null;
@@ -1478,7 +1440,8 @@
                 })
                 .catch(() => {
                     showToast('GPS unavailable — select a stop', true);
-                    this.value = 'FOLCARA-VIA';
+                    const firstStop = Object.keys(STOPS)[0];
+                    if (firstStop) this.value = firstStop;
                 });
         }
     });
@@ -1640,7 +1603,7 @@
                 </div>
             </div>
             <button class="action-btn ${btn.cls}"
-                onclick="selectMode('${opt.mode}','${opt.mode_label}',${opt.green_index},${opt.distance_metres})">
+                onclick="selectMode('${opt.mode}','${opt.mode_label}',${opt.green_index},${opt.distance_metres},${opt.cost_euros})">
                 ${btn.label}
             </button>
         </div>`;
@@ -1649,8 +1612,8 @@
 
     // selectMode — only highlights the card and shows the Start Journey banner.
     // The actual map drawing happens in startJourney so GPS is resolved first.
-    function selectMode(mode, label, greenIndex, distanceMetres) {
-        selectedJourney = { mode, label, greenIndex, distanceKm: distanceMetres / 1000 };
+    function selectMode(mode, label, greenIndex, distanceMetres,costEuros) {
+        selectedJourney = { mode, label, greenIndex, distanceKm: distanceMetres / 1000, costEuros };
 
         // Highlight selected card
         document.querySelectorAll('.route-card').forEach(c => {
@@ -1690,6 +1653,13 @@
     // startJourney — gets GPS silently, draws GPS→stop→dest route, correct icons
     async function startJourney() {
         if (!selectedJourney) return;
+        // Guard against double-tap: the GPS step below can take up to 6s before
+        // anything visible happens, so users often tap "Start" twice, which used
+        // to fire /journeys/select twice and create duplicate trips in Last Routes.
+        if (window._journeyStarting) return;
+        window._journeyStarting = true;
+        const _startBtn = document.querySelector('#start-banner button');
+        if (_startBtn) { _startBtn.disabled = true; _startBtn.textContent = '⏳ Starting…'; }
 
         const origin = window._currentOrigin;  // the named stop (or GPS stop)
         const dest   = window._currentDest;
@@ -1721,7 +1691,10 @@
                 body: JSON.stringify({
                     mode:        selectedJourney.mode,
                     green_index: selectedJourney.greenIndex,
-                    distance_km: selectedJourney.distanceKm
+                    distance_km: selectedJourney.distanceKm,
+                    cost_euros:  selectedJourney.costEuros,
+                    origin_name: origin ? origin.name : null,
+                    dest_name:   dest ? dest.name : null
                 })
             });
         } catch (e) { console.warn('Could not record journey event:', e); }
@@ -1818,6 +1791,7 @@
     function endJourney() {
         clearInterval(window._etaInterval);
         selectedJourney = null;
+        window._journeyStarting = false;   // allow starting a new journey
 
         // Remove all journey map layers
         ['_routeLine','_routeLineGps','_journeyDestMarker','_journeyOriginMarker','_journeyGpsMarker']
@@ -1839,6 +1813,7 @@
             + '</div>';
 
         showToast('🏁 Journey ended — great trip!');
+        loadEcoStats();
     }
 
     // ── Toast ─────────────────────────────────────────────────────────
@@ -1885,12 +1860,46 @@
         document.querySelectorAll('.ptab-pane').forEach(p => p.classList.remove('active'));
         const el = document.getElementById('ptab-' + tab);
         if (el) el.classList.add('active');
+        if (tab === 'history') loadHistory();
+        if (tab === 'favorites') loadFavorites();
     }
 
-    function toggleFav(star) {
-        const isStarred = star.classList.contains('starred');
-        star.classList.toggle('starred', !isStarred);
-        star.textContent = isStarred ? '☆' : '★';
+    // Escape a string so it is safe inside a double-quoted HTML attribute.
+    // (The old code injected JSON.stringify(...) straight into onclick="...",
+    //  whose double quotes broke the attribute and silently killed the handler.)
+    function escAttr(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // One delegated listener handles every star, present or future.
+    // dataset values come back already un-escaped by the browser.
+    document.addEventListener('click', e => {
+        const star = e.target.closest('.fav-star');
+        if (!star) return;
+        toggleFav(star, star.dataset.mode, star.dataset.origin, star.dataset.dest);
+    });
+
+    async function toggleFav(star, mode, originName, destName) {
+        try {
+            const r = await apiFetch('/traveller/favorites/toggle', {
+                method: 'POST',
+                body: JSON.stringify({ mode, originName, destName })
+            });
+            if (!r.ok) throw new Error('toggle fav failed');
+            const result = await r.json();
+
+            star.classList.toggle('starred', result.favorited);
+            star.textContent = result.favorited ? '★' : '☆';
+
+            if (document.getElementById('ptab-favorites').classList.contains('active')) {
+                loadFavorites();
+            }
+        } catch (e) {
+            console.warn('Could not toggle favourite:', e);
+            showToast('Errore nel salvare il preferito', true);
+        }
     }
 
     function openAI() {
@@ -1946,6 +1955,9 @@
             msgs.scrollTop = msgs.scrollHeight;
         }
     }
+
+    // ── Initial load: populate stops (dropdowns + map markers) ─────────
+    loadStops();
 </script>
 </body>
 </html>

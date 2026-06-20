@@ -1,10 +1,14 @@
 package it.unicas.omnimove.controller;
 
 import it.unicas.omnimove.dto.TravellerUpdateRequest;
+import it.unicas.omnimove.model.FavoriteRoute;
 import it.unicas.omnimove.model.User;
+import it.unicas.omnimove.repository.FavoriteRouteRepository;
+import it.unicas.omnimove.repository.JourneyLogRepository;
 import it.unicas.omnimove.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.unicas.omnimove.service.GreenIndexService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +16,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
+
+import java.util.*;
+
+import it.unicas.omnimove.model.JourneyLog;
+
+import java.time.ZonedDateTime;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/traveller")
@@ -23,6 +33,9 @@ public class TravellerController {
 
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
+    private final JourneyLogRepository journeyLogRepository;
+    private final GreenIndexService greenIndexService;
+    private final FavoriteRouteRepository favoriteRouteRepository;
 
     @PutMapping("/me")
     @Operation(summary = "Update own profile")
@@ -56,4 +69,144 @@ public class TravellerController {
         log.info("Traveller {} updated their profile", principal.getUsername());
         return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
     }
+
+    @GetMapping("/stats")
+    @Operation(summary = "Get aggregated eco/usage stats for the logged-in traveller")
+    public ResponseEntity<?> getStats(@AuthenticationPrincipal UserDetails principal) {
+
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        User user = userRepo.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<JourneyLog> all = journeyLogRepository.findByUserId(user.getId());
+
+        ZonedDateTime since30d = ZonedDateTime.now().minusDays(30);
+        double spent30d = all.stream()
+                .filter(j -> j.getCreatedAt() != null && j.getCreatedAt().isAfter(since30d))
+                .mapToDouble(JourneyLog::getCostEuros).sum();
+
+        double co2SavedGrams = all.stream()
+                .mapToDouble(j -> {
+                    double carCo2 = greenIndexService.computeCo2Grams("CAR", j.getDistanceKm());
+                    return Math.max(0, carCo2 - j.getCo2Grams());
+                }).sum();
+
+        long ecoPoints = Math.round(all.stream().mapToInt(JourneyLog::getGreenIndex).sum() * 0.5);
+
+        return ResponseEntity.ok(Map.of(
+                "ecoPoints",   ecoPoints,
+                "co2SavedKg",  Math.round((co2SavedGrams / 1000.0) * 10) / 10.0,
+                "trips",       all.size(),
+                "spent30d",    Math.round(spent30d * 100) / 100.0
+        ));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<?> getHistory(@AuthenticationPrincipal UserDetails principal) {
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        User user = userRepo.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<JourneyLog> logs = journeyLogRepository.findByUserId(user.getId());
+        logs.sort(Comparator.comparing(JourneyLog::getCreatedAt).reversed());
+
+        List<JourneyLog> limited = logs.stream().limit(20).toList();
+
+        Set<String> favKeys = favoriteRouteRepository.findByUserId(user.getId()).stream()
+                .map(f -> f.getMode() + "|" + f.getOriginName() + "|" + f.getDestName())
+                .collect(Collectors.toSet());
+
+        List<Map<String, Object>> result = limited.stream().map(j -> {
+            String key = j.getMode() + "|" + j.getOriginName() + "|" + j.getDestName();
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", j.getId());
+            m.put("mode", j.getMode());
+            m.put("distanceKm", j.getDistanceKm());
+            m.put("costEuros", j.getCostEuros());
+            m.put("greenIndex", j.getGreenIndex());
+            m.put("originName", j.getOriginName());
+            m.put("destName", j.getDestName());
+            m.put("createdAt", j.getCreatedAt());
+            m.put("isFavorite", favKeys.contains(key));
+            return m;
+        }).toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/favorites")
+    @Operation(summary = "Get favourite routes for the logged-in traveller")
+    public ResponseEntity<?> getFavorites(@AuthenticationPrincipal UserDetails principal) {
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        User user = userRepo.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<FavoriteRoute> favs = favoriteRouteRepository.findByUserId(user.getId());
+        List<JourneyLog> allTrips = journeyLogRepository.findByUserId(user.getId());
+
+        List<Map<String, Object>> result = favs.stream().map(f -> {
+            List<JourneyLog> matching = allTrips.stream()
+                    .filter(j -> j.getMode().equals(f.getMode())
+                            && f.getOriginName().equals(j.getOriginName())
+                            && f.getDestName().equals(j.getDestName()))
+                    .toList();
+
+            int usedCount = matching.size();
+            int lastGreenIndex = matching.stream()
+                    .max(Comparator.comparing(JourneyLog::getCreatedAt))
+                    .map(JourneyLog::getGreenIndex).orElse(0);
+            double avgCost = matching.stream().mapToDouble(JourneyLog::getCostEuros).average().orElse(0);
+
+            return Map.<String, Object>of(
+                    "id", f.getId(),
+                    "mode", f.getMode(),
+                    "originName", f.getOriginName(),
+                    "destName", f.getDestName(),
+                    "usedCount", usedCount,
+                    "greenIndex", lastGreenIndex,
+                    "avgCost", Math.round(avgCost * 100) / 100.0
+            );
+        }).toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/favorites/toggle")
+    @Operation(summary = "Toggle a favourite route by mode + origin + destination")
+    public ResponseEntity<?> toggleFavoriteRoute(@RequestBody Map<String, Object> body,
+                                                 @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        User user = userRepo.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String mode   = (String) body.get("mode");
+        String origin = (String) body.get("originName");
+        String dest   = (String) body.get("destName");
+
+        var existing = favoriteRouteRepository
+                .findByUserIdAndModeAndOriginNameAndDestName(user.getId(), mode, origin, dest);
+
+        if (existing.isPresent()) {
+            favoriteRouteRepository.delete(existing.get());
+            return ResponseEntity.ok(Map.of("favorited", false));
+        } else {
+            favoriteRouteRepository.save(FavoriteRoute.builder()
+                    .userId(user.getId())
+                    .mode(mode)
+                    .originName(origin)
+                    .destName(dest)
+                    .createdAt(ZonedDateTime.now())
+                    .build());
+            return ResponseEntity.ok(Map.of("favorited", true));
+        }
+    }
+
 }

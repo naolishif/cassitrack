@@ -4,6 +4,8 @@ import it.unicas.omnimove.client.CassitrackClient;
 import it.unicas.omnimove.dto.ChatResponse;
 import it.unicas.omnimove.dto.StopArrivalDTO;
 import it.unicas.omnimove.dto.VehicleDTO;
+import it.unicas.omnimove.model.Stop;
+import it.unicas.omnimove.repository.StopRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +31,7 @@ public class AiOrchestrationService {
             LoggerFactory.getLogger(AiOrchestrationService.class);
 
     private final CassitrackClient cassitrackClient;
+    private final StopRepository stopRepository;
 
     @Value("${anthropic.api.key}")
     private String apiKey;
@@ -37,13 +40,10 @@ public class AiOrchestrationService {
     @Value("${anthropic.api.model}")
     private String model;
 
-    private static final String[] STOPS = {
-            "CASSINO-STAZIONE", "CASSINO-CENTRO",
-            "CASSINO-OSPEDALE", "FOLCARA-VIA", "FOLCARA-CAMPUS"
-    };
-
-    public AiOrchestrationService(CassitrackClient cassitrackClient) {
+    public AiOrchestrationService(CassitrackClient cassitrackClient,
+                                  StopRepository stopRepository) {
         this.cassitrackClient = cassitrackClient;
+        this.stopRepository = stopRepository;
     }
 
     public ChatResponse answer(String question, String language) {
@@ -81,7 +81,8 @@ public class AiOrchestrationService {
         }
 
         sb.append("\nETA AT STOPS:\n");
-        for (String stopId : STOPS) {
+        for (Stop stop : stopRepository.findAll()) {
+            String stopId = stop.getId();
             sb.append("  Stop: ").append(stopId).append("\n");
             try {
                 List<StopArrivalDTO> arrivals = cassitrackClient.getArrivalsAtStop(stopId);
@@ -101,8 +102,12 @@ public class AiOrchestrationService {
                 sb.append("    ETA unavailable.\n");
             }
         }
-        sb.append("\nSTOPS: CASSINO-STAZIONE=Train Station, CASSINO-CENTRO=City Centre, ");
-        sb.append("CASSINO-OSPEDALE=Hospital, FOLCARA-VIA=Via Folcara, FOLCARA-CAMPUS=UNICAS Campus\n");
+        sb.append("\nSTOPS: ");
+        sb.append(stopRepository.findAll().stream()
+                .map(s -> s.getId() + "=" + s.getName())
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("none"));
+        sb.append("\n");
         sb.append("=== END ===\n");
         return sb.toString();
     }

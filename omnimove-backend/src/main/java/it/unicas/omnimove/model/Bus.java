@@ -14,16 +14,16 @@ public class Bus {
     private Integer busId;
 
     @Column(nullable = false, unique = true)
-    private String targa;
+    private String license_plate;
 
-    @Column(name = "numero_posti", nullable = false)
-    private Integer numeroPosti;
+    @Column(name = "number_seats", nullable = false)
+    private Integer numberSeats;
 
-    @Column(name = "posto_disabili", nullable = false)
-    private Boolean postoDisabili;
+    @Column(name = "place_disable_people", nullable = false)
+    private Boolean placeDisablePeople;
 
     @Column(nullable = false)
-    private Boolean disponibile;
+    private Boolean available;
 
     @Column(name = "current_vehicle_id", unique = true)
     private String currentVehicleId;

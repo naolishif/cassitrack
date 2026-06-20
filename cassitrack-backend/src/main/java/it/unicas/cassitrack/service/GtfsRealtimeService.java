@@ -2,7 +2,9 @@ package it.unicas.cassitrack.service;
 
 import com.google.transit.realtime.GtfsRealtime.*;
 import com.google.transit.realtime.GtfsRealtime.VehiclePosition.OccupancyStatus;
+import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.model.VehiclePosition;
+import it.unicas.cassitrack.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,18 +40,17 @@ public class GtfsRealtimeService {
 
     private final VehicleStateCache vehicleStateCache;
     private final ETAService        etaService;
+    private final StopRepository    stopRepository;
 
     // GTFS route ID for Linea 16
     private static final String ROUTE_ID = "LINEA-16";
 
-    // Known stop IDs in route order
-    private static final String[] STOP_IDS = {
-            "CASSINO-STAZIONE",
-            "CASSINO-CENTRO",
-            "CASSINO-OSPEDALE",
-            "FOLCARA-VIA",
-            "FOLCARA-CAMPUS"
-    };
+    /** Stop IDs read from the DB (replaces the old hardcoded array). */
+    private java.util.List<String> stopIds() {
+        return stopRepository.findAll().stream()
+                .map(Stop::getId)
+                .toList();
+    }
 
     /**
      * Build the complete GTFS Realtime feed.
@@ -207,8 +208,8 @@ public class GtfsRealtimeService {
                         );
 
         // Add a StopTimeUpdate for each stop
-        for (int i = 0; i < STOP_IDS.length; i++) {
-            String stopId = STOP_IDS[i];
+        int i = 0;
+        for (String stopId : stopIds()) {
 
             try {
                 // Get ETA at this stop
@@ -256,6 +257,7 @@ public class GtfsRealtimeService {
                                     .build();
 
                     tripUpdate.addStopTimeUpdate(stu);
+                    i++;
                 }
 
             } catch (Exception e) {

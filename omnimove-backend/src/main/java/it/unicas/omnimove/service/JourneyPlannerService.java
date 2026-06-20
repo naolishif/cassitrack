@@ -40,6 +40,7 @@ public class JourneyPlannerService {
     private final WeatherService    weatherService;
     private final GoogleMapsService googleMapsService;
     private final it.unicas.omnimove.repository.StopRepository stopRepository;
+    private final it.unicas.omnimove.repository.ScheduledStopRepository scheduledStopRepository;
 
     private static final double SPEED_WALK    = 5.0;
     private static final double SPEED_BIKE    = 15.0;
@@ -124,8 +125,18 @@ public class JourneyPlannerService {
 
         // --- Step 3: bus travel time via Google Maps ---
         // Try to get the GPS position of the nearest active bus
-        int busMin = computeBusTravelTime(nearestStop, destStop, distKm);
+        var lines = scheduledStopRepository.findLinesConnecting(nearestStop, destStop);
 
+        String lineLabel;
+        int busMin;
+        if (!lines.isEmpty()) {
+            var line = lines.get(0);                       // la migliore (ORDER BY)
+            lineLabel = line.getShortName() + " — " + line.getLongName();
+            busMin = (int) Math.ceil((line.getDestSec() - line.getOriginSec()) / 60.0);
+        } else {
+            lineLabel = "Bus";                             // nessuna linea diretta: degrado elegante
+            busMin = computeBusTravelTime(nearestStop, destStop, distKm);
+        }
         int total = walkMin + waitMin + busMin;
 
         List<JourneyLeg> legs = new ArrayList<>();
@@ -136,20 +147,20 @@ public class JourneyPlannerService {
         legs.add(JourneyLeg.builder().mode("WAIT")
             .from(fmtStop(nearestStop)).to(fmtStop(nearestStop))
             .durationMinutes(waitMin).distanceMetres(0.0)
-            .instruction("Wait " + waitMin + " min for Linea 16").build());
+            .instruction("Wait " + waitMin + " min for " + lineLabel).build());
         legs.add(JourneyLeg.builder().mode("BUS")
             .from(fmtStop(nearestStop)).to(req.getDestName())
             .durationMinutes(busMin).distanceMetres(distKm * 1000)
-            .instruction("Linea 16 — Magni Autoservizi").build());
+            .instruction(lineLabel).build());
 
         return JourneyOption.builder()
-            .mode("BUS").modeLabel("Linea 16 — Magni Autoservizi")
+            .mode("BUS").modeLabel(lineLabel)
             .durationMinutes(total).distanceMetres(distKm * 1000)
             .costEuros(COST_BUS)
             .greenIndex(greenIndex.computeGreenIndex("BUS", distKm))
             .co2Grams(greenIndex.computeCo2Grams("BUS", distKm))
             .etaMinutes(total)
-            .summary("Take Bus 16 from " + fmtStop(nearestStop))
+            .summary("Take " + lineLabel + " from " + fmtStop(nearestStop))
             .weatherWarning(weatherService.getModeWarning(weather.condition, "BUS"))
             .weatherSuggestion(weather.suggestion)
             .legs(legs).build();

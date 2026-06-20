@@ -35,9 +35,9 @@ public class StopController {
     public ResponseEntity<List<StopArrivalDTO>>
     getArrivalsAtStop(
             @Parameter(description =
-                    "Stop ID — one of: CASSINO-STAZIONE, " +
-                            "CASSINO-CENTRO, CASSINO-OSPEDALE, " +
-                            "FOLCARA-VIA, FOLCARA-CAMPUS")
+                    "Stop ID — e.g. PSB (Piazza San Benedetto), " +
+                            "SFF (Stazione FF.SS.), UNI (Università Folcara), " +
+                            "OSP (Ospedale), LIC (Liceo Scientifico)")
             @PathVariable String stopId
     ) {
         List<StopArrivalDTO> arrivals =

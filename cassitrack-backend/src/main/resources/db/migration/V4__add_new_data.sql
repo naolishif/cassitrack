@@ -2,9 +2,9 @@
 -- V4__add_new_data.sql
 -- Linee reali Magni Autoservizi — Cassino
 -- ============================================================
--- Linea A: Piazza San Benedetto ↔ Università Folcara
--- Linea B: Piazza San Benedetto ↔ Liceo Scientifico
--- Linea C: Piazza San Benedetto ↔ Ospedale
+-- Linea A: Piazza San Benedetto ↔ Università Folcara  (MAGNI-001 / MAGNI-002 alternati)
+-- Linea B: Piazza San Benedetto ↔ Liceo Scientifico   (MAGNI-003)
+-- Linea C: Piazza San Benedetto ↔ Ospedale            (MAGNI-004)
 -- ============================================================
 
 -- ============================================================
@@ -83,7 +83,13 @@ DO $$
 DECLARE
 dep INTEGER;
     tid TEXT;
-    v_bus_id INTEGER;
+
+    -- Un bus per ciascuna linea (Linea A alterna bus_a1 / bus_a2)
+    bus_a1 INTEGER;   -- MAGNI-001
+    bus_a2 INTEGER;   -- MAGNI-002
+    bus_b  INTEGER;   -- MAGNI-003
+    bus_c  INTEGER;   -- MAGNI-004
+    chosen INTEGER;   -- bus scelto per il trip corrente
 
     linea_a_deps INTEGER[] := ARRAY[
         28800,29700,30600,31500,32400,33300,34200,35100,
@@ -102,19 +108,35 @@ dep INTEGER;
 
     i INTEGER;
 BEGIN
-    -- Recuperiamo un bus valido inserito in V2 per soddisfare il vincolo di NOT NULL
-SELECT bus_id INTO v_bus_id FROM buses WHERE current_vehicle_id = 'MAGNI-001' LIMIT 1;
+    -- Recuperiamo i 4 bus reali inseriti in una migration precedente.
+    -- COALESCE su MAGNI-001 come fallback nel caso un bus non esista,
+    -- così il vincolo NOT NULL su bus_id è sempre soddisfatto.
+SELECT bus_id INTO bus_a1 FROM buses WHERE current_vehicle_id = 'MAGNI-001' LIMIT 1;
+SELECT bus_id INTO bus_a2 FROM buses WHERE current_vehicle_id = 'MAGNI-002' LIMIT 1;
+SELECT bus_id INTO bus_b  FROM buses WHERE current_vehicle_id = 'MAGNI-003' LIMIT 1;
+SELECT bus_id INTO bus_c  FROM buses WHERE current_vehicle_id = 'MAGNI-004' LIMIT 1;
 
--- ----------------------------------------------------------------
--- LINEA A
--- ----------------------------------------------------------------
+bus_a2 := COALESCE(bus_a2, bus_a1);
+    bus_b  := COALESCE(bus_b,  bus_a1);
+    bus_c  := COALESCE(bus_c,  bus_a1);
+
+    -- ----------------------------------------------------------------
+    -- LINEA A — alterna MAGNI-001 (corse dispari) e MAGNI-002 (pari)
+    -- ----------------------------------------------------------------
 FOR i IN 1..array_length(linea_a_deps, 1) LOOP
         dep := linea_a_deps[i];
+
+        -- bus scelto: dispari → bus_a1, pari → bus_a2
+        IF i % 2 = 1 THEN
+            chosen := bus_a1;
+ELSE
+            chosen := bus_a2;
+END IF;
 
         -- Andata
         tid := 'A_OUT_' || dep;
 INSERT INTO trips(id, route_id, bus_id)
-VALUES (tid, 'LINEA_A_OUT', v_bus_id);
+VALUES (tid, 'LINEA_A_OUT', chosen);
 
 INSERT INTO scheduled_stops(trip_id, stop_id, stop_sequence, arrival_seconds)
 VALUES
@@ -126,11 +148,11 @@ VALUES
     (tid, 'VBO', 6, dep + 840),
     (tid, 'UNI', 7, dep + 1320);
 
--- Ritorno (parte 5 min dopo l'arrivo a UNI)
+-- Ritorno (parte 5 min dopo l'arrivo a UNI) — stesso bus dell'andata
 dep := dep + 1320 + 300;
         tid := 'A_IN_' || dep;
 INSERT INTO trips(id, route_id, bus_id)
-VALUES (tid, 'LINEA_A_IN', v_bus_id);
+VALUES (tid, 'LINEA_A_IN', chosen);
 
 INSERT INTO scheduled_stops(trip_id, stop_id, stop_sequence, arrival_seconds)
 VALUES
@@ -145,12 +167,12 @@ VALUES
 END LOOP;
 
     -- ----------------------------------------------------------------
-    -- LINEA B ANDATA
+    -- LINEA B ANDATA — MAGNI-003
     -- ----------------------------------------------------------------
     FOREACH dep IN ARRAY linea_b_out_deps LOOP
         tid := 'B_OUT_' || dep;
 INSERT INTO trips(id, route_id, bus_id)
-VALUES (tid, 'LINEA_B_OUT', v_bus_id);
+VALUES (tid, 'LINEA_B_OUT', bus_b);
 
 INSERT INTO scheduled_stops(trip_id, stop_id, stop_sequence, arrival_seconds)
 VALUES
@@ -162,12 +184,12 @@ VALUES
 END LOOP;
 
     -- ----------------------------------------------------------------
-    -- LINEA B RITORNO
+    -- LINEA B RITORNO — MAGNI-003
     -- ----------------------------------------------------------------
     FOREACH dep IN ARRAY linea_b_in_deps LOOP
         tid := 'B_IN_' || dep;
 INSERT INTO trips(id, route_id, bus_id)
-VALUES (tid, 'LINEA_B_IN', v_bus_id);
+VALUES (tid, 'LINEA_B_IN', bus_b);
 
 INSERT INTO scheduled_stops(trip_id, stop_id, stop_sequence, arrival_seconds)
 VALUES
@@ -179,7 +201,7 @@ VALUES
 END LOOP;
 
     -- ----------------------------------------------------------------
-    -- LINEA C
+    -- LINEA C — MAGNI-004
     -- ----------------------------------------------------------------
 FOR i IN 1..array_length(linea_c_deps, 1) LOOP
         dep := linea_c_deps[i];
@@ -187,7 +209,7 @@ FOR i IN 1..array_length(linea_c_deps, 1) LOOP
         -- Andata
         tid := 'C_OUT_' || dep;
 INSERT INTO trips(id, route_id, bus_id)
-VALUES (tid, 'LINEA_C_OUT', v_bus_id);
+VALUES (tid, 'LINEA_C_OUT', bus_c);
 
 INSERT INTO scheduled_stops(trip_id, stop_id, stop_sequence, arrival_seconds)
 VALUES
@@ -202,7 +224,7 @@ VALUES
 dep := dep + 1620 + 300;
         tid := 'C_IN_' || dep;
 INSERT INTO trips(id, route_id, bus_id)
-VALUES (tid, 'LINEA_C_IN', v_bus_id);
+VALUES (tid, 'LINEA_C_IN', bus_c);
 
 INSERT INTO scheduled_stops(trip_id, stop_id, stop_sequence, arrival_seconds)
 VALUES
