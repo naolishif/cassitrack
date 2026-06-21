@@ -87,7 +87,7 @@
             <!-- Shown after ≥2 failed attempts -->
             <button type="button" class="btn-ghost" id="forgotBtn"
                     style="display:none" onclick="showForgotPanel()">
-                🔑 Forgot password?
+                 Forgot password?
             </button>
         </form>
 
@@ -119,7 +119,6 @@
         <!-- ══ PANEL: Check your email (after registration) ═════════ -->
         <div class="form" id="emailSentPanel">
             <div class="email-sent-box">
-                <div class="icon">📧</div>
                 <p>We've sent a verification link to<br>
                    <strong id="sentToEmail">—</strong></p>
                 <p style="margin-top:10px">
@@ -212,17 +211,11 @@ function clearAllFieldErrs(...ids) { ids.forEach(clearFieldErr); }
 // ════════════════════════════════════════════════════════════
 (function init() {
     const params = new URLSearchParams(window.location.search);
-    // Also support hash-based token (#reset=TOKEN) in case email client strips query params
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-
-    // ?reset=TOKEN or #reset=TOKEN or sessionStorage (survives page reload)
-    const resetToken = params.get('reset')
-        || hashParams.get('reset')
-        || sessionStorage.getItem('omnimove_pending_reset');
+    // ?pr=TOKEN  — server-side redirect from /api/v1/auth/reset-page (most reliable path)
+    // ?reset=TOKEN — legacy / direct link fallback
+    const resetToken = params.get('pr') || params.get('reset');
 
     if (resetToken) {
-        // Persist in sessionStorage so a reload doesn't lose it
-        sessionStorage.setItem('omnimove_pending_reset', resetToken);
         document.getElementById('resetToken').value = resetToken;
         history.replaceState({}, '', window.location.pathname);
         hideTabs(); hideGuestSection();
@@ -604,12 +597,9 @@ async function handleReset(e) {
         const data = await r.json();
 
         if (r.ok) {
-            sessionStorage.removeItem('omnimove_pending_reset');  // token used, discard it
             showMsg(data.message || 'Password updated! You can now sign in.', 'ok');
             setTimeout(() => { showTabs(); showGuestSection(); switchTab('login'); }, 2000);
         } else {
-            // If token expired/invalid, clear it so the user isn't stuck on this form
-            sessionStorage.removeItem('omnimove_pending_reset');
             showMsg((data.message || 'Reset failed. The link may have expired.') +
                     '\nUse "Back to Sign In" to request a new link.', 'err');
         }
