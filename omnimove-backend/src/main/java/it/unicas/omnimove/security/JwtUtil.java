@@ -26,4 +26,15 @@ public class JwtUtil {
         try { Jwts.parserBuilder().setSigningKey(getKey()).build().parseClaimsJws(token); return true; }
         catch (Exception e) { return false; }
     }
+
+    public long getRemainingValidityMs(String token) {
+        try {
+            java.util.Date expiry = Jwts.parserBuilder()
+                .setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody().getExpiration();
+            return Math.max(0, expiry.getTime() - System.currentTimeMillis());
+        } catch (JwtException e) {
+            return 0;
+        }
+    }
 }

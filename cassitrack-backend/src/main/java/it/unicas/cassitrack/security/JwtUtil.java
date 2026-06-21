@@ -55,8 +55,18 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            // In a real app, you might want to log this exception
             return false;
+        }
+    }
+
+    public long getRemainingValidityMs(String token) {
+        try {
+            java.util.Date expiry = Jwts.parser()
+                    .setSigningKey(getSigningKey())
+                    .parseClaimsJws(token).getBody().getExpiration();
+            return Math.max(0, expiry.getTime() - System.currentTimeMillis());
+        } catch (JwtException | IllegalArgumentException e) {
+            return 0;
         }
     }
 }

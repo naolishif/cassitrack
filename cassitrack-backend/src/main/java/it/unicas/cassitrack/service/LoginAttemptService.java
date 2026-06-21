@@ -14,7 +14,7 @@ public class LoginAttemptService {
 
     private final StringRedisTemplate redisTemplate;
 
-    private static final int MAX_ATTEMPTS = 100;
+    private static final int MAX_ATTEMPTS = 5;
     private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
     private static final String PREFIX = "login_failed:";
 

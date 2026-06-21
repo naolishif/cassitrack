@@ -1,5 +1,6 @@
 package it.unicas.cassitrack.security;
 
+import it.unicas.cassitrack.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,13 +26,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
         String jwt = parseJwt(request);
 
-        if (jwt != null && jwtUtil.validateToken(jwt)) {
+        if (jwt != null && jwtUtil.validateToken(jwt) && !tokenBlacklistService.isBlacklisted(jwt)) {
             String username = jwtUtil.getUsernameFromToken(jwt);
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);

@@ -90,7 +90,15 @@
             </div>
             <div>
                 <div class="label">Password</div>
-                <input class="input" type="password" id="regPassword" placeholder="Min 8 characters" required/>
+                <input class="input" type="password" id="regPassword" placeholder="Min 8 characters" required
+                       oninput="checkPasswordStrength(this.value)"/>
+                <div id="pwChecks" style="display:none;margin-top:6px;font-family:var(--mono);font-size:11px;line-height:2">
+                    <div id="chk-len"   style="color:var(--dim)">✗ At least 8 characters</div>
+                    <div id="chk-upper" style="color:var(--dim)">✗ One uppercase letter (A–Z)</div>
+                    <div id="chk-lower" style="color:var(--dim)">✗ One lowercase letter (a–z)</div>
+                    <div id="chk-num"   style="color:var(--dim)">✗ One number (0–9)</div>
+                    <div id="chk-sym"   style="color:var(--dim)">✗ One special character (!@#$…)</div>
+                </div>
             </div>
             <button class="btn" type="submit" id="regBtn">Create Account</button>
         </form>
@@ -224,8 +232,40 @@
         }
     }
 
+    function isPasswordStrong(pw) {
+        return pw.length >= 8
+            && /[A-Z]/.test(pw)
+            && /[a-z]/.test(pw)
+            && /[0-9]/.test(pw)
+            && /[!@#$%^&*(),.?":{}|<>_+\-*/]/.test(pw);
+    }
+
+    function checkPasswordStrength(pw) {
+        const box = document.getElementById('pwChecks');
+        box.style.display = pw.length > 0 ? 'block' : 'none';
+        const checks = {
+            'chk-len':   pw.length >= 8,
+            'chk-upper': /[A-Z]/.test(pw),
+            'chk-lower': /[a-z]/.test(pw),
+            'chk-num':   /[0-9]/.test(pw),
+            'chk-sym':   /[!@#$%^&*(),.?":{}|<>_+\-*/]/.test(pw)
+        };
+        for (const [id, ok] of Object.entries(checks)) {
+            const el = document.getElementById(id);
+            el.style.color = ok ? 'var(--green)' : 'var(--dim)';
+            el.textContent = (ok ? '✓' : '✗') + el.textContent.slice(1);
+        }
+    }
+
     async function handleRegister(e) {
         e.preventDefault();
+
+        const password = document.getElementById('regPassword').value;
+        if (!isPasswordStrong(password)) {
+            showMsg('Password must be at least 8 characters with uppercase, lowercase, a number, and a special character.', 'err');
+            return;
+        }
+
         const btn = document.getElementById('regBtn');
         btn.disabled = true; btn.textContent = 'Creating account...';
 

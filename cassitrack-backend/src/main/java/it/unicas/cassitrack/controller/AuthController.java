@@ -7,6 +7,7 @@ import it.unicas.cassitrack.dto.LoginResponse;
 import it.unicas.cassitrack.dto.RegisterRequest;
 import it.unicas.cassitrack.model.User;
 import it.unicas.cassitrack.service.LoginAttemptService;
+import it.unicas.cassitrack.service.TokenBlacklistService;
 import it.unicas.cassitrack.service.UserService;
 import it.unicas.cassitrack.security.JwtUtil;
 import jakarta.validation.Valid;
@@ -37,6 +38,9 @@ public class AuthController {
     @Autowired
     private LoginAttemptService loginAttemptService;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
     @PostMapping("/register")
     @Operation(summary = "Register a new user account")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
@@ -52,7 +56,7 @@ public class AuthController {
                             .email(saved.getEmail())
                             .name(saved.getName())
                             .role(saved.getRole())
-                            .expiresInMs(86400000L)
+                            .expiresInMs(3600000L)
                             .message("Registration successful")
                             .build());
 
@@ -98,5 +102,20 @@ public class AuthController {
             loginAttemptService.recordFailure(email);
             return ResponseEntity.badRequest().body("Username or password incorrect!!");
         }
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout and invalidate the current JWT token")
+    public ResponseEntity<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            long remaining = jwtUtil.getRemainingValidityMs(token);
+            if (remaining > 0) {
+                tokenBlacklistService.blacklist(token, remaining);
+                log.info("Token revoked on logout");
+            }
+        }
+        return ResponseEntity.noContent().build();
     }
 }

@@ -6,6 +6,7 @@ import it.unicas.omnimove.model.User;
 import it.unicas.omnimove.repository.UserRepository;
 import it.unicas.omnimove.security.JwtUtil;
 import it.unicas.omnimove.service.LoginAttemptService;
+import it.unicas.omnimove.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final LoginAttemptService loginAttemptService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @PostMapping("/register")
     @Operation(summary="Register a new passenger account",
@@ -32,6 +34,12 @@ public class AuthController {
         if (req.getEmail()==null||req.getPassword()==null||req.getName()==null)
             return ResponseEntity.badRequest()
                 .body(AuthResponse.builder().message("Name, email and password are required").build());
+
+        if (!isPasswordStrong(req.getPassword()))
+            return ResponseEntity.badRequest()
+                .body(AuthResponse.builder()
+                    .message("Password must be at least 8 characters with uppercase, lowercase, a number, and a special character.")
+                    .build());
 
         if (userRepo.existsByEmail(req.getEmail()))
             return ResponseEntity.badRequest()
@@ -51,7 +59,7 @@ public class AuthController {
         return ResponseEntity.ok(AuthResponse.builder()
             .token(token).email(user.getEmail())
             .name(user.getName()).role(user.getRole())
-            .expiresInMs(86400000L)
+            .expiresInMs(3600000L)
             .message("Registration successful").build());
     }
 
@@ -87,6 +95,30 @@ public class AuthController {
                 return ResponseEntity.status(401)
                     .body(AuthResponse.builder().message("Invalid email or password").build());
             });
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary="Logout and invalidate the current JWT token")
+    public ResponseEntity<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            long remaining = jwtUtil.getRemainingValidityMs(token);
+            if (remaining > 0) {
+                tokenBlacklistService.blacklist(token, remaining);
+                log.info("Token revoked on logout");
+            }
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    private boolean isPasswordStrong(String pw) {
+        return pw != null
+            && pw.length() >= 8
+            && pw.chars().anyMatch(Character::isUpperCase)
+            && pw.chars().anyMatch(Character::isLowerCase)
+            && pw.chars().anyMatch(Character::isDigit)
+            && pw.chars().anyMatch(c -> "!@#$%^&*(),.?\":{}|<>_+-*/".indexOf(c) >= 0);
     }
 
     @GetMapping("/me")

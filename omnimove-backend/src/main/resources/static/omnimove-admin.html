@@ -1006,7 +1006,14 @@
     }
 
     // log out
-    function logout() {
+    async function logout() {
+        const token = localStorage.getItem('omnimove_token');
+        if (token) {
+            await fetch('/api/v1/auth/logout', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).catch(() => {});
+        }
         localStorage.removeItem('omnimove_token');
         localStorage.removeItem('omnimove_user');
         window.location.href = 'omnimove-login.html';

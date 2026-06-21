@@ -45,6 +45,8 @@ cassitrack:
   api:
     base-url: ${CASSITRACK_URL:http://localhost:8080/api/v1}
     token: ${CASSITRACK_API_TOKEN:dev-only-insecure-token}
+  netex:
+    url: ${CASSITRACK_NETEX_URL:http://localhost:8080/api/static/netex}
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:

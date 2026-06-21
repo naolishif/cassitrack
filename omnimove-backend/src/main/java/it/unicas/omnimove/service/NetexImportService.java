@@ -1,16 +1,22 @@
 package it.unicas.omnimove.service;
 
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import it.unicas.omnimove.dto.netex.*;
 import it.unicas.omnimove.model.*;
 import it.unicas.omnimove.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import javax.xml.stream.XMLInputFactory;
 import java.util.List;
 
 @Service
 public class NetexImportService {
+
+    @Value("${cassitrack.netex.url}")
+    private String cassitrackNetexUrl;
 
     private final StopRepository stopRepository;
     private final RouteRepository routeRepository;
@@ -31,17 +37,21 @@ public class NetexImportService {
         this.scheduledStopRepository = scheduledStopRepository;
         this.busRepository = busRepository; // ← AGGIUNTO
 
+        XMLInputFactory xmlFactory = XMLInputFactory.newInstance();
+        xmlFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+        xmlFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+
+        XmlMapper xmlMapper = new XmlMapper(xmlFactory);
+
         this.restClient = RestClient.builder()
                 .messageConverters(converters -> {
-                    converters.add(new org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter());
+                    converters.add(new org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter(xmlMapper));
                 })
                 .build();
     }
 
     @Transactional
     public void importDataFromCassitrack() {
-        String cassitrackUrl = "http://localhost:8080/api/static/netex";
-
         System.out.println("Inizio scaricamento dati NeTEx da Cassitrack...");
 
         System.out.println("Pulizia dei vecchi dati prima dell'importazione...");
@@ -52,7 +62,7 @@ public class NetexImportService {
         busRepository.deleteAll(); // ← AGGIUNTO
 
         PublicationDeliveryDTO netexData = restClient.get()
-                .uri(cassitrackUrl)
+                .uri(cassitrackNetexUrl)
                 .accept(org.springframework.http.MediaType.APPLICATION_XML)
                 .retrieve()
                 .body(PublicationDeliveryDTO.class);
