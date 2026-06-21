@@ -447,7 +447,7 @@ async function handleRegister(e) {
     if (hasErr) return;
 
     if (!isPasswordValid(pass)) {
-        fieldErr('regPassword', 'Min 8 chars: uppercase, lowercase, number & symbol (@$!%*?&_#)');
+        fieldErr('regPassword', 'Min 8 chars: uppercase, lowercase, number & special character');
         return;
     }
     if (pass !== confirm) {
@@ -573,7 +573,7 @@ async function handleReset(e) {
     if (hasErr) return;
 
     if (!isPasswordValid(newPass)) {
-        fieldErr('newPassword', '⚠ Min 8 chars: uppercase, lowercase, number & symbol (@$!%*?&_#)');
+        fieldErr('newPassword', '⚠ Min 8 chars: uppercase, lowercase, number & special character');
         return;
     }
     if (newPass !== confPass) {
