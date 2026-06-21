@@ -1115,8 +1115,33 @@
                     </div>
                     <div class="settings-section">
                         <span class="section-label">Account</span>
-                        <div class="pref-row">
+                        <div class="pref-row" style="gap:12px;flex-wrap:wrap">
                             <button class="action-btn" onclick="logout()" style="width:auto;padding:8px 20px;background:#fef2f2;color:var(--red);border:1px solid #fee2e2">Log Out</button>
+                            <button class="action-btn" onclick="confirmDeleteAccount()" style="width:auto;padding:8px 20px;background:#1a0a0a;color:#f87171;border:1px solid #7f1d1d">🗑 Delete Account</button>
+                        </div>
+                        <p style="font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.5">
+                            Deleting your account is permanent and cannot be undone. All your data will be removed.
+                        </p>
+                    </div>
+
+                    <!-- Delete Account confirmation modal -->
+                    <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+                         z-index:9999;align-items:center;justify-content:center">
+                        <div style="background:#0f1623;border:1px solid #7f1d1d;border-radius:12px;
+                             padding:32px;max-width:380px;width:90%;text-align:center">
+                            <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+                            <div style="font-size:18px;font-weight:800;margin-bottom:8px;color:#f87171">Delete Account</div>
+                            <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:24px">
+                                Are you sure? This will permanently delete your account and all associated data. This action cannot be undone.
+                            </p>
+                            <div style="display:flex;gap:12px;justify-content:center">
+                                <button onclick="document.getElementById('deleteModal').style.display='none'"
+                                    style="padding:10px 24px;background:#1e293b;color:#94a3b8;border:1px solid #334155;
+                                    border-radius:8px;cursor:pointer;font-weight:700">Cancel</button>
+                                <button id="confirmDeleteBtn" onclick="deleteAccount()"
+                                    style="padding:10px 24px;background:#7f1d1d;color:#fca5a5;border:none;
+                                    border-radius:8px;cursor:pointer;font-weight:700">Yes, delete my account</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1917,6 +1942,40 @@
         localStorage.removeItem('omnimove_token');
         localStorage.removeItem('omnimove_user');
         window.location.href = 'omnimove-login.html';
+    }
+
+    function confirmDeleteAccount() {
+        const modal = document.getElementById('deleteModal');
+        modal.style.display = 'flex';
+    }
+
+    async function deleteAccount() {
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+
+        try {
+            const token = localStorage.getItem('omnimove_token');
+            const r = await fetch('/api/v1/auth/account', {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (r.ok) {
+                localStorage.removeItem('omnimove_token');
+                localStorage.removeItem('omnimove_user');
+                window.location.href = 'omnimove-login.html';
+            } else {
+                const data = await r.json().catch(() => ({}));
+                alert(data.message || 'Could not delete account. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Yes, delete my account';
+            }
+        } catch (e) {
+            alert('Cannot reach server.');
+            btn.disabled = false;
+            btn.textContent = 'Yes, delete my account';
+        }
     }
 
     let aiThinking = false;
