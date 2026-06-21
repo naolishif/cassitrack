@@ -372,8 +372,8 @@ async function handleLogin(e) {
     const email = document.getElementById('loginEmail').value.trim();
     const pass  = document.getElementById('loginPassword').value;
     let hasErr  = false;
-    if (!email) { fieldErr('loginEmail', '⚠ Campo obbligatorio'); hasErr = true; }
-    if (!pass)  { fieldErr('loginPassword', '⚠ Campo obbligatorio'); hasErr = true; }
+    if (!email) { fieldErr('loginEmail', 'Mandatory field'); hasErr = true; }
+    if (!pass)  { fieldErr('loginPassword', 'Mandatory field'); hasErr = true; }
     if (hasErr) return;
 
     const btn = document.getElementById('loginBtn');
@@ -440,18 +440,18 @@ async function handleRegister(e) {
     const confirm = document.getElementById('regConfirm').value;
     let hasErr = false;
 
-    if (!name)    { fieldErr('regName',    '⚠ Campo obbligatorio'); hasErr = true; }
-    if (!email)   { fieldErr('regEmail',   '⚠ Campo obbligatorio'); hasErr = true; }
-    if (!pass)    { fieldErr('regPassword','⚠ Campo obbligatorio'); hasErr = true; }
-    if (!confirm) { fieldErr('regConfirm', '⚠ Campo obbligatorio'); hasErr = true; }
+    if (!name)    { fieldErr('regName',    'Mandatory field'); hasErr = true; }
+    if (!email)   { fieldErr('regEmail',   'Mandatory field'); hasErr = true; }
+    if (!pass)    { fieldErr('regPassword','Mandatory field'); hasErr = true; }
+    if (!confirm) { fieldErr('regConfirm', 'Mandatory field'); hasErr = true; }
     if (hasErr) return;
 
     if (!isPasswordValid(pass)) {
-        fieldErr('regPassword', '⚠ Min 8 chars: uppercase, lowercase, number & symbol (@$!%*?&_#)');
+        fieldErr('regPassword', 'Min 8 chars: uppercase, lowercase, number & symbol (@$!%*?&_#)');
         return;
     }
     if (pass !== confirm) {
-        fieldErr('regConfirm', '⚠ Passwords do not match');
+        fieldErr('regConfirm', 'Passwords do not match');
         return;
     }
 
@@ -568,8 +568,8 @@ async function handleReset(e) {
     const confPass = document.getElementById('newPasswordConfirm').value;
     let hasErr = false;
 
-    if (!newPass)  { fieldErr('newPassword',        '⚠ Campo obbligatorio'); hasErr = true; }
-    if (!confPass) { fieldErr('newPasswordConfirm', '⚠ Campo obbligatorio'); hasErr = true; }
+    if (!newPass)  { fieldErr('newPassword',        'Mandatory field'); hasErr = true; }
+    if (!confPass) { fieldErr('newPasswordConfirm', 'Mandatory field'); hasErr = true; }
     if (hasErr) return;
 
     if (!isPasswordValid(newPass)) {
@@ -577,7 +577,7 @@ async function handleReset(e) {
         return;
     }
     if (newPass !== confPass) {
-        fieldErr('newPasswordConfirm', '⚠ Passwords do not match');
+        fieldErr('newPasswordConfirm', 'Passwords do not match');
         return;
     }
 
