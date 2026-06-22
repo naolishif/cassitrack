@@ -99,4 +99,8 @@ public class VehicleStatusDTO {
     /** Whether this bus is currently considered active */
     @JsonProperty("is_active")
     private Boolean isActive;
+
+    /** Next stop **/
+    @JsonProperty("upcoming_stop_name")
+    private String upcomingStopName;
 }

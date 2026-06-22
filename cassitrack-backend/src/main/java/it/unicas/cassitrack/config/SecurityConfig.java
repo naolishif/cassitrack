@@ -68,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, // Public for OMNIMOVE
                                 "/api/v1/vehicles/**",
                                 "/api/v1/stops/**",
+                                "/api/v1/routes/**",
                                 "/api/v1/siri/**",
                                 "/api/v1/feed/**",
                                 "/api/v1/journeys/**",

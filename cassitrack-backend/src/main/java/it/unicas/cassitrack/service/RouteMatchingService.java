@@ -1,5 +1,6 @@
 package it.unicas.cassitrack.service;
 
+import it.unicas.cassitrack.model.ScheduledStop;
 import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.repository.ScheduledStopRepository;
 import it.unicas.cassitrack.repository.StopRepository;
@@ -137,4 +138,23 @@ public class RouteMatchingService {
         );
         return R * c;
     }
+
+
+    /** Nome della fermata successiva a quella attuale, lungo la sequenza della corsa. */
+    public String nextStopName(String tripId, String routeId, String currentStopId) {
+        if (currentStopId == null) return null;
+        List<ScheduledStop> seq = (tripId != null)
+                ? scheduledStopRepo.findByTripIdOrderByStopSequenceAsc(tripId)
+                : (routeId != null ? scheduledStopRepo.findRepresentativeSequence(routeId) : List.of());
+
+        for (int i = 0; i < seq.size(); i++) {
+            if (seq.get(i).getStopId().equals(currentStopId)) {
+                if (i + 1 >= seq.size()) return null;            // e' gia' all'ultima fermata
+                String nextId = seq.get(i + 1).getStopId();
+                return stopRepository.findById(nextId).map(Stop::getName).orElse(nextId);
+            }
+        }
+        return null;
+    }
+
 }

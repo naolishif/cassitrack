@@ -12,6 +12,7 @@ import it.unicas.cassitrack.service.VehicleStateCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import it.unicas.cassitrack.repository.BusRepository;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ public class VehicleController {
 
     private final VehicleService vehicleService;
     private final VehicleStateCache vehicleStateCache;
+    private final BusRepository busRepository;
 
     /**
      * GET /api/v1/vehicles
@@ -56,6 +58,11 @@ public class VehicleController {
     public ResponseEntity<List<VehicleStatusDTO>> getAllVehicles() {
         List<VehicleStatusDTO> vehicles = vehicleService.getAllActiveVehicles();
         return ResponseEntity.ok(vehicles);
+    }
+
+    @GetMapping(value = "/fleet-size", produces = "application/json")
+    public Map<String, Long> fleetSize() {
+        return Map.of("total", busRepository.count());
     }
 
     /**
