@@ -1248,12 +1248,11 @@
             }
 
             const labels = buildHourlyLabels();
-            const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#22C55E', '#F59E0B', '#EF4444'];
 
             const datasets = routeKeys.sort().map((key, i) => ({
                 label: key,
                 data: labels.map(slot => data[key][slot] ?? null),
-                backgroundColor: COLORS[i % COLORS.length],
+                backgroundColor: chartColor(key, i),
                 borderRadius: 4,
                 maxBarThickness: 14
             }));
