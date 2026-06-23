@@ -13,8 +13,8 @@ public class Bus {
     @Column(name = "bus_id")
     private Integer busId;
 
-    @Column(nullable = false, unique = true)
-    private String license_plate;
+    @Column(name = "license_plate", nullable = false, unique = true)
+    private String licensePlate;
 
     @Column(name = "number_seats", nullable = false)
     private Integer numberSeats;

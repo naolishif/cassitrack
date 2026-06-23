@@ -1,6 +1,8 @@
 package it.unicas.omnimove.service;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import it.unicas.omnimove.dto.netex.*;
 import it.unicas.omnimove.model.*;
 import it.unicas.omnimove.repository.*;
@@ -42,6 +44,8 @@ public class NetexImportService {
         xmlFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
 
         XmlMapper xmlMapper = new XmlMapper(xmlFactory);
+        xmlMapper.registerModule(new JavaTimeModule());
+        xmlMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         this.restClient = RestClient.builder()
                 .messageConverters(converters -> {
@@ -110,8 +114,7 @@ public class NetexImportService {
                 if (serviceFrame.getBuses() != null) {
                     for (BusDTO busDto : serviceFrame.getBuses()) {
                         Bus bus = new Bus();
-                        bus.setBusId(busDto.getId());
-                        bus.setLicense_plate(busDto.getTarga());
+                        bus.setLicensePlate(busDto.getTarga());
                         bus.setNumberSeats(busDto.getNumeroPosti());
                         bus.setPlaceDisablePeople(busDto.getPostoDisabili());
                         bus.setAvailable(busDto.getDisponibile());
