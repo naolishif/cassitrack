@@ -57,6 +57,7 @@ public class JourneyController {
         if (request.getOriginLat() == null || request.getDestLat() == null)
             return ResponseEntity.badRequest().build();
 
+        journeyEventService.recordJourneySearchQuery(); // FR-OM-009: count raw searches
         JourneyResponse response = plannerService.plan(request);
 
         return ResponseEntity.ok(response);
