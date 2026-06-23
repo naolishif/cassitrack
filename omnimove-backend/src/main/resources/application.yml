@@ -6,10 +6,10 @@ spring:
   application:
     name: omnimove
   datasource:
-    url: jdbc:postgresql://localhost:5432/omnimovedb
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/omnimovedb}
     driver-class-name: org.postgresql.Driver
-    username: omnimove
-    password: omnimove
+    username: ${SPRING_DATASOURCE_USERNAME:omnimove}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   sql:
     init:
       mode: never
@@ -33,8 +33,7 @@ spring:
         port: 6380
   h2:
     console:
-      enabled: true
-      path: /h2-console
+      enabled: false
 
   # ── Mail (Gmail SMTP) ──────────────────────────────────────
   # Setup: myaccount.google.com/apppasswords → genera App Password de 16 letras
@@ -45,7 +44,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: ${MAIL_USERNAME:omnimove.noreply.demo@gmail.com}
-    password: ${MAIL_PASSWORD:wkruqaoocekntwub}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -70,14 +69,14 @@ cassitrack:
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:
   api:
-    key: ${ANTHROPIC_API_KEY:${ANTHROPIC_API_KEY}
+    key: ${ANTHROPIC_API_KEY:}
     url: https://api.anthropic.com/v1/messages
     model: claude-sonnet-4-20250514    # claude-haiku-4-5-20251001
 
 # ── Weather Service ───────────────────────────────────────────
 weather:
   api:
-    key: ${WEATHER_API_KEY:a50cdb6508e8300b5af885e88e9dcb3a}
+    key: ${WEATHER_API_KEY:}
     url: https://api.openweathermap.org/data/2.5/weather
     city: Cassino
     country: IT
@@ -101,21 +100,22 @@ springdoc:
 # ── Logging ───────────────────────────────────────────────────
 logging:
   level:
-    it.unicas.omnimove: DEBUG
+    it.unicas.omnimove: INFO
+    SECURITY_AUDIT: INFO
 
 # ── H2 Embedded Database (for user management) ────────────────
 # No Docker needed — H2 is embedded in the JAR
 
 # ── JWT ───────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:omnimove-jwt-secret-change-in-production-must-be-long}
+  secret: ${JWT_SECRET}
   expiration-ms: 3600000    # 1 hour
 
 # ── InfluxDB Omnimove ─────────────────────────────────────────────
 influx:
   url: ${INFLUX_URL:http://localhost:8087}
   # Paste here your InfluxDB generated token:
-  token: ${INFLUX_TOKEN:0Y7IMYtOnGal2wJKgBZ51VwOOOoxQt3ZFilCKgda79uyP017i5HXXrU82voN4Tg9K0cKIO4XoZdJRx61VFB8VQ==}
+  token: ${INFLUX_TOKEN}
   org: omnimove_org
   bucket: omnimove_bucket
 
@@ -130,6 +130,8 @@ google:
 
 # ── OMNIMOVE App Config ───────────────────────────────────────
 omnimove:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:3000}
   mail:
     from: "OMNIMOVE <${MAIL_USERNAME:omnimove.noreply@gmail.com}>"
     base-url: ${APP_BASE_URL:http://localhost:8081}

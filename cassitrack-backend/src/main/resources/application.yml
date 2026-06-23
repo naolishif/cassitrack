@@ -13,17 +13,16 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/cassitrack}
     username: ${SPRING_DATASOURCE_USERNAME:cassitrack}
-    password: ${SPRING_DATASOURCE_PASSWORD:cassitrack_dev}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
 
   # ── Flyway (DB schema migrations) ────────────────────────────
   flyway:
@@ -36,7 +35,7 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
-      password: ${SPRING_REDIS_PASSWORD:cassitrack_dev}
+      password: ${SPRING_REDIS_PASSWORD}
 
   # ── WebSocket ─────────────────────────────────────────────────
   websocket:
@@ -61,13 +60,15 @@ mqtt:
   broker:
     url: ${MQTT_BROKER_URL:tcp://localhost:1883}
     client-id: cassitrack-backend
+    username: ${MQTT_USERNAME:}
+    password: ${MQTT_PASSWORD:}
   topics:
     position: cassitrack/+/position    # + is a wildcard matching any vehicle_id
     ble: cassitrack/+/ble
 
 # ── JWT ───────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:cassitrack-jwt-secret-change-in-production-must-be-long}
+  secret: ${JWT_SECRET}
   expiration-ms: 3600000    # 1 hour
 
 # ── SSE API token    ──────────────────────────────────────────────
@@ -89,12 +90,13 @@ springdoc:
 # ── Logging ───────────────────────────────────────────────────────
 logging:
   level:
-    it.unicas.cassitrack: DEBUG
+    it.unicas.cassitrack: INFO
+    SECURITY_AUDIT: INFO
     org.springframework.integration.mqtt: INFO
     org.hibernate.SQL: WARN
     org:
       springframework:
-        security: DEBUG
+        security: WARN
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:
@@ -110,7 +112,7 @@ anthropic:
 # If not configured, defaults to CLEAR weather (safe fallback)
 weather:
   api:
-    key: ${WEATHER_API_KEY:a50cdb6508e8300b5af885e88e9dcb3a}
+    key: ${WEATHER_API_KEY:}
     url: https://api.openweathermap.org/data/2.5/weather
     city: Cassino
     country: IT

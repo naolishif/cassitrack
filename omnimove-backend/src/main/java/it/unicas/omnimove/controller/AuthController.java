@@ -5,7 +5,7 @@ import it.unicas.omnimove.dto.*;
 import it.unicas.omnimove.model.User;
 import it.unicas.omnimove.repository.UserRepository;
 import it.unicas.omnimove.security.JwtUtil;
-import it.unicas.omnimove.service.LoginAttemptService;
+import it.unicas.omnimove.service.SecurityAuditService;
 import it.unicas.omnimove.service.TokenBlacklistService;
 import it.unicas.omnimove.service.EmailService;
 import it.unicas.omnimove.service.RateLimiterService;
@@ -28,7 +28,7 @@ import java.util.UUID;
 @Tag(name = "Authentication", description = "Register, login, email verification, password reset")
 public class AuthController {
 
-    private static final int MAX_FAILED_ATTEMPTS = 2;
+    private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int VERIFY_EXPIRY_HOURS = 24;
     private static final int RESET_EXPIRY_HOURS  = 1;
 
@@ -37,8 +37,8 @@ public class AuthController {
     private final JwtUtil           jwtUtil;
     private final EmailService      emailService;
     private final RateLimiterService rateLimiter;
-    private final LoginAttemptService loginAttemptService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final SecurityAuditService securityAuditService;
 
     // ── REGISTER ────────────────────────────────────────────────────
 
@@ -58,17 +58,13 @@ public class AuthController {
             return ResponseEntity.badRequest()
                     .body(AuthResponse.builder().message("Passwords do not match").build());
 
-        if (!isPasswordValid(req.getPassword()))
+        if (!isPasswordValid(req.getPassword())) {
+            securityAuditService.weakPasswordRejected(req.getEmail(), getClientIp(request));
             return ResponseEntity.badRequest()
                     .body(AuthResponse.builder()
-                            .message("Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&_#).")
+                            .message("Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.")
                             .build());
-        //if (!isPasswordStrong(req.getPassword()))
-          //  return ResponseEntity.badRequest()
-            //        .body(AuthResponse.builder()
-              //              .message("Password must be at least 8 characters with uppercase, lowercase, a number, and a special character.")
-                //            .build());
-
+        }
         if (userRepo.existsByEmail(req.getEmail()))
             return ResponseEntity.badRequest()
                     .body(AuthResponse.builder().message("Email already registered").build());
@@ -89,6 +85,7 @@ public class AuthController {
 
         emailService.sendVerificationEmail(req.getEmail(), verificationToken);
         log.info("New user registered (unverified): {}", req.getEmail());
+        securityAuditService.registration(user.getEmail(), getClientIp(request));
 
         return ResponseEntity.ok(AuthResponse.builder()
                 .email(user.getEmail())
@@ -102,14 +99,26 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Login with email and password")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req) {
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req,
+                                              HttpServletRequest httpReq) {
 
         var userOpt = userRepo.findByEmail(req.getEmail());
-        if (userOpt.isEmpty())
+        if (userOpt.isEmpty()) {
+            securityAuditService.loginFailure(req.getEmail(), getClientIp(httpReq));
             return ResponseEntity.status(401)
                     .body(AuthResponse.builder().message("Invalid email or password").build());
+        }
 
         User user = userOpt.get();
+
+        if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+            securityAuditService.loginFailure(req.getEmail(), getClientIp(httpReq));
+            return ResponseEntity.status(429)
+                    .body(AuthResponse.builder()
+                            .message("Account locked due to too many failed login attempts. Please reset your password to unlock it.")
+                            .suggestPasswordReset(Boolean.TRUE)
+                            .build());
+        }
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
@@ -117,6 +126,8 @@ public class AuthController {
 
             boolean suggestReset = user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS;
             log.warn("Failed login attempt #{} for {}", user.getFailedLoginAttempts(), req.getEmail());
+            securityAuditService.loginFailure(req.getEmail(), getClientIp(httpReq));
+            if (suggestReset) securityAuditService.accountLocked(req.getEmail());
 
             return ResponseEntity.status(401)
                     .body(AuthResponse.builder()
@@ -136,6 +147,7 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(user.getEmail());
         log.info("User logged in: {}", req.getEmail());
+        securityAuditService.loginSuccess(req.getEmail(), getClientIp(httpReq));
 
         return ResponseEntity.ok(AuthResponse.builder()
                 .token(token)
@@ -172,6 +184,7 @@ public class AuthController {
         userRepo.save(user);
 
         log.info("Email verified for: {}", user.getEmail());
+        securityAuditService.emailVerified(user.getEmail());
         response.sendRedirect("/omnimove-login.html?verified=true");
     }
 
@@ -224,6 +237,7 @@ public class AuthController {
             userRepo.save(user);
             emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
             log.info("Password reset email sent to: {}", req.getEmail());
+            securityAuditService.passwordResetRequested(user.getEmail());
         }
 
         // Always return the same message to prevent email enumeration
@@ -270,6 +284,7 @@ public class AuthController {
         userRepo.save(user);
 
         log.info("Password reset successful for: {}", user.getEmail());
+        securityAuditService.passwordReset(user.getEmail());
 
         return ResponseEntity.ok(AuthResponse.builder()
                 .message("Password updated successfully! You can now log in.")
@@ -277,17 +292,12 @@ public class AuthController {
     }
 
     // ── RESET PAGE (email link lands here) ──────────────────────────
-    /**
-     * Returns a complete, self-contained HTML page with the reset form.
-     * The token is embedded directly in the page — no redirects, no URL params,
-     * no sessionStorage. The browser renders this page as-is.
-     */
     @GetMapping("/reset-page")
     public void resetPage(@RequestParam(required = false) String token,
                           HttpServletResponse response) throws IOException {
 
-        response.setContentType("text/html;charset=UTF-8");
-        String safeToken = (token != null) ? token.replaceAll("[^a-zA-Z0-9\\-]", "") : "";
+        // Allow only characters present in JWT tokens (base64url + dots)
+        String safeToken = (token != null) ? token.replaceAll("[^a-zA-Z0-9._\\-]", "") : "";
 
         if (safeToken.isBlank()) {
             response.sendRedirect("/omnimove-login.html");
@@ -301,11 +311,11 @@ public class AuthController {
         );
 
         if (!valid) {
-            response.getWriter().write(resetPageHtml(safeToken, true));
+            response.sendRedirect("/reset-password.html?expired=true");
             return;
         }
 
-        response.getWriter().write(resetPageHtml(safeToken, false));
+        response.sendRedirect("/reset-password.html?pr=" + safeToken);
     }
 
     @PostMapping("/logout")
@@ -316,110 +326,15 @@ public class AuthController {
             String token = authHeader.substring(7);
             long remaining = jwtUtil.getRemainingValidityMs(token);
             if (remaining > 0) {
+                String email = jwtUtil.extractEmail(token);
                 tokenBlacklistService.blacklist(token, remaining);
                 log.info("Token revoked on logout");
+                securityAuditService.logout(email);
             }
         }
         return ResponseEntity.noContent().build();
     }
 
-    private boolean isPasswordStrong(String pw) {
-        return pw != null
-                && pw.length() >= 8
-                && pw.chars().anyMatch(Character::isUpperCase)
-                && pw.chars().anyMatch(Character::isLowerCase)
-                && pw.chars().anyMatch(Character::isDigit)
-                && pw.chars().anyMatch(c -> "!@#$%^&*(),.?\":{}|<>_+-*/".indexOf(c) >= 0);
-    }
-
-    private String resetPageHtml(String token, boolean expired) {
-        String msg = expired
-            ? "<div class='msg err'>This reset link has expired or is invalid. "
-              + "<a href='/omnimove-login.html' style='color:#f87171'>Back to login</a></div>"
-            : "";
-        String form = expired ? "" :
-            "<form onsubmit='doReset(event)'>" +
-            "<div class='field'><label>New Password</label>" +
-            "<input id='p1' type='password' placeholder='Min 8 characters'/>" +
-            "<span class='ferr' id='e1'></span></div>" +
-            "<div class='field'><label>Confirm Password</label>" +
-            "<input id='p2' type='password' placeholder='Repeat password'/>" +
-            "<span class='ferr' id='e2'></span></div>" +
-            "<button type='submit' id='btn'>Set New Password</button>" +
-            "</form>";
-
-        return "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'/>" +
-            "<meta name='viewport' content='width=device-width,initial-scale=1'/>" +
-            "<title>OMNIMOVE — Reset Password</title>" +
-            "<link href='https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap' rel='stylesheet'/>" +
-            "<style>" +
-            "*{box-sizing:border-box;margin:0;padding:0}" +
-            ":root{--bg:#07090F;--panel:#0F1623;--border:#1A2744;--accent:#3B82F6;--red:#EF4444;--green:#22C55E;--text:#E2E8F0;--dim:#4B5563;--mono:'DM Mono',monospace;--display:'Syne',sans-serif}" +
-            "body{background:var(--bg);color:var(--text);font-family:var(--display);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}" +
-            ".box{width:100%;max-width:400px}" +
-            ".logo{font-size:32px;font-weight:800;text-align:center;margin-bottom:6px}" +
-            ".logo span{color:var(--accent)}" +
-            ".tag{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center;margin-bottom:32px}" +
-            ".card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:16px}" +
-            ".title{font-size:16px;font-weight:800;margin-bottom:4px}" +
-            ".sub{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.5}" +
-            ".field{display:flex;flex-direction:column;gap:4px}" +
-            "label{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px}" +
-            "input{padding:11px 14px;background:#141E2E;color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:13px;outline:none;width:100%}" +
-            "input:focus{border-color:var(--accent)}" +
-            "input.err{border-color:var(--red)}" +
-            ".ferr{font-family:var(--mono);font-size:10px;color:var(--red);display:none}" +
-            ".ferr.show{display:block}" +
-            "button{padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;width:100%}" +
-            "button:disabled{opacity:.5;cursor:not-allowed}" +
-            ".msg{font-family:var(--mono);font-size:11px;text-align:center;padding:10px 12px;border-radius:6px;line-height:1.5}" +
-            ".msg.ok{background:rgba(34,197,94,.1);color:var(--green)}" +
-            ".msg.err{background:rgba(239,68,68,.1);color:var(--red)}" +
-            "#msgBox:empty{display:none}" +
-            "form{display:flex;flex-direction:column;gap:12px}" +
-            "</style></head><body>" +
-            "<div class='box'>" +
-            "<div class='logo'>OMNI<span>MOVE</span></div>" +
-            "<div class='tag'>Smart mobility for Cassino — UNICAS 2025/2026</div>" +
-            "<div class='card'>" +
-            "<div><div class='title'>Reset your password</div>" +
-            "<div class='sub'>Choose a new password for your account.</div></div>" +
-            "<div id='msgBox'></div>" +
-            msg + form +
-            "</div></div>" +
-            "<script>" +
-            "const TOKEN='" + token + "';" +
-            "function valid(p){return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&_#]).{8,}$/.test(p)}" +
-            "function showErr(id,msg){const e=document.getElementById(id);e.textContent=msg;e.className='ferr show';}" +
-            "function clearErr(id){const e=document.getElementById(id);e.textContent='';e.className='ferr';}" +
-            "async function doReset(e){" +
-            "e.preventDefault();" +
-            "const p1=document.getElementById('p1').value;" +
-            "const p2=document.getElementById('p2').value;" +
-            "clearErr('e1');clearErr('e2');" +
-            "let ok=true;" +
-            "if(!p1){showErr('e1','⚠ Required');ok=false;}" +
-            "else if(!valid(p1)){showErr('e1','⚠ Min 8 chars: uppercase, lowercase, number & symbol (@$!%*?&_#)');ok=false;}" +
-            "if(!p2){showErr('e2','⚠ Required');ok=false;}" +
-            "else if(p1!==p2){showErr('e2','⚠ Passwords do not match');ok=false;}" +
-            "if(!ok)return;" +
-            "const btn=document.getElementById('btn');" +
-            "btn.disabled=true;btn.textContent='Saving…';" +
-            "try{" +
-            "const r=await fetch('/api/v1/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:TOKEN,newPassword:p1,confirmPassword:p2})});" +
-            "const d=await r.json();" +
-            "const box=document.getElementById('msgBox');" +
-            "if(r.ok){box.innerHTML=\"<div class='msg ok'>&#x2713; Password updated! <a href='/omnimove-login.html' style='color:#22C55E'>Sign in</a></div>\";document.querySelector('form').style.display='none';}" +
-            "else{box.innerHTML=\"<div class='msg err'>\"+(d.message||'Reset failed')+\"</div>\";btn.disabled=false;btn.textContent='Set New Password';}" +
-            "}catch(ex){console.error(ex);document.getElementById('msgBox').innerHTML=\"<div class='msg err'>Cannot reach server.</div>\";btn.disabled=false;btn.textContent='Set New Password';}" +
-            "}" +
-            "document.getElementById('p2').addEventListener('input',function(){" +
-            "const p1=document.getElementById('p1').value;" +
-            "if(this.value&&p1&&this.value!==p1)showErr('e2','⚠ Passwords do not match');" +
-            "else clearErr('e2');" +
-            "});" +
-            "</script></body></html>";
-    }
 
     // ── CURRENT USER ─────────────────────────────────────────────────
 
@@ -451,6 +366,7 @@ public class AuthController {
                 .map(u -> {
                     userRepo.delete(u);
                     log.info("Account deleted: {}", u.getEmail());
+                    securityAuditService.accountDeleted(u.getEmail());
                     return ResponseEntity.ok(AuthResponse.builder()
                             .message("Account deleted successfully.").build());
                 })
@@ -467,7 +383,7 @@ public class AuthController {
      */
     private boolean isPasswordValid(String password) {
         if (password == null || password.length() < 8) return false;
-        return password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&_#]).{8,}$");
+        return password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).{8,}$");
     }
 
     private String getClientIp(HttpServletRequest request) {

@@ -170,6 +170,41 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!-- ── OWASP Dependency Vulnerability Scanning ──────────────
+                 Runs on: mvn verify  (or  mvn dependency-check:check)
+                 Report:  target/dependency-check-report.html
+                 Fails build if any dependency has CVSS score >= 7 (high/critical).
+                 First run downloads the NVD database (~200 MB) — subsequent runs
+                 are incremental. Get a free NVD API key (10x faster downloads) at:
+                   https://nvd.nist.gov/developers/request-an-api-key
+                 Then pass it: mvn verify -DnvdApiKey=YOUR_KEY
+                 Add false-positive suppression entries to owasp-suppressions.xml.
+            ──────────────────────────────────────────────────────────── -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>10.0.4</version>
+                <configuration>
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <formats>
+                        <format>HTML</format>
+                        <format>JSON</format>
+                    </formats>
+                    <suppressionFile>${project.basedir}/owasp-suppressions.xml</suppressionFile>
+                    <!-- NVD API key — pass via: -DnvdApiKey=YOUR_KEY -->
+                    <!-- Retry on transient NVD API timeouts (HTTP 524 etc.) -->
+                    <nvdMaxRetryCount>5</nvdMaxRetryCount>
+                    <nvdDelayBetweenRequests>4000</nvdDelayBetweenRequests>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

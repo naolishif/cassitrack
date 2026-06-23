@@ -1,6 +1,7 @@
 package it.unicas.omnimove.config;
 import it.unicas.omnimove.security.JwtFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -19,6 +20,9 @@ import jakarta.servlet.DispatcherType;
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
+    @Value("${omnimove.cors.allowed-origins}")
+    private List<String> corsAllowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(c -> c.disable())
@@ -31,7 +35,7 @@ public class SecurityConfig {
 
                         // ── 1. Public — login page, static assets, auth endpoints ──────
                         .requestMatchers(
-                                "/", "/error", "/omnimove-login.html",
+                                "/", "/error", "/omnimove-login.html", "/reset-password.html",
                                 "/favicon.ico", "/*.css", "/*.js"
                         ).permitAll()
                         .requestMatchers(
@@ -39,14 +43,11 @@ public class SecurityConfig {
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/verify"
                         ).permitAll()
-                        .requestMatchers( // Dev tools
-                                "/h2-console/**",
+                        .requestMatchers( // API docs — require authentication
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
-                                "/api/swagger-ui.html",
-                                "/test-siri-pull",
-                                "/api/test/**"
-                        ).permitAll()
+                                "/api/swagger-ui.html"
+                        ).authenticated()
 
                         // ── 2. Admin only ────────────────────────────────────────────────
                         .requestMatchers(
@@ -89,12 +90,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:8081",
-                "http://localhost:3000"
-        ));
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedOrigins(corsAllowedOrigins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         config.setAllowCredentials(false);  // JWT is sent in Authorization header, not cookies
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

@@ -33,6 +33,12 @@ public class MqttConfig {
     @Value("${mqtt.broker.client-id}")
     private String clientId;
 
+    @Value("${mqtt.broker.username:}")
+    private String mqttUsername;
+
+    @Value("${mqtt.broker.password:}")
+    private String mqttPassword;
+
     @Value("${mqtt.topics.position}")
     private String positionTopic;
 
@@ -51,7 +57,11 @@ public class MqttConfig {
         options.setConnectionTimeout(30);
         options.setKeepAliveInterval(60);
         options.setCleanSession(true);
-        options.setAutomaticReconnect(true);  // reconnect if broker restarts
+        options.setAutomaticReconnect(true);
+        if (mqttUsername != null && !mqttUsername.isBlank()) {
+            options.setUserName(mqttUsername);
+            options.setPassword(mqttPassword.toCharArray());
+        }
         factory.setConnectionOptions(options);
         return factory;
     }

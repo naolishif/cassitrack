@@ -1,0 +1,22 @@
+# Mosquitto ACL — Topic-level access control
+# Referenced by mosquitto.conf when authentication is enabled.
+# Enforce least-privilege: each client can only touch the topics it needs.
+#
+# Syntax:
+#   user <username>
+#   topic read  <pattern>    → subscribe only
+#   topic write <pattern>    → publish only
+#   topic readwrite <pattern>
+
+# ── CassiTrack backend (Spring Boot) ──────────────────────────────────────────
+# Subscribes to all bus positions; never publishes on the bus topics.
+user cassitrack-backend
+topic read cassitrack/#
+
+# ── Bus publisher (simulator OR real ESP32) ────────────────────────────────────
+# Can only publish to its own vehicle topic — cannot subscribe or spoof other buses.
+# Use one shared publisher user for the simulator.
+# For real ESP32 deployments, consider one user per physical bus for stronger isolation.
+user cassitrack-bus
+topic write cassitrack/+/position
+topic write cassitrack/+/ble

@@ -187,7 +187,7 @@ let _lastRegisteredEmail = '';
 let _emailSentMode = 'verify'; // 'verify' | 'reset' — controls what the resend button does
 
 function isPasswordValid(p) {
-    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_#]).{8,}$/.test(p);
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/.test(p);
 }
 
 // ── Field-level validation helpers ──────────────────────────

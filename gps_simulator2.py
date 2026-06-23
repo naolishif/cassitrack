@@ -18,6 +18,7 @@ Dependencies:
 
 import json
 import math
+import os
 import random
 import time
 import argparse
@@ -27,13 +28,13 @@ import paho.mqtt.client as mqtt
 import psycopg2
 import psycopg2.extras
 
-# ── Database connection (matches docker-compose.yml) ─────────────
+# ── Database connection — reads from env vars, falls back to local dev defaults ─
 DB_CONFIG = {
-    "host":     "localhost",
-    "port":     5433,           # mapped port in docker-compose
-    "dbname":   "cassitrack",
-    "user":     "cassitrack",
-    "password": "cassitrack_dev",
+    "host":     os.environ.get("SPRING_DATASOURCE_HOST", "localhost"),
+    "port":     int(os.environ.get("SPRING_DATASOURCE_PORT", "5433")),
+    "dbname":   os.environ.get("SPRING_DATASOURCE_DB",   "cassitrack"),
+    "user":     os.environ.get("SPRING_DATASOURCE_USERNAME", "cassitrack"),
+    "password": os.environ.get("SPRING_DATASOURCE_PASSWORD", "cassitrack_dev"),
 }
 
 # ── Simulation constants ──────────────────────────────────────────
@@ -392,12 +393,13 @@ def on_connect(client, userdata, flags, rc):
 
 def main():
     parser = argparse.ArgumentParser(description="CassiTrack GPS Simulator")
-    parser.add_argument("--broker",   default="localhost", help="MQTT broker host")
-    parser.add_argument("--port",     type=int, default=1883, help="MQTT broker port")
-    parser.add_argument("--interval", type=int, default=10,
-                        help="Publish interval in seconds (default: 10)")
-    parser.add_argument("--db-host",  default=DB_CONFIG["host"])
-    parser.add_argument("--db-port",  type=int, default=DB_CONFIG["port"])
+    parser.add_argument("--broker",         default="localhost",                        help="MQTT broker host")
+    parser.add_argument("--port",           type=int, default=1883,                    help="MQTT broker port")
+    parser.add_argument("--interval",       type=int, default=10,                      help="Publish interval in seconds (default: 10)")
+    parser.add_argument("--db-host",        default=DB_CONFIG["host"])
+    parser.add_argument("--db-port",        type=int, default=DB_CONFIG["port"])
+    parser.add_argument("--mqtt-username",  default=os.environ.get("MQTT_USERNAME", ""), help="MQTT broker username (set MQTT_USERNAME env var or leave blank for no auth)")
+    parser.add_argument("--mqtt-password",  default=os.environ.get("MQTT_PASSWORD", ""), help="MQTT broker password (set MQTT_PASSWORD env var or leave blank for no auth)")
     args = parser.parse_args()
 
     # ── Connect to PostgreSQL ─────────────────────────────────────
@@ -439,6 +441,8 @@ def main():
     # ── Connect to MQTT ───────────────────────────────────────────
     client = mqtt.Client(userdata={"broker": args.broker, "port": args.port})
     client.on_connect = on_connect
+    if args.mqtt_username:
+        client.username_pw_set(args.mqtt_username, args.mqtt_password)
     try:
         client.connect(args.broker, args.port, keepalive=60)
     except Exception as e:

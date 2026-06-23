@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+    <!--
+        Add suppressions here for false positives reported by OWASP Dependency Check.
+
+        To find the correct values after running `mvn verify`:
+          1. Open target/dependency-check-report.html
+          2. Click on the flagged dependency
+          3. Copy the CVE ID and the file path shown in the report
+
+        Example suppression (remove the comment markers to activate):
+
+        <suppress>
+            <notes>False positive — CVE applies to the CLI tool, not the Java library.</notes>
+            <gav regex="true">^org\.example:some-library:.*$</gav>
+            <cve>CVE-2023-12345</cve>
+        </suppress>
+    -->
+
+</suppressions>
