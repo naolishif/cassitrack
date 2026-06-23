@@ -29,6 +29,7 @@ services:
       - DOCKER_INFLUXDB_INIT_PASSWORD=password_influx_omnimove
       - DOCKER_INFLUXDB_INIT_ORG=omnimove_org
       - DOCKER_INFLUXDB_INIT_BUCKET=omnimove_bucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=omnimove-dev-token-change-in-production
     volumes:
       - omnimove_influxdb_data:/var/lib/influxdb2
 

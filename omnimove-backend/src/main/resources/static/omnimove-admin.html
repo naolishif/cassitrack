@@ -4,28 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OMNIMOVE — Administration Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         :root {
-            --bg-deep:       #0a0f14;
-            --bg-panel:      #0f1820;
-            --bg-card:       #131f2b;
-            --bg-hover:      #1a2a3a;
-            --border:        #1e3348;
-            --border-bright: #2a4a6a;
-            --accent-green:  #00e5a0;
+            --bg-deep:       #0c1117;
+            --bg-panel:      #111820;
+            --bg-card:       #161e28;
+            --bg-hover:      #1c2636;
+            --border:        #1e2d3d;
+            --border-bright: #2a3f55;
+            --accent-green:  #34d399;
             --second-green:  #10b981;
-            --accent-cyan:   #00cfff;
-            --accent-amber:  #f5a623;
-            --accent-red:    #ff4560;
-            --accent-blue:   #3a8eff;
-            --text-primary:  #e8f4ff;
-            --text-secondary:#7a9ab8;
-            --text-dim:      #3d5a74;
-            --font-main:     'Exo 2', sans-serif;
-            --font-title:    'Rajdhani', sans-serif;
-            --font-mono:     'Share Tech Mono', monospace;
+            --accent-cyan:   #38bdf8;
+            --accent-amber:  #fbbf24;
+            --accent-red:    #f87171;
+            --accent-blue:   #60a5fa;
+            --text-primary:  #e2e8f0;
+            --text-secondary:#7a90a8;
+            --text-dim:      #3d5268;
+            --font-main:     'Inter', system-ui, sans-serif;
+            --font-title:    'Inter', system-ui, sans-serif;
+            --font-mono:     'JetBrains Mono', 'Consolas', monospace;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,11 +92,10 @@
             flex-shrink: 0;
         }
         .tab {
-            font-family: var(--font-title);
+            font-family: var(--font-main);
             font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            font-weight: 500;
+            letter-spacing: 0;
             padding: 12px 20px;
             cursor: pointer;
             color: var(--text-secondary);
@@ -137,23 +136,23 @@
             padding: 18px 20px;
         }
         .card-title {
-            font-family: var(--font-title);
+            font-family: var(--font-main);
             font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 2.5px;
-            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0;
             color: var(--text-secondary);
             margin-bottom: 14px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .card-title::before {
             content: '';
             display: inline-block;
-            width: 3px; height: 14px;
+            width: 3px; height: 12px;
             background: var(--accent-cyan);
             border-radius: 2px;
+            opacity: 0.6;
         }
 
         /* ── GRID LAYOUTS ── */
@@ -172,15 +171,14 @@
             gap: 4px;
         }
         .stat-pill .label {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            letter-spacing: 1.5px;
+            font-family: var(--font-main);
+            font-size: 11px;
+            letter-spacing: 0;
             color: var(--text-dim);
-            text-transform: uppercase;
         }
         .stat-pill .value {
-            font-family: var(--font-title);
-            font-size: 28px;
+            font-family: var(--font-main);
+            font-size: 26px;
             font-weight: 700;
             color: var(--text-primary);
             line-height: 1;
@@ -226,6 +224,19 @@
             border: 1px solid var(--border-bright);
         }
         .btn-ghost:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+        .btn-logout {
+            font-family: var(--font-main);
+            font-size: 13px;
+            font-weight: 400;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 2px;
+            border-radius: 3px;
+            transition: color .15s;
+        }
+        .btn-logout:hover { color: var(--accent-red); }
         .btn-success {
             background: var(--accent-green);
             color: #000;
@@ -269,14 +280,13 @@
             border-bottom: 1px solid var(--border-bright);
         }
         .user-table th {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            letter-spacing: 1.5px;
+            font-family: var(--font-main);
+            font-size: 11px;
+            letter-spacing: 0;
             color: var(--text-dim);
-            text-transform: uppercase;
             padding: 8px 10px;
             text-align: left;
-            font-weight: 400;
+            font-weight: 500;
         }
         .user-table td {
             font-size: 13px;
@@ -462,40 +472,7 @@
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.err { border-color: var(--accent-red); color: var(--accent-red); }
 
-        /* ── PREFERENCE BARS ── */
-        .pref-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .pref-label {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            color: var(--text-secondary);
-            width: 58px;
-            flex-shrink: 0;
-        }
-        .pref-bar-track {
-            flex: 1;
-            height: 8px;
-            background: var(--border);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .pref-bar-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width .6s ease;
-        }
-        .pref-pct {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-primary);
-            width: 34px;
-            text-align: right;
-            flex-shrink: 0;
-        }
+        /* pref-* classes removed — replaced by day-of-week chart */
 
         /* ── GDPR BADGE ── */
         .gdpr-badge {
@@ -513,20 +490,42 @@
         }
         .gdpr-badge::before { content:'🔒'; font-size:9px; }
 
-        /* ── GREEN INDEX TREND ── */
-        .green-index-value {
-            font-family: var(--font-title);
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--accent-green);
-            line-height: 1;
+        /* green-index-value/sub removed — value now inline in card header */
+
+        /* ── TIME RANGE FILTER ── */
+        .range-bar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px;
+            width: fit-content;
         }
-        .green-index-sub {
-            font-family: var(--font-mono);
-            font-size: 10px;
+        /* Large bar (top of pane) */
+        .range-bar.lg .range-btn { padding: 5px 14px; font-size: 12px; }
+        /* Small bar (inside card header) */
+        .range-bar.sm .range-btn { padding: 3px 9px; font-size: 11px; }
+        .range-btn {
+            font-family: var(--font-main);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0;
+            padding: 5px 12px;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
             color: var(--text-secondary);
-            margin-top: 4px;
-            letter-spacing: .8px;
+            cursor: pointer;
+            transition: all .15s;
+            user-select: none;
+        }
+        .range-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+        .range-btn.active {
+            background: var(--accent-cyan);
+            color: #0c1117;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -541,7 +540,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:14px">
         <div class="topbar-right" id="clock">17:43:10 | May 16, 2026</div>
-        <button onclick="logout()" style="font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;background:transparent;border:1px solid var(--accent-red);color:var(--accent-red);padding:5px 12px;border-radius:3px;cursor:pointer;text-transform:uppercase;" onmouseover="this.style.background='rgba(255,69,96,.12)'" onmouseout="this.style.background='transparent'">⏻ Logout</button>
+        <button onclick="logout()" class="btn-logout">Sign out</button>
     </div>
 </div>
 
@@ -557,27 +556,34 @@
     <!-- ══════════ STATS PANE — FR-OM-009 ══════════ -->
     <div class="pane active" id="pane-stats">
 
-        <!-- FR-OM-009 (a) KPI: journey searches & selections -->
-        <div class="grid-4">
+        <!-- Time range filter -->
+        <div style="display:flex;align-items:center;justify-content:space-between">
+            <div class="range-bar lg" id="rangeBar">
+                <button class="range-btn" data-range="1W">1W</button>
+                <button class="range-btn active" data-range="1M">1M</button>
+                <button class="range-btn" data-range="3M">3M</button>
+                <button class="range-btn" data-range="6M">6M</button>
+                <button class="range-btn" data-range="1Y">1Y</button>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim)" id="rangeLabel">Last 30 days</span>
+        </div>
+
+        <!-- FR-OM-009 (a) KPI pills -->
+        <div class="grid-3">
             <div class="stat-pill">
-                <div class="label">Journey Searches (30d)</div>
-                <div class="value">12 847</div>
-                <div class="sub up">▲ +14.2% vs prev 30d</div>
+                <div class="label">Journey Searches</div>
+                <div class="value" id="kpiSearches">—</div>
+                <div class="sub" id="kpiSearchesSub">loading…</div>
             </div>
             <div class="stat-pill">
-                <div class="label">Journeys Selected (30d)</div>
-                <div class="value">9 304</div>
-                <div class="sub up">▲ +11.8% vs prev 30d</div>
+                <div class="label">Journeys Selected</div>
+                <div class="value" id="kpiSelections">—</div>
+                <div class="sub" id="kpiSelectionsSub">loading…</div>
             </div>
             <div class="stat-pill">
-                <div class="label">Selection Rate</div>
-                <div class="value">72.4<span style="font-size:16px;color:var(--text-secondary)">%</span></div>
-                <div class="sub up">▲ +2.1 pp vs prev 30d</div>
-            </div>
-            <div class="stat-pill">
-                <div class="label">Avg Green Index (30d)</div>
-                <div class="value" style="color:var(--accent-green)">71.4</div>
-                <div class="sub up">▲ +3.1 vs prev 30d</div>
+                <div class="label">CO₂ Saved (vs car)</div>
+                <div class="value" id="kpiCo2" style="color:var(--accent-green)">—</div>
+                <div class="sub" id="kpiCo2Sub">loading…</div>
             </div>
         </div>
 
@@ -602,28 +608,39 @@
                 </div>
             </div>
             <div class="card">
-                <div class="card-title">Avg Green Index — 7-day Moving Average</div>
-                <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:10px">
-                    <div>
-                        <div class="green-index-value">71.4</div>
-                        <div class="green-index-sub">CURRENT AVG / 100</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                    <div class="card-title" style="margin-bottom:0">
+                        <span>Green Index trend</span>
+                        <span id="giAvgBadge" style="font-size:18px;font-weight:700;color:var(--accent-green);margin-left:6px">—</span>
                     </div>
-                    <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)">
-                        <div style="color:var(--accent-green)">▲ +3.1</div>
-                        <div>vs prev 30d</div>
+                    <div class="range-bar sm" id="giRangeBar">
+                        <button class="range-btn" data-range="1W">1W</button>
+                        <button class="range-btn active" data-range="1M">1M</button>
+                        <button class="range-btn" data-range="3M">3M</button>
+                        <button class="range-btn" data-range="6M">6M</button>
+                        <button class="range-btn" data-range="1Y">1Y</button>
                     </div>
                 </div>
-                <div class="chart-wrap" style="height:140px">
+                <div class="chart-wrap" style="height:148px">
                     <canvas id="chartGreenIndex"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- FR-OM-009 STACKED BAR: Mode by Time Slot — USER STORY CENTRAL -->
+        <!-- FR-OM-009 STACKED BAR: Mode by Time Slot -->
         <div class="card">
-            <div class="card-title" style="justify-content:space-between">
-                <span>Transport Mode by Time Slot — 24h</span>
-                <span class="gdpr-badge" style="font-size:8px;padding:2px 6px">ANON</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <div class="card-title" style="margin-bottom:0">Transport mode by hour of day</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span class="gdpr-badge" style="font-size:8px;padding:2px 6px">ANON</span>
+                    <div class="range-bar sm" id="hourRangeBar">
+                        <button class="range-btn" data-range="1W">1W</button>
+                        <button class="range-btn active" data-range="1M">1M</button>
+                        <button class="range-btn" data-range="3M">3M</button>
+                        <button class="range-btn" data-range="6M">6M</button>
+                        <button class="range-btn" data-range="1Y">1Y</button>
+                    </div>
+                </div>
             </div>
             <div class="chart-wrap" style="height:220px">
                 <canvas id="chartModeByHour"></canvas>
@@ -633,49 +650,22 @@
         <!-- FR-OM-009 (e) Preference comparison + Top routes -->
         <div class="grid-2">
             <div class="card">
-                <div class="card-title">User Preference Profile Mix</div>
-                <div style="margin-bottom:14px">
-                    <div class="pref-row">
-                        <div class="pref-label">Eco</div>
-                        <div class="pref-bar-track"><div class="pref-bar-fill" style="width:59%;background:var(--accent-green)"></div></div>
-                        <div class="pref-pct text-green">59%</div>
-                    </div>
-                    <div class="pref-row">
-                        <div class="pref-label">Budget</div>
-                        <div class="pref-bar-track"><div class="pref-bar-fill" style="width:24%;background:var(--accent-amber)"></div></div>
-                        <div class="pref-pct text-amber">24%</div>
-                    </div>
-                    <div class="pref-row">
-                        <div class="pref-label">Fast</div>
-                        <div class="pref-bar-track"><div class="pref-bar-fill" style="width:11%;background:var(--accent-cyan)"></div></div>
-                        <div class="pref-pct text-cyan">11%</div>
-                    </div>
-                    <div class="pref-row">
-                        <div class="pref-label">Comfort</div>
-                        <div class="pref-bar-track"><div class="pref-bar-fill" style="width:6%;background:var(--accent-blue)"></div></div>
-                        <div class="pref-pct" style="color:var(--accent-blue)">6%</div>
-                    </div>
-                </div>
-                <div class="sep"></div>
-                <div style="margin-top:10px">
-                    <div class="card-title" style="margin-bottom:8px">Preference Trend (4 weeks)</div>
-                    <div class="chart-wrap" style="height:100px">
-                        <canvas id="chartPrefTrend"></canvas>
-                    </div>
+                <div class="card-title">Trips by day of week</div>
+                <div class="chart-wrap" style="height:220px">
+                    <canvas id="chartDayOfWeek"></canvas>
                 </div>
             </div>
 
             <!-- Top routes used -->
             <div class="card">
-                <div class="card-title">Top Routes Used</div>
+                <div class="card-title">Top routes</div>
                 <table class="user-table" id="topRoutesTable">
                     <thead>
                     <tr>
                         <th>#</th>
                         <th>Route</th>
-                        <th>Uses (30d)</th>
+                        <th>Trips</th>
                         <th>Avg Green Index</th>
-                        <th>Trend</th>
                     </tr>
                     </thead>
                     <tbody id="topRoutesTbody"></tbody>
@@ -807,55 +797,20 @@
 </div>
 
 <!-- DELETE MODAL -->
-
 <div class="modal-overlay" id="deleteModal">
-
-    <div class="modal" style="width:380px;">
-
+    <div class="modal" style="width:360px;">
         <div class="modal-header">
-
-            <h2>Delete User</h2>
-
-            <button class="close-btn" onclick="closeDeleteModal()">
-                ✕
-            </button>
-
+            Remove user
+            <button class="modal-close" onclick="closeDeleteModal()">✕</button>
         </div>
-
-        <div
-                style="
-                color:var(--dim);
-                font-family:var(--mono);
-                font-size:13px;
-                line-height:1.6;
-                margin-bottom:24px;
-            "
-                id="deleteMessage"
-        >
-            Are you sure?
+        <p id="deleteMessage" style="color:var(--text-secondary);font-size:13px;line-height:1.6;margin-bottom:20px">
+            Are you sure you want to remove this user?
+        </p>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmDeleteUser()">Remove</button>
         </div>
-
-        <div style="display:flex;gap:12px;justify-content:flex-end;">
-
-            <button
-                    class="btn btn-secondary"
-                    onclick="closeDeleteModal()"
-            >
-                Cancel
-            </button>
-
-            <button
-                    class="btn btn-primary"
-                    style="background:var(--red);"
-                    onclick="confirmDeleteUser()"
-            >
-                Delete
-            </button>
-
-        </div>
-
     </div>
-
 </div>
 
 <!-- TOAST -->
@@ -992,16 +947,34 @@
         });
         renderTable(f);
     }
-    async function deleteUser(id) {
-        if (!confirm('Eliminare questo utente?')) return;
+    let _pendingDeleteId = null;
+
+    function deleteUser(id) {
+        const user = users.find(u => u.id === id);
+        const name = user ? user.name : `#${id}`;
+        document.getElementById('deleteMessage').textContent =
+            `Remove "${name}"? This action cannot be undone.`;
+        _pendingDeleteId = id;
+        document.getElementById('deleteModal').classList.add('open');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('open');
+        _pendingDeleteId = null;
+    }
+
+    async function confirmDeleteUser() {
+        if (_pendingDeleteId == null) return;
+        const id = _pendingDeleteId;
+        closeDeleteModal();
         try {
             const r = await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
             const data = await r.json();
-            if (!r.ok) { toast(data.message || 'Errore.', true); return; }
-            toast('Utente eliminato.');
+            if (!r.ok) { toast(data.message || 'Error.', true); return; }
+            toast('User removed.');
             loadUsers();
         } catch(e) {
-            toast('Errore di connessione.', true);
+            toast('Connection error.', true);
         }
     }
 
@@ -1054,99 +1027,169 @@
         }
     }
 
-    // ── Charts ──
-    const chartDefaults={
-        plugins:{legend:{labels:{color:'#7a9ab8',font:{family:'Share Tech Mono',size:10},boxWidth:10}}},
+    // ── Shared chart defaults ──
+    const C = { f:'Inter', tc:'#7a90a8', dc:'#3d5268', gc:'#1e2d3d' };
+    const chartDefaults = {
+        plugins:{ legend:{ labels:{ color:C.tc, font:{family:C.f,size:10}, boxWidth:10 } } },
         scales:{
-            x:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:10}},grid:{color:'#1e3348'}},
-            y:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:10}},grid:{color:'#1e3348'}}
+            x:{ ticks:{ color:C.dc, font:{family:C.f,size:10} }, grid:{ color:C.gc } },
+            y:{ ticks:{ color:C.dc, font:{family:C.f,size:10} }, grid:{ color:C.gc } }
         }
     };
 
-    // ── FR-OM-009 (e) Preference trend ──
-    const weeks=['W1','W2','W3','W4'];
-    new Chart(document.getElementById('chartPrefTrend'),{
-        type:'line',
-        data:{
-            labels:weeks,
-            datasets:[
-                {label:'Eco',data:[55,57,58,59],borderColor:'#00e5a0',tension:.4,pointRadius:3,pointBackgroundColor:'#00e5a0',borderWidth:2},
-                {label:'Budget',data:[26,25,25,24],borderColor:'#f5a623',tension:.4,pointRadius:3,pointBackgroundColor:'#f5a623',borderWidth:2},
-                {label:'Fast',data:[12,11,11,11],borderColor:'#00cfff',tension:.4,pointRadius:3,pointBackgroundColor:'#00cfff',borderWidth:2},
-                {label:'Comfort',data:[7,7,6,6],borderColor:'#3a8eff',tension:.4,pointRadius:3,pointBackgroundColor:'#3a8eff',borderWidth:2},
-            ]
-        },
-        options:{
-            responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{labels:{color:'#7a9ab8',font:{family:'Share Tech Mono',size:9},boxWidth:8}}},
-            scales:{
-                x:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:9}},grid:{color:'#1e3348'}},
-                y:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:9}},grid:{color:'#1e3348'},min:0,max:70,
-                    title:{display:true,text:'%',color:'#3d5a74',font:{family:'Share Tech Mono',size:9}}}
-            }
+    // ── Top routes (real data from API) ──────────────────────────────────
+    const greenColor = g => g >= 75 ? 'var(--accent-green)' : g >= 55 ? 'var(--accent-amber)' : 'var(--accent-red)';
+
+    function updateTopRoutes(routes) {
+        const tbody = document.getElementById('topRoutesTbody');
+        if (!routes || routes.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:20px;font-size:12px">No route data yet for this period</td></tr>`;
+            return;
         }
+        tbody.innerHTML = routes.map((r, i) => `
+          <tr>
+            <td class="text-mono" style="color:var(--text-dim)">${String(i+1).padStart(2,'0')}</td>
+            <td style="font-size:13px">${r.origin || '—'} → ${r.dest || '—'}</td>
+            <td class="text-mono">${Number(r.uses).toLocaleString('it-IT')}</td>
+            <td style="font-family:var(--font-mono);font-size:13px;color:${greenColor(r.avgGreenIndex)}">${r.avgGreenIndex ?? '—'}</td>
+          </tr>`).join('');
+    }
+
+    // ── Day of week chart ─────────────────────────────────────────────────
+    let dowChart = null;
+    const DAY_SHORT = { MONDAY:'Mon', TUESDAY:'Tue', WEDNESDAY:'Wed', THURSDAY:'Thu', FRIDAY:'Fri', SATURDAY:'Sat', SUNDAY:'Sun' };
+
+    function updateDayOfWeek(dowData) {
+        if (!dowData) return;
+        const order = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+        const labels = order.map(d => DAY_SHORT[d]);
+        const values = order.map(d => dowData[d] || 0);
+        const colors = order.map((_, i) => i >= 5 ? 'rgba(251,191,36,.7)' : 'rgba(56,189,248,.65)');
+
+        if (dowChart) dowChart.destroy();
+        dowChart = new Chart(document.getElementById('chartDayOfWeek'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Trips',
+                    data: values,
+                    backgroundColor: colors,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color:'#7a90a8', font:{family:'Inter',size:11} }, grid: { display: false } },
+                    y: { ticks: { color:'#3d5268', font:{family:'Inter',size:10} }, grid: { color:'#1e2d3d' } }
+                }
+            }
+        });
+    }
+
+    // ── Per-chart range: Green Index ──────────────────────────────────────
+    document.getElementById('giRangeBar').addEventListener('click', async e => {
+        const btn = e.target.closest('.range-btn');
+        if (!btn) return;
+        document.querySelectorAll('#giRangeBar .range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        try {
+            const r = await apiFetch(`/admin/analytics?range=${btn.dataset.range}`);
+            if (!r.ok) return;
+            const data = await r.json();
+            updateGreenIndexChart(data.greenIndexTrend, btn.dataset.range);
+            if (data.kpis?.avgGreenIndex != null)
+                document.getElementById('giAvgBadge').textContent = data.kpis.avgGreenIndex;
+        } catch(e) { console.error('giRange error', e); }
     });
 
-    // ── Top routes ──
-    const topRoutes=[
-        {route:'R3 → Cassino Station', uses:2341, green:84, trend:'up'},
-        {route:'University → Centre',  uses:1892, green:76, trend:'up'},
-        {route:'Stazione → Ospedale',  uses:1403, green:58, trend:'flat'},
-        {route:'Centro → Abbazia',     uses:986,  green:81, trend:'up'},
-        {route:'R1 → University',      uses:741,  green:79, trend:'down'},
-        {route:'Ospedale → Stazione',  uses:618,  green:61, trend:'flat'},
-        {route:'Abbazia → Centro',     uses:504,  green:83, trend:'up'},
-        {route:'Campus → Stazione',    uses:437,  green:72, trend:'down'},
-    ];
-    const trendSVG = t => {
-        if(t==='up')   return `<svg width="40" height="18" viewBox="0 0 40 18"><polyline points="2,14 14,10 26,7 38,3" stroke="#00e5a0" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>`;
-        if(t==='down') return `<svg width="40" height="18" viewBox="0 0 40 18"><polyline points="2,3 14,7 26,10 38,14" stroke="#ff4560" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>`;
-        return `<svg width="40" height="18" viewBox="0 0 40 18"><polyline points="2,9 14,8 26,10 38,9" stroke="#f5a623" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>`;
+    // ── Per-chart range: Mode by Hour ────────────────────────────────────
+    document.getElementById('hourRangeBar').addEventListener('click', async e => {
+        const btn = e.target.closest('.range-btn');
+        if (!btn) return;
+        document.querySelectorAll('#hourRangeBar .range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        try {
+            const r = await apiFetch(`/admin/analytics?range=${btn.dataset.range}`);
+            if (!r.ok) return;
+            const data = await r.json();
+            updateModeByHourChart(data.modeByHour);
+        } catch(e) { console.error('hourRange error', e); }
+    });
+
+    // ── Close modals on overlay click ──
+    document.getElementById('modalOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+    document.getElementById('deleteModal').addEventListener('click',  function(e){ if(e.target===this) closeDeleteModal(); });
+
+    // ── Time range filter ────────────────────────────────────────────────────
+    const RANGE_LABELS = {
+        '1W': 'Last 7 days', '1M': 'Last 30 days',
+        '3M': 'Last 90 days', '6M': 'Last 6 months', '1Y': 'Last 12 months'
     };
-    const greenColor = g => g>=75?'var(--accent-green)':g>=60?'var(--accent-amber)':'var(--accent-red)';
-    document.getElementById('topRoutesTbody').innerHTML = topRoutes.map((r,i)=>`
-  <tr>
-    <td class="text-mono" style="color:var(--text-dim)">${String(i+1).padStart(2,'0')}</td>
-    <td style="font-size:13px">${r.route}</td>
-    <td class="text-mono">${r.uses.toLocaleString()}</td>
-    <td style="font-family:var(--font-mono);font-size:13px;color:${greenColor(r.green)}">${r.green}</td>
-    <td>${trendSVG(r.trend)}</td>
-  </tr>
-`).join('');
+    let currentRange = '1M';
 
-    // ── Close modal on overlay click ──
-    document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+    document.getElementById('rangeBar').addEventListener('click', e => {
+        const btn = e.target.closest('.range-btn');
+        if (!btn) return;
+        document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentRange = btn.dataset.range;
+        document.getElementById('rangeLabel').textContent = RANGE_LABELS[currentRange] || '';
+        loadAnalytics(currentRange);
+    });
 
-    // ── Analytics: carga datos reales de InfluxDB ──────────────────────────
+    // ── Analytics: real data from InfluxDB ──────────────────────────────────
     let modeChart = null;
     let greenChart = null;
 
-    async function loadAnalytics() {
+    async function loadAnalytics(range = '1M') {
         try {
-            const r = await apiFetch('/admin/analytics');
+            const r = await apiFetch(`/admin/analytics?range=${range}`);
             if (!r.ok) { console.warn('Analytics endpoint error', r.status); return; }
             const data = await r.json();
 
-            updateKpis(data.kpis);
+            updateKpis(data.kpis, range);
             updateModeChart(data.modeDistribution);
             updateModeByHourChart(data.modeByHour);
-            updateGreenIndexChart(data.greenIndexTrend);
+            updateGreenIndexChart(data.greenIndexTrend, range);
+            updateDayOfWeek(data.dayOfWeek);
+            updateTopRoutes(data.topRoutes);
 
         } catch(e) {
             console.error('loadAnalytics error:', e);
         }
     }
 
-    function updateKpis(kpis) {
+    function updateKpis(kpis, range) {
         if (!kpis) return;
-        // Actualiza los stat-pills del pane de stats
-        const pills = document.querySelectorAll('#pane-stats .stat-pill');
-        if (pills[0]) pills[0].querySelector('.value').textContent =
-            Number(kpis.totalSearches).toLocaleString('it-IT');
-        if (pills[3]) {
-            pills[3].querySelector('.value').textContent = kpis.avgGreenIndex;
-            document.querySelector('.green-index-value').textContent = kpis.avgGreenIndex;
-        }
+        const label = RANGE_LABELS[range] || '';
+
+        // KPI 1 — Searches
+        const searches = Number(kpis.totalSearches);
+        document.getElementById('kpiSearches').textContent = searches.toLocaleString('it-IT');
+        document.getElementById('kpiSearchesSub').textContent =
+            searches === 0 ? 'tracking from today' : `queries in ${label.toLowerCase()}`;
+        document.getElementById('kpiSearchesSub').className = 'sub';
+
+        // KPI 2 — Selections
+        const selections = Number(kpis.totalSelections);
+        document.getElementById('kpiSelections').textContent = selections.toLocaleString('it-IT');
+        document.getElementById('kpiSelectionsSub').textContent = `confirmed trips · ${label.toLowerCase()}`;
+        document.getElementById('kpiSelectionsSub').className = 'sub';
+
+        // KPI 3 — CO₂ Saved
+        const co2 = Number(kpis.co2SavedKg);
+        document.getElementById('kpiCo2').textContent =
+            co2 >= 1000 ? `${(co2/1000).toFixed(1)} t` : `${co2} kg`;
+        document.getElementById('kpiCo2Sub').textContent = `vs all-car alternative · ${label.toLowerCase()}`;
+        document.getElementById('kpiCo2Sub').className = 'sub up';
+
+        // Update Green Index badge in chart card
+        if (kpis.avgGreenIndex != null)
+            document.getElementById('giAvgBadge').textContent = kpis.avgGreenIndex;
     }
 
     function updateModeChart(dist) {
@@ -1154,7 +1197,7 @@
 
         const colorMap = {
             BUS:'#00cfff', BIKE:'#00e5a0',
-            SCOOTER:'#3a8eff', WALK:'#7a9ab8', TRAIN:'#a855f7'
+            SCOOTER:'#3a8eff', WALK:'#7a90a8', TRAIN:'#a855f7'
         };
         const labelMap = {
             BUS:'Bus', BIKE:'Shared Bike',
@@ -1165,7 +1208,7 @@
         const entries = Object.entries(dist).sort((a,b) => b[1]-a[1]);
         const labels  = entries.map(([k]) => labelMap[k] || k);
         const values  = entries.map(([,v]) => Number(v));
-        const colors  = entries.map(([k]) => colorMap[k] || '#7a9ab8');
+        const colors  = entries.map(([k]) => colorMap[k] || '#7a90a8');
         const pcts    = values.map(v => Math.round(v/total*100));
 
         if (modeChart) modeChart.destroy();
@@ -1196,11 +1239,12 @@
     `).join('');
     }
 
+    let hourChart = null;
     function updateModeByHourChart(modeByHour) {
         if (!modeByHour) return;
 
         const colorMap = {
-            BUS:'#00cfff', BIKE:'#00e5a0', SCOOTER:'#3a8eff', WALK:'#7a9ab8'
+            BUS:'#00cfff', BIKE:'#00e5a0', SCOOTER:'#3a8eff', WALK:'#7a90a8'
         };
         const labelMap = {
             BUS:'Bus', BIKE:'Shared Bike', SCOOTER:'E-Scooter', WALK:'Walking'
@@ -1209,15 +1253,16 @@
         const labels = Array.from({length:24}, (_,i) => `${i}h`);
         const datasets = Object.entries(modeByHour).map(([mode, hours]) => ({
             label: labelMap[mode] || mode,
-            data: Array.from(hours),           // long[] → array JS
-            backgroundColor: colorMap[mode] || '#7a9ab8',
+            data: Array.from(hours),
+            backgroundColor: colorMap[mode] || '#7a90a8',
             stack: 'modes'
         }));
 
         const canvas = document.getElementById('chartModeByHour');
         if (!canvas) return;
+        if (hourChart) hourChart.destroy();
 
-        new Chart(canvas, {
+        hourChart = new Chart(canvas, {
             type: 'bar',
             data: { labels, datasets },
             options: {
@@ -1225,8 +1270,8 @@
                 plugins: {
                     legend: {
                         labels: {
-                            color: '#7a9ab8',
-                            font: { family: 'Share Tech Mono', size: 10 },
+                            color: '#7a90a8',
+                            font: { family: 'Inter', size: 10 },
                             boxWidth: 10
                         }
                     },
@@ -1240,16 +1285,16 @@
                 scales: {
                     x: {
                         stacked: true,
-                        ticks: { color:'#3d5a74', font:{family:'Share Tech Mono',size:9} },
-                        grid: { color:'#1e3348' }
+                        ticks: { color:'#3d5268', font:{family:'Inter',size:9} },
+                        grid: { color:'#1e2d3d' }
                     },
                     y: {
                         stacked: true,
-                        ticks: { color:'#3d5a74', font:{family:'Share Tech Mono',size:9} },
-                        grid: { color:'#1e3348' },
+                        ticks: { color:'#3d5268', font:{family:'Inter',size:9} },
+                        grid: { color:'#1e2d3d' },
                         title: {
                             display: true, text: 'Trips',
-                            color:'#3d5a74', font:{family:'Share Tech Mono',size:9}
+                            color:'#3d5268', font:{family:'Inter',size:9}
                         }
                     }
                 }
@@ -1257,21 +1302,22 @@
         });
     }
 
-    function updateGreenIndexChart(trend) {
+    function updateGreenIndexChart(trend, range) {
         if (!trend || trend.length === 0) return;
 
         const labels = trend.map(p => p.time?.substring(5));  // MM-DD
         const values = trend.map(p => p.value);
 
-        // 7-day moving average
+        // Moving average window: 7 points for short ranges, 5 for longer
+        const maWindow = ['1W','1M'].includes(range) ? 7 : 5;
         const ma = values.map((_, i, a) => {
-            if (i < 6) return null;
-            return (a.slice(i-6, i+1).reduce((s,v) => s+v, 0) / 7).toFixed(1);
+            if (i < maWindow - 1) return null;
+            return (a.slice(i - maWindow + 1, i + 1).reduce((s,v) => s+v, 0) / maWindow).toFixed(1);
         });
 
         if (greenChart) greenChart.destroy();
         const ctx = document.getElementById('chartGreenIndex').getContext('2d');
-        const grad = ctx.createLinearGradient(0, 0, 0, 140);
+        const grad = ctx.createLinearGradient(0, 0, 0, 158);
         grad.addColorStop(0, 'rgba(0,229,160,.35)');
         grad.addColorStop(1, 'rgba(0,229,160,0)');
 
@@ -1280,25 +1326,25 @@
             data: {
                 labels,
                 datasets: [
-                    { label:'Daily Avg', data:values, borderColor:'rgba(0,229,160,.25)',
+                    { label:'Raw Avg', data:values, borderColor:'rgba(0,229,160,.2)',
                         backgroundColor:'transparent', pointRadius:0, tension:.3, borderWidth:1 },
-                    { label:'7-day MA',  data:ma, borderColor:'#00e5a0',
+                    { label:`${maWindow}-pt MA`, data:ma, borderColor:'#00e5a0',
                         backgroundColor:grad, pointRadius:0, tension:.4, fill:true, borderWidth:2 }
                 ]
             },
             options: {
                 responsive:true, maintainAspectRatio:false,
-                plugins:{legend:{labels:{color:'#7a9ab8',font:{family:'Share Tech Mono',size:9},boxWidth:8}}},
+                plugins:{legend:{labels:{color:'#7a90a8',font:{family:'Inter',size:9},boxWidth:8}}},
                 scales:{
-                    x:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:8},maxTicksLimit:6},grid:{color:'#1e3348'}},
-                    y:{ticks:{color:'#3d5a74',font:{family:'Share Tech Mono',size:9}},grid:{color:'#1e3348'},min:55,max:90}
+                    x:{ticks:{color:'#3d5268',font:{family:'Inter',size:8},maxTicksLimit:7},grid:{color:'#1e2d3d'}},
+                    y:{ticks:{color:'#3d5268',font:{family:'Inter',size:9}},grid:{color:'#1e2d3d'},min:50,max:100}
                 }
             }
         });
     }
 
-    // Lanza al cargar
-    loadAnalytics();
+    // Initial load
+    loadAnalytics('1M');
 
 </script>
 </body>

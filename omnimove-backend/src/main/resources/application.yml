@@ -36,6 +36,25 @@ spring:
       enabled: true
       path: /h2-console
 
+  # ── Mail (Gmail SMTP) ──────────────────────────────────────
+  # Setup: myaccount.google.com/apppasswords → genera App Password de 16 letras
+  # IntelliJ Run Config → Environment variables:
+  #   MAIL_USERNAME=tucuenta@gmail.com
+  #   MAIL_PASSWORD=abcdefghijklmnop   (sin espacios)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:omnimove.noreply.demo@gmail.com}
+    password: ${MAIL_PASSWORD:wkruqaoocekntwub}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: false
+
 server:
   port: 8081
 
@@ -96,7 +115,7 @@ jwt:
 influx:
   url: ${INFLUX_URL:http://localhost:8087}
   # Paste here your InfluxDB generated token:
-  token: ${INFLUX_TOKEN:R2D3E2aE3uHaNrmluizQSjbA3kSlP1l1OliYLRCh5ilzDsgdAACxxH_3dZvksaNfBS4mW5NWpIYspLGAA_8VZQ==}
+  token: ${INFLUX_TOKEN:uGgIKdrNyphrkBPXuWiy58hX6rJsFMTUDBEUuVGLdDz_pVgm34OuBL7PV6XtboOerHs_EUigGZxA7C96yEvwpQ==}
   org: omnimove_org
   bucket: omnimove_bucket
 
@@ -108,3 +127,9 @@ influx:
 google:
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY:}
+
+# ── OMNIMOVE App Config ───────────────────────────────────────
+omnimove:
+  mail:
+    from: "OMNIMOVE <${MAIL_USERNAME:omnimove.noreply@gmail.com}>"
+    base-url: ${APP_BASE_URL:http://localhost:8081}

@@ -5,12 +5,12 @@
 
 -- 1. Creazione tabella buses
 CREATE TABLE IF NOT EXISTS buses (
-                                     bus_id              SERIAL    PRIMARY KEY,
-                                     targa               VARCHAR(20)  NOT NULL UNIQUE,
-    numero_posti        INTEGER      NOT NULL,
-    posto_disabili      BOOLEAN      NOT NULL DEFAULT FALSE,
-    disponibile         BOOLEAN      NOT NULL DEFAULT TRUE,
-    current_vehicle_id  VARCHAR(50)  UNIQUE
+    bus_id                    SERIAL    PRIMARY KEY,
+    license_plate             VARCHAR(20)  NOT NULL UNIQUE,
+    number_seats              INTEGER      NOT NULL,
+    place_disable_people      BOOLEAN      NOT NULL DEFAULT FALSE,
+    available                 BOOLEAN      NOT NULL DEFAULT TRUE,
+    current_vehicle_id        VARCHAR(50)  UNIQUE
     );
 
 -- 2. Aggiunta colonna bus_id alla tabella trips

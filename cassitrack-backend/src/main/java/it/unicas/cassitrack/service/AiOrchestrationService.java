@@ -3,7 +3,9 @@ package it.unicas.cassitrack.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unicas.cassitrack.dto.ChatResponse;
 import it.unicas.cassitrack.dto.StopArrivalDTO;
+import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.model.VehiclePosition;
+import it.unicas.cassitrack.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +48,7 @@ public class AiOrchestrationService {
     private final VehicleStateCache vehicleStateCache;
     private final ETAService etaService;
     private final ObjectMapper objectMapper;
+    private final StopRepository stopRepository;
 
     @Value("${anthropic.api.key}")
     private String apiKey;
@@ -59,36 +62,17 @@ public class AiOrchestrationService {
     @Value("${anthropic.api.version:2023-06-01}")
     private String apiVersion;
 
-    private static final List<String> STOP_IDS = List.of(
-            "CASSINO-STAZIONE",
-            "CASSINO-CENTRO",
-            "CASSINO-OSPEDALE",
-            "FOLCARA-VIA",
-            "FOLCARA-CAMPUS"
-    );
-
-    private static final Map<String, String> STOP_LABELS = Map.of(
-            "CASSINO-STAZIONE", "Cassino Station",
-            "CASSINO-CENTRO", "Cassino Centro",
-            "CASSINO-OSPEDALE", "Cassino Hospital",
-            "FOLCARA-VIA", "Via Folcara",
-            "FOLCARA-CAMPUS", "UNICAS Campus"
-    );
-
-    private static final Map<String, double[]> STOP_COORDS = Map.of(
-            "CASSINO-STAZIONE", new double[]{41.4892, 13.8282},
-            "CASSINO-CENTRO", new double[]{41.4917, 13.8314},
-            "CASSINO-OSPEDALE", new double[]{41.4955, 13.8330},
-            "FOLCARA-VIA", new double[]{41.5020, 13.8200},
-            "FOLCARA-CAMPUS", new double[]{41.5041, 13.8189}
-    );
-
+    // Keyword → stopId matching for natural-language questions.
+    // This is NLP-specific (not geographic data), so it stays in code.
+    // Keys are matched against the stop NAME from the DB, case-insensitively,
+    // plus these extra synonyms.
     private static final Map<String, List<String>> STOP_KEYWORDS = Map.of(
-            "CASSINO-STAZIONE", List.of("stazione", "station", "train"),
-            "CASSINO-CENTRO", List.of("centro", "center", "centre", "city"),
-            "CASSINO-OSPEDALE", List.of("ospedale", "hospital"),
-            "FOLCARA-VIA", List.of("folcara via", "via folcara", "folcara"),
-            "FOLCARA-CAMPUS", List.of("campus", "unicas", "universit", "folcara campus")
+            "PSB", List.of("san benedetto", "benedetto", "piazza san benedetto"),
+            "SFF", List.of("stazione", "station", "train", "ferrovia", "ff.ss"),
+            "UNI", List.of("campus", "unicas", "universit", "folcara", "università"),
+            "OSP", List.of("ospedale", "hospital"),
+            "LIC", List.of("liceo", "scientifico", "scuola", "school"),
+            "P14", List.of("14 febbraio", "quattordici febbraio")
     );
 
     private static final ZoneId ITALY_TZ = ZoneId.of("Europe/Rome");
@@ -178,7 +162,7 @@ public class AiOrchestrationService {
         }
 
         sb.append("\nETA AT EACH STOP:\n");
-        STOP_IDS.forEach(stopId -> {
+        stopIds().forEach(stopId -> {
             sb.append("\n  Stop: ").append(stopId).append("\n");
             try {
                 List<StopArrivalDTO> arrivals = etaService.getArrivalsAtStop(stopId);
@@ -195,12 +179,14 @@ public class AiOrchestrationService {
             }
         });
 
-        sb.append("\nKNOWN STOPS ON LINEA 16:\n");
-        sb.append("  1. CASSINO-STAZIONE  = Cassino Train Station\n");
-        sb.append("  2. CASSINO-CENTRO    = Cassino City Centre\n");
-        sb.append("  3. CASSINO-OSPEDALE  = Santa Scolastica Hospital\n");
-        sb.append("  4. FOLCARA-VIA       = Via Folcara (residential area)\n");
-        sb.append("  5. FOLCARA-CAMPUS    = UNICAS Engineering Campus\n");
+        sb.append("\nKNOWN STOPS:\n");
+        int idx = 1;
+        for (Stop stop : stopRepository.findAll()) {
+            sb.append("  ").append(idx++).append(". ")
+              .append(stop.getId())
+              .append(" = ").append(stop.getName())
+              .append("\n");
+        }
         sb.append("\n=== END OF LIVE DATA ===\n");
 
         return sb.toString();
@@ -300,7 +286,9 @@ public class AiOrchestrationService {
         String requestedStopId = findRequestedStopId(question);
 
         if (isComparisonIntent(question)) {
-            String targetStop = StringUtils.hasText(requestedStopId) ? requestedStopId : "FOLCARA-CAMPUS";
+            String fallbackStop = stopIds().stream().findFirst().orElse(null);
+            String targetStop = StringUtils.hasText(requestedStopId)
+                    ? requestedStopId : fallbackStop;
             return buildComparisonFallback(targetStop, italian);
         }
 
@@ -370,6 +358,16 @@ public class AiOrchestrationService {
             return null;
         }
         String q = question.toLowerCase(Locale.ROOT);
+
+        // 1. Try matching against the real stop names from the DB
+        for (Stop stop : stopRepository.findAll()) {
+            if (stop.getName() != null
+                    && q.contains(stop.getName().toLowerCase(Locale.ROOT))) {
+                return stop.getId();
+            }
+        }
+
+        // 2. Fall back to the NLP keyword synonyms
         for (Map.Entry<String, List<String>> entry : STOP_KEYWORDS.entrySet()) {
             for (String keyword : entry.getValue()) {
                 if (q.contains(keyword)) {
@@ -383,7 +381,7 @@ public class AiOrchestrationService {
     private String buildAllStopsEtaFallback(boolean italian) {
         List<String> lines = new ArrayList<>();
         try {
-            for (String stopId : STOP_IDS) {
+            for (String stopId : stopIds()) {
                 List<StopArrivalDTO> arrivals = etaService.getArrivalsAtStop(stopId);
                 if (!arrivals.isEmpty()) {
                     StopArrivalDTO next = arrivals.get(0);
@@ -589,7 +587,7 @@ public class AiOrchestrationService {
 
     private Optional<Map.Entry<String, StopArrivalDTO>> findNextArrivalForVehicle(String vehicleId) {
         Map.Entry<String, StopArrivalDTO> best = null;
-        for (String stopId : STOP_IDS) {
+        for (String stopId : stopIds()) {
             try {
                 for (StopArrivalDTO a : etaService.getArrivalsAtStop(stopId)) {
                     if (!vehicleId.equalsIgnoreCase(a.getVehicleId())) {
@@ -616,22 +614,38 @@ public class AiOrchestrationService {
         }
     }
 
+    /** All stop IDs currently in the DB. */
+    private List<String> stopIds() {
+        return stopRepository.findAll().stream()
+                .map(Stop::getId)
+                .toList();
+    }
+
+    /** Coordinates [lat, lon] of a stop from the DB, or null if unknown. */
+    private double[] stopCoords(String stopId) {
+        return stopRepository.findById(stopId)
+                .filter(s -> s.getLat() != null && s.getLon() != null)
+                .map(s -> new double[]{s.getLat(), s.getLon()})
+                .orElse(null);
+    }
+
     private String findNearestStopId(double lat, double lon) {
-        String nearest = "FOLCARA-CAMPUS";
+        String nearest = null;
         double best = Double.MAX_VALUE;
-        for (Map.Entry<String, double[]> entry : STOP_COORDS.entrySet()) {
-            double[] c = entry.getValue();
-            double d = haversineMetres(lat, lon, c[0], c[1]);
+        for (Stop stop : stopRepository.findAll()) {
+            if (stop.getLat() == null || stop.getLon() == null) continue;
+            double d = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
             if (d < best) {
                 best = d;
-                nearest = entry.getKey();
+                nearest = stop.getId();
             }
         }
         return nearest;
     }
 
     private double distanceToStopMetres(double lat, double lon, String stopId) {
-        double[] coords = STOP_COORDS.getOrDefault(stopId, STOP_COORDS.get("FOLCARA-CAMPUS"));
+        double[] coords = stopCoords(stopId);
+        if (coords == null) return Double.MAX_VALUE;
         return haversineMetres(lat, lon, coords[0], coords[1]);
     }
 
@@ -647,7 +661,10 @@ public class AiOrchestrationService {
     }
 
     private String stopLabel(String stopId, boolean italian) {
-        return italian ? stopId : STOP_LABELS.getOrDefault(stopId, stopId);
+        String name = stopRepository.findById(stopId)
+                .map(Stop::getName)
+                .orElse(stopId);
+        return name;
     }
 
     private String etaMinutesText(Instant eta, boolean italian) {

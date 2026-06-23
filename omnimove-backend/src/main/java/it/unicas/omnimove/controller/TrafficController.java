@@ -32,14 +32,14 @@ public class TrafficController {
     private final TrafficAwareETAService trafficAwareETAService;
 
     /**
-     * GET /api/v1/traffic/eta?stopId=FOLCARA-CAMPUS
+     * GET /api/v1/traffic/eta?stopId=UNI
      *
      * Returns predicted bus arrivals at a stop enriched with
      * real-time traffic data from Google Maps.
      *
      * Known stopIds:
-     *   CASSINO-STAZIONE, CASSINO-CENTRO, CASSINO-OSPEDALE,
-     *   FOLCARA-VIA, FOLCARA-CAMPUS
+     *   PSB (Piazza San Benedetto), SFF (Stazione FF.SS.), UNI (Università Folcara),
+     *   OSP (Ospedale), LIC (Liceo Scientifico)
      */
     @GetMapping("/eta")
     @Operation(
@@ -52,7 +52,7 @@ public class TrafficController {
             """
     )
     public ResponseEntity<List<TrafficAwareETAService.TrafficEtaResult>> getTrafficEta(
-            @Parameter(description = "Stop ID, e.g. FOLCARA-CAMPUS")
+            @Parameter(description = "Stop ID, e.g. UNI for Università Folcara")
             @RequestParam String stopId
     ) {
         List<TrafficAwareETAService.TrafficEtaResult> results =

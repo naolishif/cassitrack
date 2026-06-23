@@ -149,10 +149,12 @@ public class AdminController {
         ));
     }
 
-    // ── GET /api/v1/admin/analytics ───────────────────────────────────────
+    // ── GET /api/v1/admin/analytics?range=1M ─────────────────────────────
     @GetMapping("/analytics")
-    @Operation(summary = "Transport mode analytics", description = "InfluxDB aggregates. ADMIN only.")
+    @Operation(summary = "Transport mode analytics",
+               description = "InfluxDB aggregates. range = 1W | 1M | 3M | 6M | 1Y. ADMIN only.")
     public ResponseEntity<?> analytics(
+            @RequestParam(value = "range", defaultValue = "1M") String range,
             @AuthenticationPrincipal UserDetails principal) {
 
         if (!isAdmin(principal))
@@ -160,10 +162,12 @@ public class AdminController {
                     .body(Map.of("message", "Forbidden: ADMIN role required"));
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("kpis",            analyticsService.getSummaryKpis());
-        payload.put("modeDistribution",analyticsService.getModeDistribution());
-        payload.put("modeByHour",      analyticsService.getModeByHour());
-        payload.put("greenIndexTrend", analyticsService.getGreenIndexTrend());
+        payload.put("kpis",             analyticsService.getSummaryKpis(range));
+        payload.put("modeDistribution", analyticsService.getModeDistribution(range));
+        payload.put("modeByHour",       analyticsService.getModeByHour(range));
+        payload.put("greenIndexTrend",  analyticsService.getGreenIndexTrend(range));
+        payload.put("dayOfWeek",        analyticsService.getModeByDayOfWeek(range));
+        payload.put("topRoutes",        analyticsService.getTopRoutes(range));
 
         return ResponseEntity.ok(payload);
     }
