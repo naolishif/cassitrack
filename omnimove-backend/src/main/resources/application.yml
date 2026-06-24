@@ -135,7 +135,7 @@ influx:
 
 google:
   maps:
-    api-key: ${GOOGLE_MAPS_API_KEY:#AIzaSyAIcS5KU5svVtHFC6KzMHGkgc37dHm9HBU}
+    api-key: ${GOOGLE_MAPS_API_KEY}
 
 # ── OMNIMOVE App Config ───────────────────────────────────────
 omnimove:
