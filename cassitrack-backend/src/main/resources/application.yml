@@ -42,6 +42,11 @@ spring:
     stomp:
       endpoint: /ws/vehicles
 
+  # ── H2 Console (disabled — use only locally with spring.h2.console.enabled=true) ─
+  h2:
+    console:
+      enabled: false
+
 # ── Server ───────────────────────────────────────────────────────
 server:
   port: 8080
@@ -86,12 +91,6 @@ springdoc:
     title: CASSITRACK API
     description: Real-time bus fleet monitoring — Cassino MAGNI Autoservizi
     version: v1
-
-# ── H2 Console (disabled — use only locally with spring.h2.console.enabled=true) ─
-spring:
-  h2:
-    console:
-      enabled: false
 
 # ── Spring Boot Actuator (expose only health + info) ──────────────
 management:

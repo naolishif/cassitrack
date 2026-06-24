@@ -210,7 +210,7 @@ SELECT 'TAXID_ADMIN_01', 'Alessandro', 'Rossi', 'admin@cassitrack.it',
 -- 2. FLEET MANAGER
 -- Plain text password: "Manager_Magni2026*"
 INSERT INTO users (tax_id, name, surname, email, password_hash, role, telephone)
-SELECT 'TAXID_MNG_02', 'Francesca', 'Bianchi', 'manager@cassitrack.it',
+    SELECT 'TAXID_MNG_02', 'Francesca', 'Bianchi', 'manager@cassitrack.it',
        '$2a$12$Q.jCq9QvD2BFmkFQdwpWpu15PsRtT0npz6RoGmZXZlk/ctxsw17nC',
        'FLEET_MANAGER',
        '+393332222222'
