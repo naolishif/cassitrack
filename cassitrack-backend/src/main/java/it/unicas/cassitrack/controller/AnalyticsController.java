@@ -4,14 +4,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unicas.cassitrack.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Fleet analytics endpoints for the CASSITRACK manager dashboard.
@@ -64,6 +68,7 @@ public class AnalyticsController {
             @RequestParam(required = false) String busId,
             @RequestParam(required = false, defaultValue = "hour") String groupBy) {
         List<String> routes = parseRouteIds(routeIds);
+        validateAnalyticsParams(startTime, endTime, busId, groupBy, routes);
         return ResponseEntity.ok(
             analyticsService.getPassengersByRouteAndHour(startTime, endTime, routes, busId, groupBy));
     }
@@ -78,6 +83,7 @@ public class AnalyticsController {
             @RequestParam(required = false) String busId,
             @RequestParam(required = false, defaultValue = "hour") String groupBy) {
         List<String> routes = parseRouteIds(routeIds);
+        validateAnalyticsParams(startTime, endTime, busId, groupBy, routes);
         return ResponseEntity.ok(
             analyticsService.getDelayByRouteAndHour(startTime, endTime, routes, busId, groupBy));
     }
@@ -93,6 +99,7 @@ public class AnalyticsController {
             @RequestParam(required = false) String routeIds,
             @RequestParam(required = false) String busId) {
         List<String> routes = parseRouteIds(routeIds);
+        validateAnalyticsParams(startTime, endTime, busId, null, routes);
         return ResponseEntity.ok(analyticsService.getCo2Saved(startTime, endTime, routes, busId));
     }
 
@@ -121,5 +128,36 @@ public class AnalyticsController {
     private List<String> parseRouteIds(String routeIds) {
         if (routeIds == null || routeIds.isBlank()) return Collections.emptyList();
         return Arrays.asList(routeIds.split(","));
+    }
+
+    // ── Input validation (A03 — Flux injection prevention) ───────────────────
+
+    // ISO-8601 UTC instant: 2026-06-23T00:00:00Z
+    private static final Pattern ISO_INSTANT = Pattern.compile(
+        "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$");
+
+    // Vehicle / route IDs: alphanumeric, underscore, hyphen, dot — max 100 chars
+    private static final Pattern SAFE_ID = Pattern.compile(
+        "^[A-Za-z0-9_\\-\\.]{1,100}$");
+
+    private static final Set<String> VALID_GROUP_BY = Set.of("hour", "day");
+
+    private void validateAnalyticsParams(String startTime, String endTime,
+                                         String busId, String groupBy,
+                                         List<String> routeIds) {
+        if (startTime != null && !startTime.isBlank() && !ISO_INSTANT.matcher(startTime).matches())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid startTime format");
+        if (endTime != null && !endTime.isBlank() && !ISO_INSTANT.matcher(endTime).matches())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid endTime format");
+        if (busId != null && !busId.isBlank() && !SAFE_ID.matcher(busId).matches())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid busId format");
+        if (groupBy != null && !VALID_GROUP_BY.contains(groupBy))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "groupBy must be 'hour' or 'day'");
+        if (routeIds != null) {
+            for (String id : routeIds) {
+                if (!id.isBlank() && !SAFE_ID.matcher(id.trim()).matches())
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid routeId: " + id);
+            }
+        }
     }
 }

@@ -80,13 +80,11 @@ public class SecurityConfig {
                                 "/api/v1/telemetry/stream"
                          ).permitAll()
 
-                        .requestMatchers( // Dev tools
-                                "/h2-console/**",
+                        .requestMatchers( // Dev tools — H2 console removed (disabled in application.yml)
                                 "/ws/**",
                                 "/api/docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html",
-                                "/ws/**",
                                 "/api/static/**"
                         ).permitAll()
 
@@ -116,7 +114,13 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 );
 
-        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        http.headers(headers -> headers
+            .frameOptions(frame -> frame.deny())
+            .xssProtection(xss -> xss.disable()) // modern browsers use CSP, not X-XSS-Protection
+            .contentTypeOptions(ct -> {})         // X-Content-Type-Options: nosniff (default on)
+            .httpStrictTransportSecurity(hsts ->
+                hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
+        );
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

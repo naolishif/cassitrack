@@ -87,6 +87,22 @@ springdoc:
     description: Real-time bus fleet monitoring — Cassino MAGNI Autoservizi
     version: v1
 
+# ── H2 Console (disabled — use only locally with spring.h2.console.enabled=true) ─
+spring:
+  h2:
+    console:
+      enabled: false
+
+# ── Spring Boot Actuator (expose only health + info) ──────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
 # ── Logging ───────────────────────────────────────────────────────
 logging:
   level:

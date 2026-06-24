@@ -1109,6 +1109,16 @@
     })();
 
     const API          = '/api/v1';                        // CASSITRACK — fleet, ETA  (relativo, porta 8080)
+
+    // XSS defense: escape any API-supplied string before inserting into innerHTML
+    function escHtml(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
     const OMNIMOVE_API = 'http://localhost:8081/api/v1';   // OMNIMOVE — journey planner, AI (porta 8081)
     const REFRESH = 15000;
     const SC = {
@@ -1324,7 +1334,7 @@
             const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
             const d=document.createElement('div');
             d.className='vcard'+(selectedVeh===v.vehicle_id?' selected':'');
-            d.innerHTML=`<div class="vcard-stripe" style="background:${c}"></div><div class="vcard-top"><div class="vcard-id" style="color:${c}">${v.vehicle_id}</div><div class="chip" style="color:${c};border-color:${c}44;background:${c}18;font-size:9px">${l}</div></div><div class="vcard-grid"><div class="vitem"><div class="vitem-lbl">Speed</div><div class="vitem-val">${spd} km/h</div></div><div class="vitem"><div class="vitem-lbl">Passengers</div><div class="vitem-val">${pax}</div></div><div class="vitem"><div class="vitem-lbl">Crowding</div><div class="vitem-val">${v.crowding_level||'—'}</div></div><div class="vitem"><div class="vitem-lbl">Route</div><div class="vitem-val" style="color:${v.route_id&&v.route_id.startsWith('RUTA_2')?'#06B6D4':'#3B82F6'}">${v.route_name||'—'}</div></div></div><div class="cbar"><div class="cbar-fill" style="width:${cp}%;background:${cc}"></div></div>`;
+            d.innerHTML=`<div class="vcard-stripe" style="background:${c}"></div><div class="vcard-top"><div class="vcard-id" style="color:${c}">${escHtml(v.vehicle_id)}</div><div class="chip" style="color:${c};border-color:${c}44;background:${c}18;font-size:9px">${escHtml(l)}</div></div><div class="vcard-grid"><div class="vitem"><div class="vitem-lbl">Speed</div><div class="vitem-val">${escHtml(spd)} km/h</div></div><div class="vitem"><div class="vitem-lbl">Passengers</div><div class="vitem-val">${escHtml(pax)}</div></div><div class="vitem"><div class="vitem-lbl">Crowding</div><div class="vitem-val">${escHtml(v.crowding_level||'—')}</div></div><div class="vitem"><div class="vitem-lbl">Route</div><div class="vitem-val" style="color:${v.route_id&&v.route_id.startsWith('RUTA_2')?'#06B6D4':'#3B82F6'}">${escHtml(v.route_name||'—')}</div></div></div><div class="cbar"><div class="cbar-fill" style="width:${cp}%;background:${cc}"></div></div>`;
             d.addEventListener('click',()=>selV(v.vehicle_id));
             list.appendChild(d);
         });
@@ -1528,10 +1538,10 @@
         }
         list.innerHTML = allRoutes.map(rt => `
             <div class="rdrop-item">
-                <input type="checkbox" id="rc_${rt.id}" value="${rt.id}"
+                <input type="checkbox" id="rc_${escHtml(rt.id)}" value="${escHtml(rt.id)}"
                     ${activeFilters.routeIds.includes(rt.id) ? 'checked' : ''}
-                    onchange="toggleRoute('${rt.id}', this.checked)">
-                <label for="rc_${rt.id}">${rt.shortName || rt.id}${rt.longName ? ' — ' + rt.longName : ''}</label>
+                    onchange="toggleRoute('${escHtml(rt.id)}', this.checked)">
+                <label for="rc_${escHtml(rt.id)}">${escHtml(rt.shortName || rt.id)}${rt.longName ? ' — ' + escHtml(rt.longName) : ''}</label>
             </div>`).join('');
     }
 

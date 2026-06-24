@@ -256,6 +256,7 @@ public class AiOrchestrationService {
                                 ))
                 )
                 .bodyToMono(Map.class)
+                .timeout(java.time.Duration.ofSeconds(30))
                 .block();
 
         if (response != null && response.containsKey("content")) {
