@@ -158,6 +158,7 @@
         }
 
         localStorage.setItem('omnimove_user', JSON.stringify({
+            id: data.id,
             name:  data.name  || data.username || 'User',
             email: data.email || '',
             role:  assignedRole

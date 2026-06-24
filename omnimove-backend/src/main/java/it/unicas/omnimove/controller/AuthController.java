@@ -49,6 +49,7 @@ public class AuthController {
         return ResponseEntity.ok(AuthResponse.builder()
             .token(token).email(user.getEmail())
             .name(user.getName()).role(user.getRole())
+            .id(user.getId())
             .expiresInMs(86400000L)
             .message("Registration successful").build());
     }
@@ -67,6 +68,7 @@ public class AuthController {
                 return ResponseEntity.ok(AuthResponse.builder()
                     .token(token).email(u.getEmail())
                     .name(u.getName()).role(u.getRole())
+                    .id(u.getId())
                     .expiresInMs(86400000L)
                     .message("Login successful").build());
             })
@@ -82,8 +84,8 @@ public class AuthController {
         if (userDetails == null)
             return ResponseEntity.status(401).build();
         return userRepo.findByEmail(userDetails.getUsername())
-            .map(u -> ResponseEntity.ok(AuthResponse.builder()
-                .email(u.getEmail()).name(u.getName()).role(u.getRole()).build()))
+                .map(u -> ResponseEntity.ok(AuthResponse.builder()
+                        .id(u.getId()).email(u.getEmail()).name(u.getName()).role(u.getRole()).build()))
             .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -977,18 +977,6 @@
 
             let data=await r.json();
 
-            // Calcular schedule_status desde delay_minutes
-            data=data.map(v=>{
-                const d=v.delay_minutes || 0;
-
-                v.schedule_status =
-                    d <= 3 ? 'ON_TIME' :
-                        d <= 6 ? 'SLIGHTLY_LATE' :
-                            'SIGNIFICANTLY_LATE';
-
-                return v;
-            });
-
             lastUpdate=new Date();
 
             document.getElementById('hDot').className='dot dot-green';
@@ -1353,10 +1341,10 @@
 
         kpiSpan.textContent = '';
 
-        const total = vehicles.length;
-        const onTime   = vehicles.filter(v => (v.delay_minutes || 0) <= 3).length;
-        const slight   = vehicles.filter(v => (v.delay_minutes || 0) > 3 && (v.delay_minutes || 0) <= 6).length;
-        const late     = vehicles.filter(v => (v.delay_minutes || 0) > 6).length;
+        const total    = vehicles.length;
+        const onTime   = vehicles.filter(v => v.schedule_status === 'ON_TIME' || v.schedule_status === 'EARLY').length;
+        const slight   = vehicles.filter(v => v.schedule_status === 'SLIGHTLY_LATE').length;
+        const late     = vehicles.filter(v => v.schedule_status === 'SIGNIFICANTLY_LATE').length;
 
         const onTimePct  = (onTime  / total) * 100;
         const slightPct  = (slight  / total) * 100;

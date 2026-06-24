@@ -118,8 +118,7 @@ public class ETAService {
                     .scheduledArrival(scheduledArrival)
                     .estimatedArrival(estimatedArrival)
                     .delayMinutes(delayMinutes)
-                    .scheduleStatus(bus.getScheduleStatus() != null
-                            ? bus.getScheduleStatus().name() : "UNKNOWN")
+                    .scheduleStatus(ScheduleAdherenceService.statusFromDelay(delayMinutes).name())
                     .build();
 
         } catch (Exception e) {
@@ -161,8 +160,12 @@ public class ETAService {
 
         String anchorStop = (bus.getNearestStopId() != null)
                 ? bus.getNearestStopId()
-                : routeMatchingService.findNearestStopId(bus.getLat(), bus.getLon());
-        if (targetStopId.equals(anchorStop)) return 0L;
+                : (bus.getLat() != null && bus.getLon() != null
+                ? (bus.getTripId() != null
+                    ? routeMatchingService.findNearestStopOnTrip(bus.getTripId(), bus.getLat(), bus.getLon())
+                    : routeMatchingService.findNearestStopId(bus.getLat(), bus.getLon()))
+                : null);
+        if (anchorStop != null && targetStopId.equals(anchorStop)) return 0L;
 
         int anchorIdx = indexOfStop(seq, anchorStop, 0);
         if (anchorIdx < 0) return null;

@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Optional;
 
+import static it.unicas.cassitrack.service.ScheduleAdherenceService.statusFromDelay;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -28,7 +30,8 @@ public class MqttMessageHandler implements MessageHandler {
     private final ObjectMapper objectMapper;
     private final WriteApiBlocking influxWriteApi;
     private final VehicleStateCache vehicleStateCache;
-    private final BusRepository busRepository; // 🚌 Iniettiamo il repository reale di Postgres!
+    private final BusRepository busRepository;
+    private final it.unicas.cassitrack.service.ScheduleAdherenceService scheduleAdherenceService;
 
     private static final double LAT_MIN = 41.40;
     private static final double LAT_MAX = 41.60;
@@ -72,6 +75,7 @@ public class MqttMessageHandler implements MessageHandler {
 
             // ── Step 5: Salva in REDIS (Cache arricchita con i dati statici del bus) ──
             VehiclePosition entity = toEntity(pos, busId, numeroPosti, postoDisabili);
+            scheduleAdherenceService.processBusAdherence(entity);
             vehicleStateCache.update(pos.getVehicleId(), entity);
 
             log.info("Processed [{}] -> Bus ID: {}, Posti: {}, Disabili: {} | lat={}, lon={}",
@@ -102,7 +106,7 @@ public class MqttMessageHandler implements MessageHandler {
                 .addField("lon", pos.getLon())
                 .addField("speed_kmh", pos.getSpeedKmh() != null ? pos.getSpeedKmh() : 0.0)
                 .addField("heading_deg", pos.getHeadingDeg() != null ? pos.getHeadingDeg() : 0.0)
-                // 📈 Salviamo i posti e l'accessibilità anche nello storico InfluxDB per statistiche future
+                // Salviamo i posti e l'accessibilità anche nello storico InfluxDB per statistiche future
                 .addField("numero_posti", numeroPosti != null ? numeroPosti : 0)
                 .addField("posto_disabili", postoDisabili != null ? postoDisabili : false)
                 .time(pos.getTimestamp(), WritePrecision.S);

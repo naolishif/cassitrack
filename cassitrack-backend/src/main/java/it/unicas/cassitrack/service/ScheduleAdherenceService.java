@@ -45,94 +45,14 @@ public class ScheduleAdherenceService {
     private static final int SIGNIFICANTLY_LATE_MINUTES = 10;
     private static final ZoneId ITALY_TZ = ZoneId.of("Europe/Rome");
 
-//    /**
-//     * Runs every 30 seconds automatically.
-//     * Updates the schedule status of every active bus.
-//     *
-//     * The @Scheduled annotation is why we have
-//     * @EnableScheduling in CassitrackApplication.
-//     */
-//    @Scheduled(fixedDelay = 30000)
-//    public void updateAllVehicleAdherence() {
-//        Collection<VehiclePosition> active =
-//                vehicleStateCache.getActive();
-//
-//        if (active.isEmpty()) return;
-//
-//        log.debug("Updating schedule adherence " +
-//                "for {} vehicles", active.size());
-//
-//        active.forEach(this::updateVehicleAdherence);
-//    }
-
-//    /**
-//     * Compute and update schedule status
-//     * for one specific vehicle.
-//     */
-//    public void updateVehicleAdherence(VehiclePosition pos) {
-//        try {
-//            // What time is it now in Italy?
-//            LocalTime now = LocalTime.now(ITALY_TZ);
-//            int nowSeconds = now.toSecondOfDay();
-//
-//            // Find the nearest stop to this bus
-//            String nearestStopId =
-//                    routeMatchingService.findNearestStopId(
-//                            pos.getLat(), pos.getLon()
-//                    );
-//
-//            if (nearestStopId == null) {
-//                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
-//                return;
-//            }
-//
-//            // Find what time the schedule says
-//            // the bus should be at that stop
-//            int scheduledSeconds =
-//                    routeMatchingService.getScheduledArrival(
-//                            pos.getMatchedRouteId() != null
-//                                    ? pos.getMatchedRouteId()
-//                                    : "LINEA-16",
-//                            nearestStopId,
-//                            nowSeconds
-//                    );
-//
-//            if (scheduledSeconds < 0) {
-//                // No scheduled trip found near this time
-//                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
-//                return;
-//            }
-//
-//            // How many minutes late is the bus?
-//            int delaySeconds  = nowSeconds - scheduledSeconds;
-//            int delayMinutes  = delaySeconds / 60;
-//
-//            ScheduleStatus status;
-//            if (delayMinutes < -1) {
-//                status = ScheduleStatus.EARLY;
-//            } else if (delayMinutes <= SLIGHTLY_LATE_MINUTES) {
-//                status = ScheduleStatus.ON_TIME;
-//            } else if (delayMinutes <= SIGNIFICANTLY_LATE_MINUTES) {
-//                status = ScheduleStatus.SLIGHTLY_LATE;
-//            } else {
-//                status = ScheduleStatus.SIGNIFICANTLY_LATE;
-//            }
-//
-//            pos.setScheduleStatus(status);
-//            pos.setMatchedRouteId("LINEA-16");
-//
-//            log.debug("Vehicle {} at stop {}: " +
-//                            "{} minutes delay → {}",
-//                    pos.getVehicleId(), nearestStopId,
-//                    delayMinutes, status);
-//
-//        } catch (Exception e) {
-//            log.warn("Could not compute adherence " +
-//                            "for {}: {}",
-//                    pos.getVehicleId(), e.getMessage());
-//            pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
-//        }
-//    }
+    /** Unica fonte di verità: da minuti di ritardo a stato di puntualità. */
+    public static ScheduleStatus statusFromDelay(Integer delayMinutes) {
+        if (delayMinutes == null)                       return ScheduleStatus.UNKNOWN;
+        if (delayMinutes < -1)                          return ScheduleStatus.EARLY;
+        if (delayMinutes <= SLIGHTLY_LATE_MINUTES)      return ScheduleStatus.ON_TIME;
+        if (delayMinutes <= SIGNIFICANTLY_LATE_MINUTES) return ScheduleStatus.SLIGHTLY_LATE;
+        return ScheduleStatus.SIGNIFICANTLY_LATE;
+    }
 
     @Scheduled(fixedRate = 30000)
     public void checkAdherence() {
@@ -143,7 +63,7 @@ public class ScheduleAdherenceService {
         }
     }
 
-    private void processBusAdherence(VehiclePosition pos) {
+    public void processBusAdherence(VehiclePosition pos) {
         try {
             /*
              * GOOGLE MAPS API INTEGRATION POINT:
@@ -155,14 +75,19 @@ public class ScheduleAdherenceService {
              * * This service doesn't need to call GMaps directly; it just trusts RouteMatchingService.
              */
 
-            // 🛡️ SAFE BY DESIGN GUARD CLAUSE: Validate inputs before processing
+            // SAFE BY DESIGN GUARD CLAUSE: Validate inputs before processing
             if (pos.getLat() == null || pos.getLon() == null) {
                 log.warn("Vehicle {} has no GPS coordinates. Cannot compute adherence.", pos.getVehicleId());
                 pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
                 return;
             }
 
-            String nearestStopId = routeMatchingService.findNearestStopId(pos.getLat(), pos.getLon());
+            if (pos.getTripId() == null) {
+                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
+                return;
+            }
+            String nearestStopId = routeMatchingService.findNearestStopOnTrip(
+                    pos.getTripId(), pos.getLat(), pos.getLon());
 
             if (nearestStopId == null) {
                 pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
@@ -171,8 +96,8 @@ public class ScheduleAdherenceService {
 
             int nowSeconds = LocalTime.now(ITALY_TZ).toSecondOfDay();
 
-            String routeId = pos.getMatchedRouteId() != null ? pos.getMatchedRouteId() : "UNKNOWN_ROUTE";
-            pos.setMatchedRouteId(routeId);
+            String routeId = pos.getRouteId() != null ? pos.getRouteId()
+                    : (pos.getMatchedRouteId() != null ? pos.getMatchedRouteId() : "UNKNOWN_ROUTE");
 
             int scheduledSeconds = routeMatchingService.getScheduledArrival(routeId, nearestStopId, nowSeconds);
 
@@ -184,17 +109,8 @@ public class ScheduleAdherenceService {
             int delaySeconds = nowSeconds - scheduledSeconds;
             int delayMinutes = delaySeconds / 60;
 
-            ScheduleStatus status;
-            if (delayMinutes < -1) status = ScheduleStatus.EARLY;
-            else if (delayMinutes <= SLIGHTLY_LATE_MINUTES) status = ScheduleStatus.ON_TIME;
-            else if (delayMinutes <= SIGNIFICANTLY_LATE_MINUTES) status = ScheduleStatus.SLIGHTLY_LATE;
-            else status = ScheduleStatus.SIGNIFICANTLY_LATE;
-
-            pos.setScheduleStatus(status);
-
-            // Replaced hardcoded "LINEA-16" with the actual matched route ID dynamically
-            //String routeId = pos.getMatchedRouteId() != null ? pos.getMatchedRouteId() : "UNKNOWN_ROUTE";
-            //pos.setMatchedRouteId(routeId);
+            pos.setDelayMinutes(delayMinutes);
+            pos.setScheduleStatus(statusFromDelay(delayMinutes));
 
             // Write historical "Stop Arrival" event to InfluxDB for the Analytics Dashboard
             int estimatedPassengers = pos.getBleDeviceCount() != null ? (int)(pos.getBleDeviceCount() * 0.6) : 0;
@@ -211,7 +127,7 @@ public class ScheduleAdherenceService {
             influxWriteApi.writePoint(arrivalEvent);
 
             log.debug("Vehicle {} at stop {}: {} minutes delay → {}",
-                    pos.getVehicleId(), nearestStopId, delayMinutes, status);
+                    pos.getVehicleId(), nearestStopId, delayMinutes, pos.getScheduleStatus());
 
         } catch (Exception e) {
             log.warn("Could not compute adherence for {}: {}", pos.getVehicleId(), e.getMessage());

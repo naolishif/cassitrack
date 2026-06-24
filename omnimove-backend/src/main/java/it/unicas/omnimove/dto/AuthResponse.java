@@ -10,5 +10,6 @@ public class AuthResponse {
     private String role;
     @JsonProperty("expires_in_ms")
     private long expiresInMs;
+    private Long id;
     private String message;
 }
