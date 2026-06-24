@@ -59,6 +59,10 @@ public class JwtUtil {
         }
     }
 
+    public long getExpirationMs() {
+        return jwtExpirationMs;
+    }
+
     public long getRemainingValidityMs(String token) {
         try {
             java.util.Date expiry = Jwts.parser()

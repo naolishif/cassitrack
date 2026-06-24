@@ -248,10 +248,9 @@ function clearAllFieldErrs(...ids) { ids.forEach(clearFieldErr); }
         return;
     }
 
-    // Already logged in?
-    const token = localStorage.getItem('omnimove_token');
-    const user  = JSON.parse(localStorage.getItem('omnimove_user') || 'null');
-    if (token && user) secureRedirect(user.role || 'TRAVELLER', token);
+    // V-04 FIX: localStorage token removed — auth is handled via httpOnly cookie.
+    // If a valid session cookie exists, the server-side redirect handles re-entry.
+    // No client-side auto-redirect needed here.
 })();
 
 // ════════════════════════════════════════════════════════════
@@ -318,12 +317,7 @@ async function showForgotPanel() {
             showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
         }
 
-        localStorage.setItem('omnimove_user', JSON.stringify({
-            id: data.id,
-            name:  data.name  || data.username || 'User',
-            email: data.email || '',
-            role:  assignedRole
-        }));
+        // V-04 FIX: no localStorage write here — this is a forgot-password flow, not login.
     }
     // Fallback: no email pre-filled, show the form
     hideTabs(); hideGuestSection();
@@ -331,36 +325,25 @@ async function showForgotPanel() {
 }
 
 // ════════════════════════════════════════════════════════════
-// SECURE REDIRECT (original logic preserved)
+// REDIRECT — V-11 FIX (OWASP A03): No more document.write()
+// V-04 FIX (OWASP A02): Token stays in httpOnly cookie; not in localStorage.
 // ════════════════════════════════════════════════════════════
-async function secureRedirect(role, token) {
+function secureRedirect(role) {
     const cleanRole = (role || 'TRAVELLER').toUpperCase();
     const targetHtmlUrl = REDIRECT[cleanRole] || 'omnimove-traveller.html';
-    setTimeout(async () => {
-        try {
-            const htmlResponse = await fetch(targetHtmlUrl, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (htmlResponse.ok) {
-                const htmlContent = await htmlResponse.text();
-                document.open();
-                document.write(htmlContent);
-                document.close();
-                window.history.pushState({}, '', targetHtmlUrl);
-            } else {
-                showMsg('Access Denied (403): Your profile role cannot view this resource.', 'err');
-            }
-        } catch (e) {
-            showMsg('Network error while requesting secure dashboard resource.', 'err');
-        }
+    // Navigate normally — the httpOnly session cookie is sent automatically.
+    // document.write() is removed: it was an XSS vector and breaks CSP.
+    setTimeout(() => {
+        window.location.replace(targetHtmlUrl);
     }, 1200);
 }
 
 function saveSession(data) {
-    localStorage.setItem('omnimove_token', data.token);
+    // V-04 FIX: Token is stored in an httpOnly cookie by the server — not here.
+    // We only keep non-sensitive display info in sessionStorage (cleared on tab close).
     let role = data.role || (data.roles && data.roles[0]) || 'TRAVELLER';
     if (role === 'USER') role = 'TRAVELLER';
-    localStorage.setItem('omnimove_user', JSON.stringify({
+    sessionStorage.setItem('omnimove_user', JSON.stringify({
         name:  data.name  || data.username || 'User',
         email: data.email || '',
         role
@@ -397,7 +380,7 @@ async function handleLogin(e) {
             _failedAttempts = 0; syncForgotButton();
             saveSession(data);
             showMsg('Welcome back, ' + (data.name || 'user') + '! Redirecting…', 'ok');
-            secureRedirect(data.role || 'TRAVELLER', data.token);
+            secureRedirect(data.role || 'TRAVELLER');
         } else {
             // 403 = not verified (don't count as lockout)
             if (r.status !== 403) {

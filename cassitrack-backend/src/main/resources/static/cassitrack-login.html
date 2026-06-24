@@ -98,47 +98,21 @@
             const data = await r.json();
 
             if (data.token) {
-                // 2. Store session securely
-                localStorage.setItem('cassitrack_token', data.token);
-                localStorage.setItem('cassitrack_user', JSON.stringify({
-                    username: data.username,
-                    email: data.email,
-                    role: data.role
-                }));
+                // V-04 FIX (OWASP A02/A07): Token is stored in an httpOnly cookie by the server.
+                // We do NOT store it in localStorage (XSS-accessible).
+                // V-11 FIX (OWASP A03): Redirect via window.location — no document.write() XSS risk.
 
                 const userRole = data.role ? data.role.toUpperCase() : 'USER';
                 showMsg(`Success! Verified role: ${userRole}.`, 'ok');
 
-                // 3. Find the correct landing page for this role
+                // Find the correct landing page for this role
                 const targetHtmlUrl = roleRoutes[userRole];
 
                 if (targetHtmlUrl) {
-                    // Wait 1 second so the user can see the green success message
-                    setTimeout(async () => {
-                        try {
-                            // 4. Securely fetch the protected HTML page using the JWT token
-                            const htmlResponse = await fetch(targetHtmlUrl, {
-                                headers: {
-                                    'Authorization': 'Bearer ' + data.token
-                                }
-                            });
-
-                            if (htmlResponse.ok) {
-                                const htmlContent = await htmlResponse.text();
-
-                                // 5. Inject the secure HTML into the browser
-                                document.open();
-                                document.write(htmlContent);
-                                document.close();
-
-                                // Make the URL bar look clean
-                                window.history.pushState({}, "", targetHtmlUrl);
-                            } else {
-                                showMsg('Access Denied (403): Your role cannot access this page.', 'err');
-                            }
-                        } catch (fetchError) {
-                            showMsg('Error loading the landing page.', 'err');
-                        }
+                    // Wait 1 second so the user sees the success message, then navigate normally.
+                    // The httpOnly cookie is sent automatically with the GET request.
+                    setTimeout(() => {
+                        window.location.replace(targetHtmlUrl);
                     }, 1000);
                 } else {
                     showMsg('No landing page configured for your role.', 'err');

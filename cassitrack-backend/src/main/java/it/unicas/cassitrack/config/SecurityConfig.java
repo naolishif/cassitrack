@@ -81,26 +81,34 @@ public class SecurityConfig {
                                 "/api/v1/telemetry/stream"
                          ).permitAll()
 
-                        .requestMatchers( // Dev tools — H2 console removed (disabled in application.yml)
+                        .requestMatchers( // Dev tools
                                 "/ws/**",
-                                "/api/docs/**",
-                                "/api/swagger-ui/**",
-                                "/api/swagger-ui.html",
                                 "/api/static/**"
                         ).permitAll()
+
+                        // V-07 FIX (OWASP A05): Swagger UI now requires authentication — no free recon
+                        .requestMatchers(
+                                "/api/docs/**",
+                                "/api/swagger-ui/**",
+                                "/api/swagger-ui.html"
+                        ).authenticated()
 
                         // ── 3. Role-Specific Protected HTML ───────────────
                         .requestMatchers(
                                 "/cassitrack-fleetmanager.html",
                                 "/api/v1/analytics/**",
-                                "/cassitrack-analytics.html",
-                                "/api/v1/ai/**"
+                                "/cassitrack-analytics.html"
                         ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
+
+                        // V-10 FIX (OWASP A01): /api/v1/ai/** was mapped to two conflicting rules;
+                        // first-match-wins in Spring Security meant ADMIN was always denied.
+                        // Now both FLEET_MANAGER and ADMIN can access the AI endpoint.
+                        .requestMatchers("/api/v1/ai/**"
+                        ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER", "ADMIN", "ROLE_ADMIN")
 
                         .requestMatchers(
                                 "/cassitrack-admin.html",
                                 "/api/v1/users/**",
-                                "/api/v1/ai/**",
                                 "/api/v1/auth/register"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
@@ -115,12 +123,22 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 );
 
+        // V-12 FIX (OWASP A05): Add Content-Security-Policy to prevent XSS and clickjacking
         http.headers(headers -> headers
             .frameOptions(frame -> frame.deny())
             .xssProtection(xss -> xss.disable()) // modern browsers use CSP, not X-XSS-Protection
             .contentTypeOptions(ct -> {})         // X-Content-Type-Options: nosniff (default on)
             .httpStrictTransportSecurity(hsts ->
                 hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
+            .contentSecurityPolicy(csp -> csp.policyDirectives(
+                "default-src 'self'; " +
+                "script-src 'self' 'unsafe-inline'; " +
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
+                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+                "img-src 'self' data: https:; " +
+                "connect-src 'self' wss:; " +
+                "frame-ancestors 'none';"
+            ))
         );
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

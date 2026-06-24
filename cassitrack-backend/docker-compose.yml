@@ -16,6 +16,11 @@
 #    View logs:               docker compose logs -f cassitrack
 #    Stop everything:         docker compose down
 #    Wipe all data (careful): docker compose down -v
+#
+#  ⚠️  SECURITY (V-05/V-09 fixes — OWASP A02/A05):
+#    - All secrets are read from the .env file (never hardcoded here).
+#    - All infrastructure ports are bound to 127.0.0.1 (localhost only).
+#    - Generate strong secrets: openssl rand -base64 48
 # ─────────────────────────────────────────────────────────────
 
 services:
@@ -27,15 +32,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: cassitrack
-      POSTGRES_USER: cassitrack
-      POSTGRES_PASSWORD: cassitrack_dev
-
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"   # V-09: bound to localhost only
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cassitrack -d cassitrack"]
+      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME} -d cassitrack"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,12 +52,12 @@ services:
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: cassitrack
-      DOCKER_INFLUXDB_INIT_PASSWORD: cassitrack_dev
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       DOCKER_INFLUXDB_INIT_ORG: unicas
       DOCKER_INFLUXDB_INIT_BUCKET: vehicle_telemetry
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: cassitrack-dev-token-change-in-production
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN}
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"   # V-09: bound to localhost only
     volumes:
       - influxdb_data:/var/lib/influxdb2
     healthcheck:
@@ -67,13 +71,13 @@ services:
     image: redis:7.2-alpine
     container_name: cassitrack-redis
     restart: unless-stopped
-    command: redis-server --requirepass cassitrack_dev
+    command: redis-server --requirepass ${SPRING_REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"   # V-09: bound to localhost only
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "cassitrack_dev", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${SPRING_REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,14 +88,15 @@ services:
     container_name: cassitrack-mosquitto
     restart: unless-stopped
     ports:
-      - "1883:1883"   # MQTT (plain, for local dev)
-      - "9001:9001"   # WebSocket (optional, for browser clients)
+      - "127.0.0.1:1883:1883"   # V-09: bound to localhost only (auth required — see V-02 fix)
     volumes:
       - ../mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ../mosquitto/config/passwd:/mosquitto/config/passwd
+      - ../mosquitto/config/acl:/mosquitto/config/acl
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health -m ping || exit 1"]
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health -m ping -u ${MQTT_USERNAME} -P ${MQTT_PASSWORD} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -115,24 +120,27 @@ services:
     environment:
       # Database
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cassitrack
-      SPRING_DATASOURCE_USERNAME: cassitrack
-      SPRING_DATASOURCE_PASSWORD: cassitrack_dev
-      # Temporarily disable Flyway validation to allow startup when migration checksum changed
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       # InfluxDB
       INFLUX_URL: http://influxdb:8086
-      INFLUX_TOKEN: cassitrack-dev-token-change-in-production
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
       INFLUX_ORG: unicas
       INFLUX_BUCKET: vehicle_telemetry
       # Redis
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
-      SPRING_REDIS_PASSWORD: cassitrack_dev
+      SPRING_REDIS_PASSWORD: ${SPRING_REDIS_PASSWORD}
       # MQTT
       MQTT_BROKER_URL: tcp://mosquitto:1883
-      # JWT
-      JWT_SECRET: cassitrack-jwt-secret-change-in-production-must-be-long
-      # SEE API TOKEN
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      # JWT — V-05 fix: secret loaded from .env, never hardcoded here
+      JWT_SECRET: ${JWT_SECRET}
+      # SSE API TOKEN
       SSE_API_TOKEN: ${SSE_API_TOKEN}
+      # Weather
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
     ports:
       - "8080:8080"
     # NOTE: comment out the 'build' block and use 'image' below

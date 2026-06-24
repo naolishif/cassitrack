@@ -9,6 +9,7 @@ import it.unicas.omnimove.service.SecurityAuditService;
 import it.unicas.omnimove.service.TokenBlacklistService;
 import it.unicas.omnimove.service.EmailService;
 import it.unicas.omnimove.service.RateLimiterService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.UUID;
 
 @RestController
@@ -28,6 +30,9 @@ import java.util.UUID;
 @Slf4j
 @Tag(name = "Authentication", description = "Register, login, email verification, password reset")
 public class AuthController {
+
+    // V-04 FIX (OWASP A02/A07): JWT delivered as httpOnly cookie — not readable by JavaScript
+    private static final String JWT_COOKIE_NAME   = "omnimove_jwt";
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int VERIFY_EXPIRY_HOURS = 24;
@@ -102,7 +107,8 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Login with email and password")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req,
-                                              HttpServletRequest httpReq) {
+                                              HttpServletRequest httpReq,
+                                              HttpServletResponse httpResp) {
 
         var userOpt = userRepo.findByEmail(req.getEmail());
         if (userOpt.isEmpty()) {
@@ -148,16 +154,22 @@ public class AuthController {
         userRepo.save(user);
 
         String token = jwtUtil.generateToken(user.getEmail());
+        long expiresInMs = jwtUtil.getExpirationMs();
         log.info("User logged in: {}", req.getEmail());
         securityAuditService.loginSuccess(req.getEmail(), getClientIp(httpReq));
 
+        // V-04 FIX: Deliver token as httpOnly, Secure, SameSite=Strict cookie
+        httpResp.setHeader("Set-Cookie",
+            String.format("%s=%s; Path=/; Max-Age=%d; HttpOnly; Secure; SameSite=Strict",
+                JWT_COOKIE_NAME, token, (int) (expiresInMs / 1000)));
+
         return ResponseEntity.ok(AuthResponse.builder()
-                .token(token)
+                .token(token)       // kept for API clients using Authorization header
                 .email(user.getEmail())
                 .name(user.getName())
                 .id(user.getId())
                 .role(user.getRole())
-                .expiresInMs(3600000L)
+                .expiresInMs(expiresInMs)
                 .message("Login successful")
                 .build());
     }
@@ -324,9 +336,23 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(summary="Logout and invalidate the current JWT token")
     public ResponseEntity<Void> logout(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        // Resolve token from Authorization header OR httpOnly cookie
+        String token = null;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+            token = authHeader.substring(7);
+        } else if (request.getCookies() != null) {
+            token = Arrays.stream(request.getCookies())
+                    .filter(c -> JWT_COOKIE_NAME.equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (token != null) {
             long remaining = jwtUtil.getRemainingValidityMs(token);
             if (remaining > 0) {
                 String email = jwtUtil.extractEmail(token);
@@ -335,6 +361,11 @@ public class AuthController {
                 securityAuditService.logout(email);
             }
         }
+
+        // V-04 FIX: Clear the httpOnly JWT cookie
+        response.setHeader("Set-Cookie",
+            JWT_COOKIE_NAME + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict");
+
         return ResponseEntity.noContent().build();
     }
 

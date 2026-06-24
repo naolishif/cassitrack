@@ -1,18 +1,25 @@
 services:
+  # ─────────────────────────────────────────────────────────────
+  # OMNIMOVE — Local Development Infrastructure
+  # ⚠️  SECURITY (V-08/V-09 fixes — OWASP A05):
+  #   - Redis now requires a password (from .env SPRING_REDIS_PASSWORD).
+  #   - All ports bound to 127.0.0.1 (localhost only, not 0.0.0.0).
+  # ─────────────────────────────────────────────────────────────
+
   # 1. Database Relazionale (Postgres)
   omnimove-postgres:
     image: postgres:15-alpine
     container_name: omnimove-postgres-container
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"   # V-09: localhost only
     environment:
       POSTGRES_DB: omnimovedb
-      POSTGRES_USER: omnimove
-      POSTGRES_PASSWORD: omnimove
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     volumes:
       - omnimove_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U omnimove -d omnimovedb" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME} -d omnimovedb" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,14 +29,14 @@ services:
     image: influxdb:2.7-alpine
     container_name: omnimove-influxdb-container
     ports:
-      - "8087:8086" # Mappa la porta 8087 del PC alla 8086 del container
+      - "127.0.0.1:8087:8086"   # V-09: localhost only
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=omnimove_admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=password_influx_omnimove
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
       - DOCKER_INFLUXDB_INIT_ORG=omnimove_org
       - DOCKER_INFLUXDB_INIT_BUCKET=omnimove_bucket
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=omnimove-dev-token-change-in-production
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN}
     volumes:
       - omnimove_influxdb_data:/var/lib/influxdb2
 
@@ -37,13 +44,14 @@ services:
   omnimove-redis:
     image: redis:7-alpine
     container_name: omnimove-redis-container
-    command: redis-server --requirepass ${REDIS_PASSWORD:-omnimove_dev}
+    # V-08 fix (OWASP A05): Redis requires a password loaded from .env SPRING_REDIS_PASSWORD
+    command: redis-server --requirepass ${SPRING_REDIS_PASSWORD}
     ports:
-      - "6380:6379" # Mappa la porta 6380 del PC alla 6379 del container
+      - "127.0.0.1:6380:6379"   # V-09: localhost only
     volumes:
       - omnimove_redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-omnimove_dev}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${SPRING_REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

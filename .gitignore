@@ -12,10 +12,19 @@ target/
 # Maven
 .mvn/wrapper/maven-wrapper.jar
 
-# Environment / secrets
+# Environment / secrets — NEVER commit these files
 .env
 *.env
 env
+**/env
+**/.env
+cassitrack-backend/env
+omnimove-backend/env
+
+# ⚠️  SECURITY NOTICE — Git history cleanup required:
+# Secrets were committed in early commits (see omnimove-backend/env, cassitrack-backend/env).
+# Run: git filter-repo --path cassitrack-backend/env --path omnimove-backend/env --invert-paths
+# Then force-push all branches and rotate ALL secrets exposed (see OWASP_SECURITY_AUDIT.md).
 
 # Docker volumes
 mosquitto/data/

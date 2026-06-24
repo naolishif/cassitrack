@@ -9,7 +9,11 @@
  */
 
 // ── Configuration ────────────────────────────────────────────
-const CASSITRACK_API = 'http://172.20.10.6:8080/api/v1';
+// V-06 FIX (OWASP A02): Use a relative URL so the PWA works on any host over HTTPS.
+// When served from the CassiTrack backend directly, /api/v1 is the correct relative path.
+// If served from a different origin, override CASSITRACK_API_ORIGIN via a build-time env var
+// or deploy the PWA as a static asset of the Spring Boot app.
+const CASSITRACK_API = (window.CASSITRACK_API_ORIGIN || '') + '/api/v1';
 const REFRESH   = 15000; // milliseconds
 
 // Status colours matching the schedule service

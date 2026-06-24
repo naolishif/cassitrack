@@ -27,6 +27,8 @@ public class JwtUtil {
         catch (Exception e) { return false; }
     }
 
+    public long getExpirationMs() { return expirationMs; }
+
     public long getRemainingValidityMs(String token) {
         try {
             java.util.Date expiry = Jwts.parserBuilder()

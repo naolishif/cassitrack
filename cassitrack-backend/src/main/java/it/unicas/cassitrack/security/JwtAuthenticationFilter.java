@@ -15,7 +15,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import jakarta.servlet.http.Cookie;
+
 import java.io.IOException;
+import java.util.Arrays;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -49,9 +52,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    // V-04 FIX (OWASP A02): Read JWT from httpOnly cookie first; fall back to Authorization header
+    // for API clients (mobile apps, CLI tools, Swagger, etc.).
     private String parseJwt(HttpServletRequest request) {
-        String headerAuth = request.getHeader("Authorization");
+        // 1. Prefer httpOnly cookie — not accessible to JavaScript
+        if (request.getCookies() != null) {
+            String cookieToken = Arrays.stream(request.getCookies())
+                    .filter(c -> "cassitrack_jwt".equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .filter(StringUtils::hasText)
+                    .findFirst()
+                    .orElse(null);
+            if (cookieToken != null) return cookieToken;
+        }
 
+        // 2. Fall back to Authorization: Bearer <token> header (API clients)
+        String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
             return headerAuth.substring(7);
         }

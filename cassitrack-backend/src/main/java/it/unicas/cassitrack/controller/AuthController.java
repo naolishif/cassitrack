@@ -10,7 +10,9 @@ import it.unicas.cassitrack.service.LoginAttemptService;
 import it.unicas.cassitrack.service.SecurityAuditService;
 import it.unicas.cassitrack.service.TokenBlacklistService;
 import it.unicas.cassitrack.service.UserService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import it.unicas.cassitrack.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +25,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
+
+    // V-04 FIX (OWASP A02/A07): Token is delivered as an httpOnly, Secure, SameSite=Strict
+    // cookie rather than in the JSON response body, so JavaScript cannot read it.
+    // The token is still included in the JSON body for backward compatibility with the
+    // Spring Security filter chain and API clients that use the Authorization header.
+    private static final String JWT_COOKIE_NAME = "cassitrack_jwt";
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -79,7 +89,8 @@ public class AuthController {
     // ─────────────────────────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest,
-                                   HttpServletRequest request) {
+                                   HttpServletRequest request,
+                                   HttpServletResponse response) {
 
         String email = loginRequest.getEmail();
 
@@ -99,13 +110,25 @@ public class AuthController {
             User user = userService.getUserByEmail(email);
             securityAuditService.loginSuccess(email, getClientIp(request));
 
-            LoginResponse response = new LoginResponse();
-            response.setToken(token);
-            response.setUsername(user.getEmail());
-            response.setEmail(user.getEmail());
-            response.setRole(user.getRole());
+            // V-04 FIX: Set token in httpOnly cookie — JS cannot read it
+            Cookie jwtCookie = new Cookie(JWT_COOKIE_NAME, token);
+            jwtCookie.setHttpOnly(true);
+            jwtCookie.setSecure(true);          // HTTPS only; set to false for local HTTP dev
+            jwtCookie.setPath("/");
+            jwtCookie.setMaxAge((int) (jwtUtil.getExpirationMs() / 1000));
+            // SameSite=Strict via header (Cookie API doesn't expose it directly)
+            response.addCookie(jwtCookie);
+            response.setHeader("Set-Cookie",
+                String.format("%s=%s; Path=/; Max-Age=%d; HttpOnly; Secure; SameSite=Strict",
+                    JWT_COOKIE_NAME, token, (int) (jwtUtil.getExpirationMs() / 1000)));
 
-            return ResponseEntity.ok(response);
+            LoginResponse resp = new LoginResponse();
+            resp.setToken(token);   // kept for API clients using Authorization header
+            resp.setUsername(user.getEmail());
+            resp.setEmail(user.getEmail());
+            resp.setRole(user.getRole());
+
+            return ResponseEntity.ok(resp);
 
         } catch (AuthenticationException e) {
             loginAttemptService.recordFailure(email);
@@ -117,9 +140,23 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(summary = "Logout and invalidate the current JWT token")
     public ResponseEntity<Void> logout(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        // Resolve token from Authorization header OR cookie
+        String token = null;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+            token = authHeader.substring(7);
+        } else if (request.getCookies() != null) {
+            token = Arrays.stream(request.getCookies())
+                    .filter(c -> JWT_COOKIE_NAME.equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (token != null) {
             long remaining = jwtUtil.getRemainingValidityMs(token);
             if (remaining > 0) {
                 String email = jwtUtil.getUsernameFromToken(token);
@@ -128,13 +165,17 @@ public class AuthController {
                 securityAuditService.logout(email);
             }
         }
+
+        // V-04 FIX: Clear the httpOnly JWT cookie on logout
+        response.setHeader("Set-Cookie",
+            JWT_COOKIE_NAME + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict");
+
         return ResponseEntity.noContent().build();
     }
 
     private String getClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            // X-Forwarded-For may be a comma-separated list; first value is the original client
             return forwarded.split(",")[0].trim();
         }
         String realIp = request.getHeader("X-Real-IP");
