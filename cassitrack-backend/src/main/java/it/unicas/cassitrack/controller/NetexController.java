@@ -134,9 +134,9 @@ public class NetexController {
         DataObjects dataObjects = new DataObjects();
         dataObjects.setCompositeFrame(compositeFrame);
 
-        PublicationDeliveryDTO response = new PublicationDeliveryDTO();
-        response.setDataObjects(dataObjects);
+        PublicationDeliveryDTO publicationDelivery = new PublicationDeliveryDTO();
+        publicationDelivery.setDataObjects(dataObjects);
 
-        return response;
+        return publicationDelivery;
     }
 }

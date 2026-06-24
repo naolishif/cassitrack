@@ -36,6 +36,9 @@ public class StopArrivalDTO {
     @JsonProperty("route_name")
     private String routeName;
 
+    @JsonProperty("route_short_name")
+    private String routeShortName;
+
     /** The arrival time according to the static GTFS schedule */
     @JsonProperty("scheduled_arrival")
     private Instant scheduledArrival;

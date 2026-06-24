@@ -1,8 +1,10 @@
 package it.unicas.cassitrack.service;
 
 import it.unicas.cassitrack.dto.StopArrivalDTO;
+import it.unicas.cassitrack.model.Route;
 import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.model.VehiclePosition;
+import it.unicas.cassitrack.repository.RouteRepository;
 import it.unicas.cassitrack.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Predicts when buses will arrive at a specific stop.
@@ -37,6 +41,7 @@ public class ETAService {
     private final VehicleStateCache     vehicleStateCache;
     private final RouteMatchingService  routeMatchingService;
     private final StopRepository        stopRepository;
+    private final RouteRepository       routeRepository;
 
     private static final ZoneId ITALY_TZ =
             ZoneId.of("Europe/Rome");
@@ -53,6 +58,10 @@ public class ETAService {
     public List<StopArrivalDTO> getArrivalsAtStop(
             String stopId) {
 
+        // Load all routes once up front — avoids N DB hits inside the loop.
+        Map<String, Route> routeMap = routeRepository.findAll().stream()
+                .collect(Collectors.toMap(Route::getId, r -> r, (a, b) -> a));
+
         List<StopArrivalDTO> arrivals = new ArrayList<>();
 
         // Look at every active bus
@@ -60,7 +69,7 @@ public class ETAService {
                 : vehicleStateCache.getActive()) {
 
             StopArrivalDTO arrival =
-                    computeArrival(bus, stopId);
+                    computeArrival(bus, stopId, routeMap);
 
             if (arrival != null) {
                 arrivals.add(arrival);
@@ -81,7 +90,8 @@ public class ETAService {
      * a specific stop.
      */
     private StopArrivalDTO computeArrival(
-            VehiclePosition bus, String targetStopId) {
+            VehiclePosition bus, String targetStopId,
+            Map<String, Route> routeMap) {
         try {
             // Distance from bus to the target stop
             double[] stopCoords =
@@ -96,7 +106,7 @@ public class ETAService {
                     );
 
             // If bus is already past the stop
-            // (more than 500m behind), skip it
+            // (more than 8km behind), skip it
             if (distMetres > 8000) return null;
 
             // Estimate travel time
@@ -115,17 +125,31 @@ public class ETAService {
             Instant estimatedArrival =
                     Instant.now().plusSeconds(etaSeconds);
 
-            // Get the scheduled arrival for comparison
-            int nowSeconds = LocalTime.now(ITALY_TZ)
-                    .toSecondOfDay();
-            int scheduledSec =
-                    routeMatchingService.getScheduledArrival(
-                            bus.getMatchedRouteId() != null
-                                    ? bus.getMatchedRouteId()
-                                    : "LINEA-16",
-                            targetStopId,
-                            nowSeconds
-                    );
+            // Prefer routeId from the simulator (set from MQTT), fall back to server-matched
+            String routeId = bus.getRouteId() != null
+                    ? bus.getRouteId()
+                    : bus.getMatchedRouteId();
+            Route route = routeId != null ? routeMap.get(routeId) : null;
+
+            // Route display name: DB long name → DB short name → simulator name → null
+            String routeName = null;
+            String routeShortName = null;
+            if (route != null) {
+                routeName      = route.getLongName() != null ? route.getLongName() : route.getShortName();
+                routeShortName = route.getShortName();
+            } else if (bus.getRouteName() != null) {
+                routeName = bus.getRouteName();
+            }
+
+            // Schedule lookup: try matchedRouteId first (more precise), fall back to routeId
+            int nowSeconds = LocalTime.now(ITALY_TZ).toSecondOfDay();
+            String scheduleRouteId = bus.getMatchedRouteId() != null
+                    ? bus.getMatchedRouteId()
+                    : routeId;
+            int scheduledSec = scheduleRouteId != null
+                    ? routeMatchingService.getScheduledArrival(
+                            scheduleRouteId, targetStopId, nowSeconds)
+                    : -1;
 
             Instant scheduledArrival = scheduledSec > 0
                     ? Instant.now().plusSeconds(
@@ -139,10 +163,9 @@ public class ETAService {
 
             return StopArrivalDTO.builder()
                     .vehicleId(bus.getVehicleId())
-                    .routeId(bus.getMatchedRouteId() != null
-                            ? bus.getMatchedRouteId()
-                            : "LINEA-16")
-                    .routeName("Linea 16 — Campus Folcara")
+                    .routeId(routeId)
+                    .routeName(routeName)
+                    .routeShortName(routeShortName)
                     .scheduledArrival(scheduledArrival)
                     .estimatedArrival(estimatedArrival)
                     .delayMinutes(delayMinutes)

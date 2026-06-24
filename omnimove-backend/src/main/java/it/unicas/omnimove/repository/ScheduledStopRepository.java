@@ -13,6 +13,30 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
 
     List<ScheduledStop> findByTripId(String tripId);
 
+    /**
+     * Returns upcoming scheduled stops for a given stop within a time window,
+     * eagerly joining trip → route and trip → bus so callers can access
+     * route name and vehicle ID without triggering lazy-load exceptions.
+     *
+     * @param stopId      the stop to query (e.g. "CASSINO-STAZIONE")
+     * @param fromSeconds seconds-since-midnight lower bound (inclusive)
+     * @param toSeconds   seconds-since-midnight upper bound (exclusive)
+     */
+    @Query("""
+        SELECT ss FROM ScheduledStop ss
+        JOIN FETCH ss.trip t
+        JOIN FETCH t.route r
+        JOIN FETCH t.bus b
+        WHERE ss.stopId      = :stopId
+          AND ss.arrivalSeconds >= :fromSeconds
+          AND ss.arrivalSeconds  < :toSeconds
+        ORDER BY ss.arrivalSeconds ASC
+        """)
+    List<ScheduledStop> findUpcomingByStopId(
+            @Param("stopId")      String stopId,
+            @Param("fromSeconds") int    fromSeconds,
+            @Param("toSeconds")   int    toSeconds);
+
     @Query("""
         SELECT r.shortName AS shortName, r.longName AS longName,
                so.arrivalSeconds AS originSec, sd.arrivalSeconds AS destSec, t.id AS tripId
