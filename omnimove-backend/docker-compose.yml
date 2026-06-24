@@ -37,10 +37,16 @@ services:
   omnimove-redis:
     image: redis:7-alpine
     container_name: omnimove-redis-container
+    command: redis-server --requirepass ${REDIS_PASSWORD:-omnimove_dev}
     ports:
       - "6380:6379" # Mappa la porta 6380 del PC alla 6379 del container
     volumes:
       - omnimove_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-omnimove_dev}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   omnimove_postgres_data:

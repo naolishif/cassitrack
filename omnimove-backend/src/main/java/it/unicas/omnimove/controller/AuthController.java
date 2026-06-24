@@ -11,6 +11,7 @@ import it.unicas.omnimove.service.EmailService;
 import it.unicas.omnimove.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -44,7 +45,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Register a new passenger account")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest req,
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req,
                                                   HttpServletRequest request) {
         // Rate limit: 5 registrations per IP per hour
         if (!rateLimiter.allowRegister(getClientIp(request)))

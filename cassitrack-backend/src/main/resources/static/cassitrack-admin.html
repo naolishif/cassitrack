@@ -554,6 +554,15 @@
 
 <script>
 
+    function escHtml(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     let selectedRow = null;
     let selectedUser = null;
 
@@ -944,15 +953,15 @@
 
                 // HTML
                 row.innerHTML = `
-                    <td>${user.id}</td>
-                    <td>${user.taxId}</td>
-                    <td>${user.name}</td>
-                    <td>${user.surname}</td>
-                    <td>${user.email}</td>
-                    <td>${user.telephone || '-'}</td>
+                    <td>${escHtml(user.id)}</td>
+                    <td>${escHtml(user.taxId)}</td>
+                    <td>${escHtml(user.name)}</td>
+                    <td>${escHtml(user.surname)}</td>
+                    <td>${escHtml(user.email)}</td>
+                    <td>${escHtml(user.telephone || '-')}</td>
                     <td>
                         <span class="role ${roleClass}">
-                            ${user.role}
+                            ${escHtml(user.role)}
                         </span>
                     </td>
                 `;

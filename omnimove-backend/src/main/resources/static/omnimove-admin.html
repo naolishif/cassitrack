@@ -817,6 +817,15 @@
 <div class="toast" id="toastEl"></div>
 
 <script>
+    function escHtml(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     // ── Route guard: solo ADMIN può accedere ──────────────────────────────
     (function checkAdminAuth() {
         const token   = localStorage.getItem('omnimove_token');
@@ -904,10 +913,10 @@
         const tb = document.getElementById('userTbody');
         tb.innerHTML = data.map(u => `
         <tr>
-          <td class="text-mono">#${u.id}</td>
-          <td>${u.name}</td>
-          <td style="color:var(--text-secondary);font-size:12px">${u.email}</td>
-          <td><span class="badge ${roles[u.role] || 'badge-user'}">${u.role}</span></td>
+          <td class="text-mono">#${escHtml(u.id)}</td>
+          <td>${escHtml(u.name)}</td>
+          <td style="color:var(--text-secondary);font-size:12px">${escHtml(u.email)}</td>
+          <td><span class="badge ${roles[u.role] || 'badge-user'}">${escHtml(u.role)}</span></td>
           <td class="text-mono" style="font-size:11px">—</td>
           <td class="text-mono" style="font-size:11px">—</td>
           <td>

@@ -88,6 +88,7 @@ public class MqttMessageHandler implements MessageHandler {
 
     private boolean isValid(MqttPositionPayload pos) {
         if (pos.getVehicleId() == null || pos.getVehicleId().isBlank()) return false;
+        if (!pos.getVehicleId().matches("[A-Za-z0-9_\\-]{1,50}")) return false;
         if (pos.getLat() == null || pos.getLon() == null) return false;
         if (pos.getLat() < LAT_MIN || pos.getLat() > LAT_MAX || pos.getLon() < LON_MIN || pos.getLon() > LON_MAX) return false;
         if (pos.getTimestamp() == null) return false;
