@@ -317,7 +317,13 @@ async function showForgotPanel() {
         } catch (_) {
             showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
         }
-        return;
+
+        localStorage.setItem('omnimove_user', JSON.stringify({
+            id: data.id,
+            name:  data.name  || data.username || 'User',
+            email: data.email || '',
+            role:  assignedRole
+        }));
     }
     // Fallback: no email pre-filled, show the form
     hideTabs(); hideGuestSection();

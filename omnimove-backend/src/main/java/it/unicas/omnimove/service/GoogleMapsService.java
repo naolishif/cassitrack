@@ -62,37 +62,43 @@ public class GoogleMapsService {
     public Optional<TrafficResult> getTravelTime(
             double originLat, double originLon,
             double destLat,   double destLon) {
+        return getTravelTime(originLat, originLon, destLat, destLon, "driving");
+    }
+
+    public Optional<TrafficResult> getTravelTime(
+            double originLat, double originLon,
+            double destLat,   double destLon,
+            String mode) {
 
         if (apiKey == null || apiKey.isBlank()) {
-            log.debug("Google Maps API key not configured — skipping traffic query");
+            log.debug("Google Maps API key non configurata — uso fallback");
             return Optional.empty();
         }
-
+        boolean driving = "driving".equalsIgnoreCase(mode);
         try {
             String origins      = originLat + "," + originLon;
             String destinations = destLat   + "," + destLon;
 
             String response = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .queryParam("origins",        origins)
-                            .queryParam("destinations",   destinations)
-                            .queryParam("departure_time", "now")
-                            .queryParam("traffic_model",  "best_guess")
-                            .queryParam("mode",           "driving")
-                            .queryParam("key",            apiKey)
-                            .build())
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+                    .uri(b -> {
+                        b.queryParam("origins",      origins)
+                                .queryParam("destinations", destinations)
+                                .queryParam("mode",         mode)
+                                .queryParam("key",          apiKey);
+                        if (driving) {   // traffico solo in auto
+                            b.queryParam("departure_time", "now")
+                                    .queryParam("traffic_model",  "best_guess");
+                        }
+                        return b.build();
+                    })
+                    .retrieve().bodyToMono(String.class).block();
 
             return parseResponse(response);
-
         } catch (Exception e) {
-            log.warn("Google Maps API call failed: {}", e.getMessage());
+            log.warn("Google Maps API fallita ({}): {}", mode, e.getMessage());
             return Optional.empty();
         }
     }
-
     private Optional<TrafficResult> parseResponse(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);

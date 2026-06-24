@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unicas.omnimove.dto.JourneyRequest;
 import it.unicas.omnimove.dto.JourneyResponse;
+import it.unicas.omnimove.dto.StopArrivalDTO;
 import it.unicas.omnimove.model.JourneyLog;
 import it.unicas.omnimove.model.Stop;
 import it.unicas.omnimove.model.User;
@@ -38,6 +39,7 @@ public class JourneyController {
     private final UserRepository userRepo;
     private final GreenIndexService greenIndexService;
     private final RateLimiterService rateLimiter;
+    private final it.unicas.omnimove.client.CassitrackClient cassitrackClient;
 
     @GetMapping("/stops")
     @Operation(summary = "List active stops for origin/destination pickers")
@@ -71,6 +73,16 @@ public class JourneyController {
         JourneyResponse response = plannerService.plan(request);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/stops/{stopId}/arrivals")
+    @Operation(summary = "Prossimi arrivi in tempo reale a una fermata")
+    public ResponseEntity<List<StopArrivalDTO>> arrivals(@PathVariable String stopId) {
+        try {
+            return ResponseEntity.ok(cassitrackClient.getArrivalsAtStop(stopId));
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());   // fermata senza arrivi → lista vuota
+        }
     }
 
     @PostMapping("/select")

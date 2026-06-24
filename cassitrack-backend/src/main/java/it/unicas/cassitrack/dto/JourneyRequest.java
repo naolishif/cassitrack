@@ -39,6 +39,9 @@ public class JourneyRequest {
     @JsonProperty("dest_name")
     private String destName;
 
+    @JsonProperty("user_id")
+    private Long userId;
+
     /**
      * Which transport modes to consider.
      * If null or empty, all modes are considered.

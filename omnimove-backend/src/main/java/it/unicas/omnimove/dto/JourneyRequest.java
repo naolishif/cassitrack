@@ -10,5 +10,7 @@ public class JourneyRequest {
     @JsonProperty("dest_lat") private Double destLat;
     @JsonProperty("dest_lon") private Double destLon;
     @JsonProperty("dest_name") private String destName;
+    @JsonProperty("origin_is_gps") private Boolean originIsGps;
+    @JsonProperty("user_id") private Long userId;
     private List<String> modes;
 }

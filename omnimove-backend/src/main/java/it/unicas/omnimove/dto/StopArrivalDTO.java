@@ -9,4 +9,7 @@ public class StopArrivalDTO {
     @JsonProperty("estimated_arrival") private Instant estimatedArrival;
     @JsonProperty("scheduled_arrival") private Instant scheduledArrival;
     @JsonProperty("schedule_status") private String scheduleStatus;
+    @JsonProperty("route_id")   private String routeId;
+    @JsonProperty("route_name") private String routeName;
+    @JsonProperty("delay_minutes") private Integer delayMinutes;
 }

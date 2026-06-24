@@ -7,6 +7,8 @@ import it.unicas.cassitrack.repository.StopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import it.unicas.cassitrack.model.ScheduledStop;
+import it.unicas.cassitrack.repository.ScheduledStopRepository;
 
 import java.time.Instant;
 import java.time.LocalTime;
@@ -37,13 +39,11 @@ public class ETAService {
     private final VehicleStateCache     vehicleStateCache;
     private final RouteMatchingService  routeMatchingService;
     private final StopRepository        stopRepository;
+    private final ScheduledStopRepository scheduledStopRepository;
 
     private static final ZoneId ITALY_TZ =
             ZoneId.of("Europe/Rome");
 
-    // Average bus speed assumption when stopped
-    // or speed data is missing
-    private static final double DEFAULT_SPEED_KMH = 25.0;
 
     /**
      * Get predicted arrivals at a specific stop.
@@ -80,84 +80,50 @@ public class ETAService {
      * Compute when one specific bus will reach
      * a specific stop.
      */
-    private StopArrivalDTO computeArrival(
-            VehiclePosition bus, String targetStopId) {
+    private StopArrivalDTO computeArrival(VehiclePosition bus, String targetStopId) {
         try {
-            // Distance from bus to the target stop
-            double[] stopCoords =
-                    getStopCoords(targetStopId);
+            Long seqEta = computeSequenceEta(bus, targetStopId);
+            // null = questo bus NON e' un arrivo valido per questa fermata:
+            // non la serve, oppure l'ha gia' superata in questo giro. Lo escludiamo.
+            if (seqEta == null) return null;
+            long etaSeconds = seqEta;
 
-            if (stopCoords == null) return null;
+            if (etaSeconds > 1800) return null;   // filtro display: non mostriamo arrivi oltre 30 min
+            Instant estimatedArrival = Instant.now().plusSeconds(etaSeconds);
 
-            double distMetres =
-                    routeMatchingService.haversineMetres(
-                            bus.getLat(), bus.getLon(),
-                            stopCoords[0], stopCoords[1]
-                    );
-
-            // If bus is already past the stop
-            // (more than 500m behind), skip it
-            if (distMetres > 8000) return null;
-
-            // Estimate travel time
-            double speedKmh = (bus.getSpeedKmh() != null
-                    && bus.getSpeedKmh() > 2)
-                    ? bus.getSpeedKmh()
-                    : DEFAULT_SPEED_KMH;
-
-            double speedMs      = speedKmh / 3.6;
-            long   etaSeconds   = (long)(distMetres / speedMs);
-
-            // Cap at 30 minutes — if longer,
-            // bus is probably not heading to this stop
-            if (etaSeconds > 1800) return null;
-
-            Instant estimatedArrival =
-                    Instant.now().plusSeconds(etaSeconds);
-
-            // Get the scheduled arrival for comparison
-            int nowSeconds = LocalTime.now(ITALY_TZ)
-                    .toSecondOfDay();
-            int scheduledSec =
-                    routeMatchingService.getScheduledArrival(
-                            bus.getMatchedRouteId() != null
-                                    ? bus.getMatchedRouteId()
-                                    : "LINEA-16",
-                            targetStopId,
-                            nowSeconds
-                    );
+            // Confronto con l'orario di tabella per calcolare il ritardo.
+            // String routeId = bus.getMatchedRouteId() != null
+            //        ? bus.getMatchedRouteId() : bus.getRouteId();
+            // matchedRouteId non e' implementato (vale "UNKNOWN_ROUTE"): usiamo la
+            // linea reale pubblicata dal simulatore. matchedRouteId solo come ripiego.
+            String routeId = bus.getRouteId() != null
+                    ? bus.getRouteId() : bus.getMatchedRouteId();
+            int nowSeconds = LocalTime.now(ITALY_TZ).toSecondOfDay();
+            int scheduledSec = routeId != null
+                    ? routeMatchingService.getScheduledArrival(routeId, targetStopId, nowSeconds)
+                    : -1;
 
             Instant scheduledArrival = scheduledSec > 0
-                    ? Instant.now().plusSeconds(
-                    scheduledSec - nowSeconds)
+                    ? Instant.now().plusSeconds(scheduledSec - nowSeconds)
                     : estimatedArrival;
-
             int delayMinutes = scheduledSec > 0
                     ? (int)((estimatedArrival.getEpochSecond()
-                             - scheduledArrival.getEpochSecond()) / 60)
+                    - scheduledArrival.getEpochSecond()) / 60)
                     : 0;
 
             return StopArrivalDTO.builder()
                     .vehicleId(bus.getVehicleId())
-                    .routeId(bus.getMatchedRouteId() != null
-                            ? bus.getMatchedRouteId()
-                            : "LINEA-16")
-                    .routeName("Linea 16 — Campus Folcara")
+                    .routeId(routeId)
+                    .routeName(bus.getRouteName() != null ? bus.getRouteName() : routeId)
                     .scheduledArrival(scheduledArrival)
                     .estimatedArrival(estimatedArrival)
                     .delayMinutes(delayMinutes)
-                    .scheduleStatus(
-                            bus.getScheduleStatus() != null
-                                    ? bus.getScheduleStatus().name()
-                                    : "UNKNOWN"
-                    )
+                    .scheduleStatus(ScheduleAdherenceService.statusFromDelay(delayMinutes).name())
                     .build();
 
         } catch (Exception e) {
-            log.warn("ETA computation failed for " +
-                            "bus {} to stop {}: {}",
-                    bus.getVehicleId(), targetStopId,
-                    e.getMessage());
+            log.warn("ETA computation failed for bus {} to stop {}: {}",
+                    bus.getVehicleId(), targetStopId, e.getMessage());
             return null;
         }
     }
@@ -172,4 +138,57 @@ public class ETAService {
                 .map(s -> new double[]{s.getLat(), s.getLon()})
                 .orElse(null);
     }
+
+    /** ETA in secondi sommando i tratti dal DB, o null se non calcolabile. */
+    private Long computeSequenceEta(VehiclePosition bus, String targetStopId) {
+        // NOTA: non usiamo bus.getMatchedRouteId() per recuperare la sequenza.
+        // Quel campo dovrebbe contenere la linea DEDOTTA dal GPS (route matching),
+        // ma al momento non e' implementato: nessuno lo valorizza davvero e finisce
+        // sempre a "UNKNOWN_ROUTE". Ci appoggiamo quindi a tripId/routeId, che il
+        // simulatore pubblica leggendoli dal DB e sono affidabili.
+        // TODO: quando il route matching sara' reale, valutare se preferire
+        //       matchedRouteId come fonte primaria della linea.
+        List<ScheduledStop> seq;
+        if (bus.getTripId() != null) {
+            seq = scheduledStopRepository.findByTripIdOrderByStopSequenceAsc(bus.getTripId());
+        } else {
+            String routeId = bus.getRouteId() != null ? bus.getRouteId() : bus.getMatchedRouteId();
+            if (routeId == null) return null;
+            seq = scheduledStopRepository.findRepresentativeSequence(routeId);
+        }
+        if (seq.isEmpty()) return null;
+
+        String anchorStop = (bus.getNearestStopId() != null)
+                ? bus.getNearestStopId()
+                : (bus.getLat() != null && bus.getLon() != null
+                ? (bus.getTripId() != null
+                    ? routeMatchingService.findNearestStopOnTrip(bus.getTripId(), bus.getLat(), bus.getLon())
+                    : routeMatchingService.findNearestStopId(bus.getLat(), bus.getLon()))
+                : null);
+        if (anchorStop != null && targetStopId.equals(anchorStop)) return 0L;
+
+        int anchorIdx = indexOfStop(seq, anchorStop, 0);
+        if (anchorIdx < 0) return null;
+        int targetIdx = indexOfStop(seq, targetStopId, anchorIdx + 1);   // prossima occorrenza: gestisce gli anelli
+        if (targetIdx < 0) return null;
+
+        // L'ETA e' la differenza tra gli orari di tabella della fermata target
+        // e di quella attuale (ancora). Gli arrival_seconds includono gia' le
+        // soste, quindi questa differenza conta sia i tragitti sia le fermate
+        // intermedie. NB: include anche la sosta alla fermata attuale (bus
+        // considerato ancora fermo li'). Per assumerlo invece in uscita,
+        // sottrarre una sosta (-60).
+        long eta = (long) seq.get(targetIdx).getArrivalSeconds()
+                - seq.get(anchorIdx).getArrivalSeconds();
+        return eta > 0 ? eta : null;
+    }
+
+    private int indexOfStop(List<ScheduledStop> seq, String stopId, int from) {
+        if (stopId == null) return -1;
+        for (int i = Math.max(0, from); i < seq.size(); i++) {
+            if (seq.get(i).getStopId().equals(stopId)) return i;
+        }
+        return -1;
+    }
+
 }

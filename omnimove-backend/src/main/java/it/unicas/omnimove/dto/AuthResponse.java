@@ -13,7 +13,8 @@ public class AuthResponse {
     private String name;
     private String role;
     @JsonProperty("expires_in_ms")
-    private Long expiresInMs;
+    private long expiresInMs;
+    private Long id;
     private String message;
 
     /** true → el frontend muestra el botón "Olvidé mi contraseña" */

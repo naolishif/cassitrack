@@ -1,5 +1,6 @@
 package it.unicas.cassitrack.service;
 
+import it.unicas.cassitrack.model.ScheduledStop;
 import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.repository.ScheduledStopRepository;
 import it.unicas.cassitrack.repository.StopRepository;
@@ -38,34 +39,44 @@ public class RouteMatchingService {
      * Find the ID of the nearest stop to a GPS position.
      * Returns null if no stop is within MAX_MATCH_METRES.
      */
-    public String findNearestStopId(double lat, double lon) {
-        String nearestId  = null;
+
+    public String findNearestStopOnTrip(String tripId, double lat, double lon) {
+        if (tripId == null) return null;
+
+        var seq = scheduledStopRepo.findByTripIdOrderByStopSequenceAsc(tripId);
+        String nearestId = null;
         double nearestDist = Double.MAX_VALUE;
 
-        for (Stop stop : stopRepository.findAll()) {
-            if (stop.getLat() == null || stop.getLon() == null) {
-                continue;
-            }
-            double dist = haversineMetres(
-                    lat, lon, stop.getLat(), stop.getLon()
-            );
+        for (var ss : seq) {
+            var stopOpt = stopRepository.findById(ss.getStopId());
+            if (stopOpt.isEmpty()) continue;
+            var stop = stopOpt.get();
+            if (stop.getLat() == null || stop.getLon() == null) continue;
 
+            double dist = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
             if (dist < nearestDist) {
                 nearestDist = dist;
-                nearestId   = stop.getId();
+                nearestId = stop.getId();
             }
         }
-
-        if (nearestId != null && nearestDist > MAX_MATCH_METRES) {
-            // Bus is between stops — return closest anyway
-            // for schedule computation purposes
-            log.debug("Bus is {}m from nearest stop {}",
-                    (int)nearestDist, nearestId);
-        }
-
         return nearestId;
     }
 
+    /** Fermata più vicina cercata su TUTTA la rete (ancora per l'ETA). */
+    public String findNearestStopId(double lat, double lon) {
+        String nearestId = null;
+        double nearestDist = Double.MAX_VALUE;
+
+        for (Stop stop : stopRepository.findAll()) {
+            if (stop.getLat() == null || stop.getLon() == null) continue;
+            double dist = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestId = stop.getId();
+            }
+        }
+        return nearestId;
+    }
     /**
      * Get the scheduled arrival time (seconds after midnight)
      * for a specific stop on a specific route,
@@ -137,4 +148,23 @@ public class RouteMatchingService {
         );
         return R * c;
     }
+
+
+    /** Nome della fermata successiva a quella attuale, lungo la sequenza della corsa. */
+    public String nextStopName(String tripId, String routeId, String currentStopId) {
+        if (currentStopId == null) return null;
+        List<ScheduledStop> seq = (tripId != null)
+                ? scheduledStopRepo.findByTripIdOrderByStopSequenceAsc(tripId)
+                : (routeId != null ? scheduledStopRepo.findRepresentativeSequence(routeId) : List.of());
+
+        for (int i = 0; i < seq.size(); i++) {
+            if (seq.get(i).getStopId().equals(currentStopId)) {
+                if (i + 1 >= seq.size()) return null;            // e' gia' all'ultima fermata
+                String nextId = seq.get(i + 1).getStopId();
+                return stopRepository.findById(nextId).map(Stop::getName).orElse(nextId);
+            }
+        }
+        return null;
+    }
+
 }

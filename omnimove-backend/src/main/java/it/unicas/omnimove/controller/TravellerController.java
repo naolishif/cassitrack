@@ -3,8 +3,10 @@ package it.unicas.omnimove.controller;
 import it.unicas.omnimove.dto.TravellerUpdateRequest;
 import it.unicas.omnimove.model.FavoriteRoute;
 import it.unicas.omnimove.model.User;
+import it.unicas.omnimove.model.UserPreferences;
 import it.unicas.omnimove.repository.FavoriteRouteRepository;
 import it.unicas.omnimove.repository.JourneyLogRepository;
+import it.unicas.omnimove.repository.UserPreferencesRepository;
 import it.unicas.omnimove.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +40,7 @@ public class TravellerController {
     private final JourneyLogRepository journeyLogRepository;
     private final GreenIndexService greenIndexService;
     private final FavoriteRouteRepository favoriteRouteRepository;
+    private final UserPreferencesRepository preferencesRepository;
 
     @PutMapping("/me")
     @Operation(summary = "Update own profile")
@@ -75,6 +78,46 @@ public class TravellerController {
         userRepo.save(user);
         log.info("Traveller {} updated their profile", principal.getUsername());
         return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
+    }
+
+    @GetMapping("/preferences")
+    @Operation(summary = "Get preferences for the logged-in traveller")
+    public ResponseEntity<?> getPreferences(@AuthenticationPrincipal UserDetails principal) {
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        User user = userRepo.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        UserPreferences prefs = preferencesRepository.findByUserId(user.getId())
+                .orElse(UserPreferences.builder()
+                        .userId(user.getId())
+                        .defaultJourneyMode("FAST")
+                        .avoidHighOccupancy(false)
+                        .showWalking(true)
+                        .preferBikeOverBus(false)
+                        .notifyDelays(true)
+                        .notifyTicketExpiry(true)
+                        .notifyEcoTip(false)
+                        .build());
+
+        return ResponseEntity.ok(prefs);
+    }
+
+    @PutMapping("/preferences")
+    @Operation(summary = "Save preferences for the logged-in traveller")
+    public ResponseEntity<?> savePreferences(@RequestBody UserPreferences body,
+                                             @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        User user = userRepo.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        body.setUserId(user.getId());
+        preferencesRepository.save(body);
+
+        return ResponseEntity.ok(Map.of("message", "Preferences saved"));
     }
 
     @GetMapping("/stats")

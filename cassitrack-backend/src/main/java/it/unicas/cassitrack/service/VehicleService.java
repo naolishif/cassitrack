@@ -27,6 +27,7 @@ import java.util.Optional;
 public class VehicleService {
 
     private final VehicleStateCache vehicleStateCache;
+    private final RouteMatchingService routeMatchingService;
 
     /**
      * Returns current status of ALL active vehicles.
@@ -82,14 +83,14 @@ public class VehicleService {
                 .lon(pos.getLon())
                 .speedKmh(pos.getSpeedKmh())
                 .headingDeg(pos.getHeadingDeg())
-                .routeId(pos.getRouteId() != null
-                        ? pos.getRouteId() : "LINEA-16")
-                .routeName(pos.getRouteName() != null
-                        ? pos.getRouteName() : "Linea 16")
+                .routeId(pos.getRouteId())
+                .routeName(pos.getRouteName())
                 .scheduleStatus(status)
                 .delayMinutes(pos.getDelayMinutes())
                 .nextStopId(pos.getNearestStopId())
                 .nextStopName(pos.getNearestStop())
+                .upcomingStopName(routeMatchingService.nextStopName(
+                        pos.getTripId(), pos.getRouteId(), pos.getNearestStopId()))
                 .etaSeconds(null)
                 .estimatedPassengers(estimatedPassengers)
                 .crowdingLevel(crowdingLevel)

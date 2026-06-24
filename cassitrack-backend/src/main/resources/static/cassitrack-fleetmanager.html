@@ -939,6 +939,8 @@
             <!-- KPI GRID -->
             <div class="kpi-grid compact-kpis">
 
+
+
                 <div class="kpi-card">
                     <div class="kpi-label">Average Delay</div>
                     <div class="kpi-row">
@@ -1147,8 +1149,44 @@
             }
         ).addTo(map);
 
-        // Load routes and stops from PostgreSQL
-        initRoutes();
+        fetch(`${API}/vehicles/fleet-size`).then(r=>r.json())
+            .then(d=>{ if(d && d.total) fleetSize = d.total; })
+            .catch(()=>{});
+
+        fetch(`${API}/routes`).then(r=>r.json()).then(routes=>{
+            routes.forEach((route, i)=>{
+                const color = `hsl(${(i * 137.5) % 360}, 70%, 55%)`;
+                routeColors[route.id] = color;
+                routeColors[route.name] = color;
+
+                // la polilinea della linea resta una per linea
+                L.polyline(route.stops.map(s=>[s.lat,s.lon]),
+                    {color,weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
+
+                // accumula le fermate, unendo le linee che le servono
+                route.stops.forEach(s=>{
+                    if(!stopMap[s.id]) stopMap[s.id] = {name:s.name, lat:s.lat, lon:s.lon, lines:[]};
+                    if(!stopMap[s.id].lines.some(l=>l.name===route.name))
+                        stopMap[s.id].lines.push({name:route.name, color});
+                });
+            });
+
+            // un solo marker per fermata, con TUTTE le linee nel popup
+            Object.values(stopMap).forEach(st=>{
+                const linesHtml = st.lines.map(l=>
+                    `<span style="color:${l.color};font-weight:700">${l.name}</span>`
+                ).join(' · ');
+                L.circleMarker([st.lat, st.lon],{
+                    radius:7, fillColor:'#0f1623', color:'#94A3B8', weight:2, opacity:1, fillOpacity:1
+                }).addTo(map).bindPopup(`
+                    <div style="padding:10px;min-width:150px">
+                        <div style="font-family:Syne,sans-serif;font-weight:700;color:#E2E8F0;margin-bottom:5px">🚏 ${st.name}</div>
+                        <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4B5563">Linee: ${linesHtml} · Magni Autoservizi</div>
+                    </div>`);
+            });
+
+            fetchVehicles();
+        }).catch(e=>console.error('routes load failed',e));
 
         setTimeout(() => {
             map.invalidateSize();
@@ -1157,66 +1195,11 @@
     });
 
 
-    const ROUTE_PALETTE = ['#3B82F6','#06B6D4','#8B5CF6','#10B981','#F59E0B','#EF4444','#F97316'];
-
-    async function initRoutes() {
-        try {
-            const token = localStorage.getItem('cassitrack_token');
-            const r = await fetch(`${API}/analytics/routes-map`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!r.ok) throw new Error(r.status);
-            const routes = await r.json();
-            if (!routes || routes.length === 0) return;
-
-            // Count which stops are shared between routes
-            const stopRoutes = {};
-            routes.forEach(route => {
-                route.stops.forEach(stop => {
-                    if (!stopRoutes[stop.id]) stopRoutes[stop.id] = [];
-                    stopRoutes[stop.id].push(route.routeId);
-                });
-            });
-
-            const allLatLons = [];
-
-            routes.forEach((route, i) => {
-                const color = ROUTE_PALETTE[i % ROUTE_PALETTE.length];
-
-                if (route.stops.length > 1) {
-                    L.polyline(route.stops.map(s => [s.lat, s.lon]), {
-                        color, weight: 4, opacity: 0.8, dashArray: '8 8'
-                    }).addTo(map);
-                }
-
-                route.stops.forEach(stop => {
-                    allLatLons.push([stop.lat, stop.lon]);
-                    const sharedWith  = stopRoutes[stop.id] || [];
-                    const isShared    = sharedWith.length > 1;
-                    const markerColor = isShared ? '#8B5CF6' : color;
-                    const routeLabel  = isShared ? sharedWith.join(' + ') : route.routeId;
-                    L.circleMarker([stop.lat, stop.lon], {
-                        radius: 7, fillColor: '#0f1623', color: markerColor,
-                        weight: 2, opacity: 1, fillOpacity: 1
-                    }).addTo(map).bindPopup(`
-                        <div style="padding:10px;min-width:160px">
-                            <div style="font-family:Syne,sans-serif;font-weight:700;color:${markerColor};margin-bottom:5px">🚏 ${stop.name}</div>
-                            <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4B5563">${routeLabel} · Magni Autoservizi</div>
-                        </div>`);
-                });
-            });
-
-            // Fit map to the actual stops extent
-            if (allLatLons.length > 0) {
-                map.fitBounds(L.latLngBounds(allLatLons), { padding: [40, 40] });
-            }
-        } catch (e) {
-            console.error('initRoutes: failed to load routes from DB', e);
-        }
-    }
-
     const markers={},vehicleData={};
     let selectedVeh=null,lastUpdate=null;
+    const routeColors = {};   // id linea -> colore, riempita all'avvio
+    const stopMap = {};   // stopId -> { name, lat, lon, lines:[{name,color}] }
+    let fleetSize = 4;
 
     function busIcon(id,status){
         const c=SC[status]||SC.UNKNOWN;
@@ -1229,18 +1212,6 @@
             if(!r.ok) throw new Error(r.status);
 
             let data=await r.json();
-
-            // Calcular schedule_status desde delay_minutes
-            data=data.map(v=>{
-                const d=v.delay_minutes || 0;
-
-                v.schedule_status =
-                    d <= 3 ? 'ON_TIME' :
-                        d <= 6 ? 'SLIGHTLY_LATE' :
-                            'SIGNIFICANTLY_LATE';
-
-                return v;
-            });
 
             lastUpdate=new Date();
 
@@ -1272,7 +1243,7 @@
 
     function popupV(v){
         const c=SC[v.schedule_status]||SC.UNKNOWN,l=SL[v.schedule_status]||'LIVE';
-        const routeCol=v.route_id&&v.route_id.startsWith('RUTA_2')?'#06B6D4':'#3B82F6';
+        const routeCol = routeColor(v.route_id);
         const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
         const delayTxt=v.delay_minutes>0?`+${v.delay_minutes}m`:'In orario';
         return `
@@ -1287,6 +1258,7 @@
             <div><div style="color:#4B5563;font-size:9px">DELAY</div><span style="color:${c}">${delayTxt}</span></div>
             <div><div style="color:#4B5563;font-size:9px">PASSENGERS</div>${v.estimated_passengers?'~'+v.estimated_passengers:'—'}</div>
             <div style="grid-column:span 2"><div style="color:#4B5563;font-size:9px">LAST STOP</div>${v.next_stop_name||'—'}</div>
+            <div style="grid-column:span 2"><div style="color:#4B5563;font-size:9px">NEXT STOP</div>${v.upcoming_stop_name||'—'}</div>
         </div>
         <div style="height:4px;background:#1A2744;border-radius:2px;overflow:hidden">
             <div style="width:${cp}%;height:100%;background:${cc};border-radius:2px"></div>
@@ -1299,7 +1271,7 @@
         const onTime=vehicles.filter(v=>v.schedule_status==='ON_TIME'||v.schedule_status==='EARLY').length;
         const late=vehicles.filter(v=>v.schedule_status==='SLIGHTLY_LATE'||v.schedule_status==='SIGNIFICANTLY_LATE').length;
         // Analytics
-        const totalFleet = 4; // cambia esto si tienes más buses reales
+        const totalFleet = fleetSize
         const punctuality = vehicles.length
             ? Math.round((onTime / vehicles.length) * 100)
             : 0;
@@ -1334,7 +1306,7 @@
             const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
             const d=document.createElement('div');
             d.className='vcard'+(selectedVeh===v.vehicle_id?' selected':'');
-            d.innerHTML=`<div class="vcard-stripe" style="background:${c}"></div><div class="vcard-top"><div class="vcard-id" style="color:${c}">${escHtml(v.vehicle_id)}</div><div class="chip" style="color:${c};border-color:${c}44;background:${c}18;font-size:9px">${escHtml(l)}</div></div><div class="vcard-grid"><div class="vitem"><div class="vitem-lbl">Speed</div><div class="vitem-val">${escHtml(spd)} km/h</div></div><div class="vitem"><div class="vitem-lbl">Passengers</div><div class="vitem-val">${escHtml(pax)}</div></div><div class="vitem"><div class="vitem-lbl">Crowding</div><div class="vitem-val">${escHtml(v.crowding_level||'—')}</div></div><div class="vitem"><div class="vitem-lbl">Route</div><div class="vitem-val" style="color:${v.route_id&&v.route_id.startsWith('RUTA_2')?'#06B6D4':'#3B82F6'}">${escHtml(v.route_name||'—')}</div></div></div><div class="cbar"><div class="cbar-fill" style="width:${cp}%;background:${cc}"></div></div>`;
+            d.innerHTML=`<div class="vcard-stripe" style="background:${c}"></div><div class="vcard-top"><div class="vcard-id" style="color:${routeColor(v.route_id)}">${v.vehicle_id}</div><div class="chip" style="color:${c};border-color:${c}44;background:${c}18;font-size:9px">${l}</div></div><div class="vcard-grid"><div class="vitem"><div class="vitem-lbl">Speed</div><div class="vitem-val">${spd} km/h</div></div><div class="vitem"><div class="vitem-lbl">Passengers</div><div class="vitem-val">${pax}</div></div><div class="vitem"><div class="vitem-lbl">Crowding</div><div class="vitem-val">${v.crowding_level||'—'}</div></div><div class="vitem"><div class="vitem-lbl">Route</div><div class="vitem-val" style="color:${routeColor(v.route_id)}">${v.route_name||'—'}</div></div></div><div class="cbar"><div class="cbar-fill" style="width:${cp}%;background:${cc}"></div></div>`;
             d.addEventListener('click',()=>selV(v.vehicle_id));
             list.appendChild(d);
         });
@@ -1350,6 +1322,12 @@
 
     // Helpers
     function crowdPct(l){return{LOW:18,MEDIUM:48,HIGH:74,VERY_HIGH:95}[l]||0;}
+    function routeColor(routeId){
+        return routeColors[routeId] || '#4B5563';
+    }
+    function chartColor(key, i){
+        return routeColors[key] || `hsl(${(i * 137.5) % 360}, 70%, 55%)`;
+    }
     function fmtT(iso){if(!iso)return'—';return new Date(iso).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});}
     function fmtDist(m){if(!m)return'—';return m<1000?(Math.round(m)+'m'):(m/1000).toFixed(1)+'km';}
     // ─────────────────────────────────────────────
@@ -1664,13 +1642,13 @@
         if (emptyEl) emptyEl.style.display = 'none';
 
         const labels   = buildChartLabels(groupBy, data);
-        const datasets = routeKeys.map((key, i) => ({
-            label:           key,
-            data:            labels.map(slot => data[key]?.[slot] ?? null),
-            backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
-            borderRadius:    4,
-            maxBarThickness: groupBy === 'day' ? 18 : 14
-        }));
+        const datasets = routeKeys.sort().map((key, i) => ({
+                label: key,
+                data: labels.map(slot => data[key][slot] ?? null),
+                backgroundColor: chartColor(key, i),
+                borderRadius: 4,
+                maxBarThickness: groupBy === 'day' ? 18 : 14
+            }));
 
         if (instanceRef) instanceRef.destroy();
 
@@ -1720,6 +1698,7 @@
             document.getElementById('kpiPassengers').textContent = avg != null ? avg : '—';
         } catch(e) {
             console.error('Failed to load passengers by route', e);
+            canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
         }
     }
 
@@ -1734,6 +1713,24 @@
             const data = await r.json();
             delayChartInstance = renderBarChart('delayChart', delayChartInstance, data, 'min');
 
+            const routeKeys = Object.keys(data);
+            if (routeKeys.length === 0) {
+                canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
+                return;
+            }
+
+            const labels = buildHourlyLabels();
+
+            const datasets = routeKeys.sort().map((key, i) => ({
+                label: key,
+                data: labels.map(slot => data[key][slot] ?? null),
+                backgroundColor: chartColor(key, i),
+                borderRadius: 4,
+                maxBarThickness: 14
+            }));
+
+            canvas.width = Math.max(700, labels.length * 90);
+
             // Update average delay KPI
             const allVals = [];
             Object.values(data).forEach(s => Object.values(s).forEach(v => { if (v != null) allVals.push(v); }));
@@ -1742,6 +1739,7 @@
             document.getElementById('kpiDelay').textContent = avg > 0 ? `+${avg}m` : '0m';
         } catch(e) {
             console.error('Failed to load delay by route', e);
+            canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
         }
     }
 
@@ -1807,12 +1805,17 @@
         const kpiSpan = document.getElementById('kpiOnTime');
         if (!donut || !vehicles.length) return;
 
-        if (kpiSpan) kpiSpan.textContent = '';
+        kpiSpan.textContent = '';
+
         const total    = vehicles.length;
-        const onTime   = vehicles.filter(v => (v.delay_minutes || 0) <= 3).length;
-        const slight   = vehicles.filter(v => (v.delay_minutes || 0) > 3 && (v.delay_minutes || 0) <= 6).length;
-        const onTimePct = (onTime  / total) * 100;
-        const slightPct = (slight  / total) * 100;
+        const onTime   = vehicles.filter(v => v.schedule_status === 'ON_TIME' || v.schedule_status === 'EARLY').length;
+        const slight   = vehicles.filter(v => v.schedule_status === 'SLIGHTLY_LATE').length;
+        const late     = vehicles.filter(v => v.schedule_status === 'SIGNIFICANTLY_LATE').length;
+
+        const onTimePct  = (onTime  / total) * 100;
+        const slightPct  = (slight  / total) * 100;
+        const latePct    = (late    / total) * 100;
+
         donut.style.background = `conic-gradient(
             #22C55E 0% ${onTimePct}%,
             #F59E0B ${onTimePct}% ${onTimePct + slightPct}%,

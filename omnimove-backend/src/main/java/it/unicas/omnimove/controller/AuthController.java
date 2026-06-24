@@ -90,6 +90,7 @@ public class AuthController {
         return ResponseEntity.ok(AuthResponse.builder()
                 .email(user.getEmail())
                 .name(user.getName())
+                .id(user.getId())
                 .role(user.getRole())
                 .message("Registration successful! Please check your email to verify your account.")
                 .build());
@@ -153,6 +154,7 @@ public class AuthController {
                 .token(token)
                 .email(user.getEmail())
                 .name(user.getName())
+                .id(user.getId())
                 .role(user.getRole())
                 .expiresInMs(3600000L)
                 .message("Login successful")
@@ -348,8 +350,8 @@ public class AuthController {
 
         return userRepo.findByEmail(userDetails.getUsername())
                 .map(u -> ResponseEntity.ok(AuthResponse.builder()
-                        .email(u.getEmail()).name(u.getName()).role(u.getRole()).build()))
-                .orElse(ResponseEntity.notFound().build());
+                        .id(u.getId()).email(u.getEmail()).name(u.getName()).role(u.getRole()).build()))
+            .orElse(ResponseEntity.notFound().build());
     }
 
     // ── DELETE ACCOUNT ────────────────────────────────────────────────
