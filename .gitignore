@@ -15,6 +15,7 @@ target/
 # Environment / secrets
 .env
 *.env
+env
 
 # Docker volumes
 mosquitto/data/
