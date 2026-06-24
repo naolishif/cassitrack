@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unicas.cassitrack.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('FLEET_MANAGER', 'ROLE_FLEET_MANAGER')")
 @Tag(name = "Analytics", description = "Fleet manager dashboard data")
 public class AnalyticsController {
 

@@ -1,6 +1,7 @@
 package it.unicas.cassitrack.service;
 
 import it.unicas.cassitrack.dto.RegisterRequest;
+import it.unicas.cassitrack.dto.UserDTO;
 import it.unicas.cassitrack.model.User;
 import it.unicas.cassitrack.repository.UserRepository;
 
@@ -30,9 +31,11 @@ public class UserService {
     // ─────────────────────────────────────────────────────────────────
     // GET ALL USERS
     // ─────────────────────────────────────────────────────────────────
-    public List<User> getAllUsers() {
+    public List<UserDTO> getAllUsers() {
         log.info("Fetching all users");
-        return userRepository.findAll();
+        return userRepository.findAll().stream()
+                .map(UserDTO::from)
+                .toList();
     }
 
     // ─────────────────────────────────────────────────────────────────

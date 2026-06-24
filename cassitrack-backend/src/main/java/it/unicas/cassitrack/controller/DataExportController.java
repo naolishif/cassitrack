@@ -59,6 +59,11 @@ public class DataExportController {
             return null;
         }
 
+        if (emitters.size() >= 50) {
+            response.setStatus(429);
+            return null;
+        }
+
         // Creiamo un Emitter senza timeout (-1L) così la connessione resta aperta indefinitamente
         SseEmitter emitter = new SseEmitter(-1L);
         this.emitters.add(emitter);

@@ -17,6 +17,7 @@ import java.util.List;
 import jakarta.servlet.DispatcherType;
 
 @Configuration @EnableWebSecurity @RequiredArgsConstructor
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
@@ -68,7 +69,11 @@ public class SecurityConfig {
                                 "/api/v1/traffic/**"
                         ).hasAnyAuthority("TRAVELLER", "ADMIN", "ROLE_TRAVELLER", "ROLE_ADMIN")
 
-                        // ── 5. Everything else requires authentication ────────────────────
+                        // ── 5. Actuator — health/info public, everything else admin only ──
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+
+                        // ── 6. Everything else requires authentication ────────────────────
                         .anyRequest().authenticated()
                 )
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()))

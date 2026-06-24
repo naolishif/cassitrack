@@ -51,7 +51,7 @@ server:
 # ── InfluxDB ──────────────────────────────────────────────────────
 influx:
   url: ${INFLUX_URL:http://localhost:8086}
-  token: ${INFLUX_TOKEN:cassitrack-dev-token-change-in-production}
+  token: ${INFLUX_TOKEN}
   org: ${INFLUX_ORG:unicas}
   bucket: ${INFLUX_BUCKET:vehicle_telemetry}
 
@@ -73,7 +73,7 @@ jwt:
 
 # ── SSE API token    ──────────────────────────────────────────────
 sse:
-  api-token: ${SSE_API_TOKEN:dev-only-insecure-token}
+  api-token: ${SSE_API_TOKEN}
 
 # ── OpenAPI / Swagger UI ──────────────────────────────────────────
 springdoc:
@@ -97,6 +97,14 @@ logging:
     org:
       springframework:
         security: WARN
+
+# ── CORS ──────────────────────────────────────────────────────
+# List the origins that browser-based apps are allowed to call CassiTrack from.
+# Add any external website URL here if it needs to access CassiTrack's public APIs
+# (e.g. GTFS-RT, SIRI, vehicle positions) directly from the browser.
+cassitrack:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:8081}
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:

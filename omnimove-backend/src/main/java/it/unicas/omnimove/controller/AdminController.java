@@ -10,6 +10,7 @@ import it.unicas.omnimove.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,20 +25,13 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasAnyAuthority('ADMIN', 'ROLE_ADMIN')")
 @Tag(name = "Admin", description = "User management — ADMIN role required")
 public class AdminController {
 
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final AnalyticsService analyticsService;
-
-    // ── guard helper ──────────────────────────────────────────────────────
-    private boolean isAdmin(UserDetails principal) {
-        if (principal == null) return false;
-        return userRepo.findByEmail(principal.getUsername())
-                .map(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
-                .orElse(false);
-    }
 
     private UserDTO toDTO(User u) {
         return UserDTO.builder()
@@ -54,10 +48,6 @@ public class AdminController {
     public ResponseEntity<?> listUsers(
             @AuthenticationPrincipal UserDetails principal) {
 
-        if (!isAdmin(principal))
-            return ResponseEntity.status(403)
-                    .body(Map.of("message", "Forbidden: ADMIN role required"));
-
         List<UserDTO> users = userRepo.findAll()
                 .stream().map(this::toDTO)
                 .collect(Collectors.toList());
@@ -72,10 +62,6 @@ public class AdminController {
     public ResponseEntity<?> createUser(
             @RequestBody AdminCreateUserRequest req,
             @AuthenticationPrincipal UserDetails principal) {
-
-        if (!isAdmin(principal))
-            return ResponseEntity.status(403)
-                    .body(Map.of("message", "Forbidden: ADMIN role required"));
 
         if (req.getName() == null || req.getEmail() == null || req.getPassword() == null)
             return ResponseEntity.badRequest()
@@ -107,10 +93,6 @@ public class AdminController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails principal) {
 
-        if (!isAdmin(principal))
-            return ResponseEntity.status(403)
-                    .body(Map.of("message", "Forbidden: ADMIN role required"));
-
         return userRepo.findById(id).map(target -> {
             // Impedisce all'admin di cancellare se stesso
             if (target.getEmail().equalsIgnoreCase(principal.getUsername()))
@@ -130,12 +112,7 @@ public class AdminController {
     // ── GET /api/v1/admin/users/stats ─────────────────────────────────────
     @GetMapping("/users/stats")
     @Operation(summary = "User counts by role", description = "Returns total, admins, travellers. ADMIN only.")
-    public ResponseEntity<?> userStats(
-            @AuthenticationPrincipal UserDetails principal) {
-
-        if (!isAdmin(principal))
-            return ResponseEntity.status(403)
-                    .body(Map.of("message", "Forbidden: ADMIN role required"));
+    public ResponseEntity<?> userStats() {
 
         List<User> all = userRepo.findAll();
         long total     = all.size();
@@ -154,12 +131,7 @@ public class AdminController {
     @Operation(summary = "Transport mode analytics",
                description = "InfluxDB aggregates. range = 1W | 1M | 3M | 6M | 1Y. ADMIN only.")
     public ResponseEntity<?> analytics(
-            @RequestParam(value = "range", defaultValue = "1M") String range,
-            @AuthenticationPrincipal UserDetails principal) {
-
-        if (!isAdmin(principal))
-            return ResponseEntity.status(403)
-                    .body(Map.of("message", "Forbidden: ADMIN role required"));
+            @RequestParam(value = "range", defaultValue = "1M") String range) {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("kpis",             analyticsService.getSummaryKpis(range));

@@ -2,6 +2,7 @@ package it.unicas.cassitrack.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import it.unicas.cassitrack.dto.RegisterRequest;
+import it.unicas.cassitrack.dto.UserDTO;
 import it.unicas.cassitrack.model.User;
 import it.unicas.cassitrack.service.UserService;
 
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/users")
 @CrossOrigin
+@PreAuthorize("hasAnyAuthority('ADMIN', 'ROLE_ADMIN')")
 public class UserController {
 
     private final UserService userService;
@@ -31,7 +34,7 @@ public class UserController {
     // ─────────────────────────────────────────────────────────────────
     @GetMapping
     @Operation(summary = "Get all users to populate the admin dashboard")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
         log.info("REST request to get all users");
         return ResponseEntity.ok(userService.getAllUsers());
     }

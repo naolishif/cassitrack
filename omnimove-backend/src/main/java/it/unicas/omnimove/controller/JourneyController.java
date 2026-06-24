@@ -13,8 +13,10 @@ import it.unicas.omnimove.repository.UserRepository;
 import it.unicas.omnimove.service.GreenIndexService;
 import it.unicas.omnimove.service.JourneyEventService;
 import it.unicas.omnimove.service.JourneyPlannerService;
+import it.unicas.omnimove.service.RateLimiterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +37,7 @@ public class JourneyController {
     private final JourneyLogRepository journeyLogRepository;
     private final UserRepository userRepo;
     private final GreenIndexService greenIndexService;
+    private final RateLimiterService rateLimiter;
 
     @GetMapping("/stops")
     @Operation(summary = "List active stops for origin/destination pickers")
@@ -42,6 +45,7 @@ public class JourneyController {
         List<Map<String, Object>> result = stopRepository.findByActiveTrue().stream()
                 .filter(s -> s.getLat() != null && s.getLon() != null)
                 .sorted(Comparator.comparing(Stop::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .limit(500)
                 .<Map<String, Object>>map(s -> Map.of(
                         "id",   s.getId(),
                         "name", s.getName() != null ? s.getName() : s.getId(),
@@ -53,9 +57,15 @@ public class JourneyController {
     }
 
     @PostMapping("/search")
-    public ResponseEntity<JourneyResponse> search(@RequestBody JourneyRequest request) {
+    public ResponseEntity<JourneyResponse> search(
+            @RequestBody JourneyRequest request,
+            @AuthenticationPrincipal UserDetails principal) {
+
         if (request.getOriginLat() == null || request.getDestLat() == null)
             return ResponseEntity.badRequest().build();
+
+        if (principal != null && !rateLimiter.allowJourneySearch(principal.getUsername()))
+            return ResponseEntity.status(429).build();
 
         journeyEventService.recordJourneySearchQuery(); // FR-OM-009: count raw searches
         JourneyResponse response = plannerService.plan(request);
@@ -75,13 +85,24 @@ public class JourneyController {
         User user = userRepo.findByEmail(principal.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String mode        = (String) body.get("mode");
-        int greenIndex      = body.get("green_index") != null ? ((Number) body.get("green_index")).intValue() : 0;
-        double distanceKm   = body.get("distance_km") != null ? ((Number) body.get("distance_km")).doubleValue() : 0.0;
-        double costEuros    = body.get("cost_euros") != null ? ((Number) body.get("cost_euros")).doubleValue() : 0.0;
-        String originName   = (String) body.get("origin_name");
-        String destName     = (String) body.get("dest_name");
-        double co2Grams     = greenIndexService.computeCo2Grams(mode, distanceKm);
+        String mode      = (String) body.get("mode");
+        String originName = (String) body.get("origin_name");
+        String destName   = (String) body.get("dest_name");
+
+        if (mode == null || !java.util.Set.of("BUS", "WALK", "BIKE", "SCOOTER").contains(mode.toUpperCase()))
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid transport mode"));
+
+        double distanceKm = body.get("distance_km") != null ? ((Number) body.get("distance_km")).doubleValue() : 0.0;
+        if (distanceKm < 0 || distanceKm > 200)
+            return ResponseEntity.badRequest().body(Map.of("message", "Distance out of valid range (0–200 km)"));
+
+        double costEuros = body.get("cost_euros") != null ? ((Number) body.get("cost_euros")).doubleValue() : 0.0;
+        if (costEuros < 0 || costEuros > 50)
+            return ResponseEntity.badRequest().body(Map.of("message", "Cost out of valid range (0–50 €)"));
+
+        // Always compute server-side — never trust the client-supplied green_index
+        int greenIndex  = greenIndexService.computeGreenIndex(mode, distanceKm);
+        double co2Grams = greenIndexService.computeCo2Grams(mode, distanceKm);
 
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         journeyEventService.recordJourneySearch(

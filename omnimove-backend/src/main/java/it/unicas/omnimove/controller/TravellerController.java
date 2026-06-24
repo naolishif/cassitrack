@@ -12,6 +12,7 @@ import it.unicas.omnimove.service.GreenIndexService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/traveller")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasAnyAuthority('TRAVELLER', 'ROLE_TRAVELLER')")
 @Tag(name = "Traveller", description = "Traveller self-service profile management")
 public class TravellerController {
 
@@ -62,8 +64,13 @@ public class TravellerController {
             user.setEmail(req.getEmail());
         }
 
-        if (req.getPassword() != null && !req.getPassword().isBlank())
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            if (req.getCurrentPassword() == null || req.getCurrentPassword().isBlank()
+                    || !passwordEncoder.matches(req.getCurrentPassword(), user.getPassword()))
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Current password is incorrect"));
             user.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
 
         userRepo.save(user);
         log.info("Traveller {} updated their profile", principal.getUsername());
@@ -93,7 +100,7 @@ public class TravellerController {
                     return Math.max(0, carCo2 - j.getCo2Grams());
                 }).sum();
 
-        long ecoPoints = Math.round(all.stream().mapToInt(JourneyLog::getGreenIndex).sum() * 0.5);
+        long ecoPoints = all.stream().mapToInt(JourneyLog::getGreenIndex).sum();
 
         return ResponseEntity.ok(Map.of(
                 "ecoPoints",   ecoPoints,
@@ -190,6 +197,15 @@ public class TravellerController {
         String mode   = (String) body.get("mode");
         String origin = (String) body.get("originName");
         String dest   = (String) body.get("destName");
+
+        if (mode == null || origin == null || dest == null)
+            return ResponseEntity.badRequest().body(Map.of("message", "mode, originName and destName are required"));
+
+        if (!java.util.Set.of("BUS", "WALK", "BIKE", "SCOOTER").contains(mode.toUpperCase()))
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid transport mode"));
+
+        if (origin.length() > 200 || dest.length() > 200)
+            return ResponseEntity.badRequest().body(Map.of("message", "Origin and destination names must be 200 characters or less"));
 
         var existing = favoriteRouteRepository
                 .findByUserIdAndModeAndOriginNameAndDestName(user.getId(), mode, origin, dest);

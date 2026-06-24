@@ -315,7 +315,7 @@ public class AuthController {
             return;
         }
 
-        response.sendRedirect("/reset-password.html?pr=" + safeToken);
+        response.sendRedirect("/reset-password.html#" + safeToken);
     }
 
     @PostMapping("/logout")
@@ -387,10 +387,6 @@ public class AuthController {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim(); // take first IP in chain
-        }
         return request.getRemoteAddr();
     }
 

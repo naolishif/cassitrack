@@ -4,5 +4,6 @@ import lombok.Data;
 public class TravellerUpdateRequest {
     private String name;
     private String email;
+    private String currentPassword;
     private String password;
 }

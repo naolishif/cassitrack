@@ -37,18 +37,15 @@ public class EmailService {
         String subject = "OMNIMOVE — Verify your email address";
         String body = buildVerificationHtml(to, link);
         sendHtml(to, subject, body);
-        log.info("[EMAIL] Verification link for {}: {}", to, link);
+        log.info("[EMAIL] Verification email sent to {}", to);
     }
 
     public void sendPasswordResetEmail(String to, String token) {
-        // Link goes to the backend endpoint, NOT directly to the static HTML.
-        // The backend embeds the token in sessionStorage and then redirects to the login page,
-        // so query-string stripping by email clients / safe-link proxies can't break the flow.
         String link = baseUrl + "/api/v1/auth/reset-page?token=" + token;
         String subject = "OMNIMOVE — Reset your password";
         String body = buildResetHtml(to, link);
         sendHtml(to, subject, body);
-        log.info("[EMAIL] Password reset link for {}: {}", to, link);
+        log.info("[EMAIL] Password reset email sent to {}", to);
     }
 
     // ── Internal helpers ────────────────────────────────────────────
@@ -64,8 +61,6 @@ public class EmailService {
             mailSender.send(message);
             log.info("[EMAIL] Sent '{}' to {}", subject, to);
         } catch (Exception e) {
-            // In dev/demo without SMTP config, log the error but don't crash the flow.
-            // The token is already logged above so the developer can test manually.
             log.warn("[EMAIL] Could not send email to {}: {}. Check MAIL_USERNAME / MAIL_PASSWORD env vars.", to, e.getMessage());
         }
     }

@@ -5,11 +5,13 @@ import it.unicas.cassitrack.model.*;
 import it.unicas.cassitrack.model.Route;
 import it.unicas.cassitrack.model.Stop;
 import it.unicas.cassitrack.repository.*;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,26 +19,38 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/static")
 public class NetexController {
 
+    @Value("${sse.api-token}")
+    private String expectedToken;
+
     private final StopRepository stopRepository;
     private final RouteRepository routeRepository;
     private final TripRepository tripRepository;
     private final ScheduledStopRepository scheduledStopRepository;
-    private final BusRepository busRepository; // ← AGGIUNTO
+    private final BusRepository busRepository;
 
     public NetexController(StopRepository stopRepository,
                            RouteRepository routeRepository,
                            TripRepository tripRepository,
                            ScheduledStopRepository scheduledStopRepository,
-                           BusRepository busRepository) { // ← AGGIUNTO
+                           BusRepository busRepository) {
         this.stopRepository = stopRepository;
         this.routeRepository = routeRepository;
         this.tripRepository = tripRepository;
         this.scheduledStopRepository = scheduledStopRepository;
-        this.busRepository = busRepository; // ← AGGIUNTO
+        this.busRepository = busRepository;
     }
 
     @GetMapping(value = "/netex", produces = MediaType.APPLICATION_XML_VALUE)
-    public PublicationDeliveryDTO getNetexData() {
+    public PublicationDeliveryDTO getNetexData(
+            @RequestHeader(value = "X-Api-Key", required = false) String receivedToken,
+            HttpServletResponse response) {
+
+        if (!MessageDigest.isEqual(
+                expectedToken.getBytes(StandardCharsets.UTF_8),
+                (receivedToken != null ? receivedToken : "").getBytes(StandardCharsets.UTF_8))) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return null;
+        }
 
         // ==========================================
         // 1. SITE FRAME (Fermate)

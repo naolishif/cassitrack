@@ -20,6 +20,9 @@ public class NetexImportService {
     @Value("${cassitrack.netex.url}")
     private String cassitrackNetexUrl;
 
+    @Value("${cassitrack.api.token}")
+    private String cassitrackApiToken;
+
     private final StopRepository stopRepository;
     private final RouteRepository routeRepository;
     private final TripRepository tripRepository;
@@ -68,12 +71,12 @@ public class NetexImportService {
         PublicationDeliveryDTO netexData = restClient.get()
                 .uri(cassitrackNetexUrl)
                 .accept(org.springframework.http.MediaType.APPLICATION_XML)
+                .header("X-Api-Key", cassitrackApiToken)
                 .retrieve()
                 .body(PublicationDeliveryDTO.class);
 
         if (netexData == null || netexData.getDataObjects() == null) {
-            System.out.println("Nessun dato ricevuto o formato non valido.");
-            return;
+            throw new RuntimeException("NeTEx import aborted: no data received from CassiTrack. Previous data preserved.");
         }
 
         CompositeFrameDTO frame = netexData.getDataObjects().getCompositeFrame();
