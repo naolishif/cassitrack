@@ -200,6 +200,34 @@
         .tab-panel::-webkit-scrollbar,.chat-messages::-webkit-scrollbar{width:3px}
         .tab-panel::-webkit-scrollbar-thumb,.chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
+        /* Dark thin scrollbars for all analytics panels — both vertical and horizontal */
+        .analytics-left::-webkit-scrollbar,
+        .analytics-right::-webkit-scrollbar,
+        #delay-chart-wrap::-webkit-scrollbar,
+        #routes-chart-wrap::-webkit-scrollbar,
+        .filter-bar::-webkit-scrollbar { width:4px; height:4px }
+
+        .analytics-left::-webkit-scrollbar-track,
+        .analytics-right::-webkit-scrollbar-track,
+        #delay-chart-wrap::-webkit-scrollbar-track,
+        #routes-chart-wrap::-webkit-scrollbar-track,
+        .filter-bar::-webkit-scrollbar-track { background:transparent }
+
+        .analytics-left::-webkit-scrollbar-thumb,
+        .analytics-right::-webkit-scrollbar-thumb,
+        #delay-chart-wrap::-webkit-scrollbar-thumb,
+        #routes-chart-wrap::-webkit-scrollbar-thumb,
+        .filter-bar::-webkit-scrollbar-thumb { background:rgba(59,130,246,.25); border-radius:4px }
+
+        .analytics-left::-webkit-scrollbar-thumb:hover,
+        .analytics-right::-webkit-scrollbar-thumb:hover,
+        #delay-chart-wrap::-webkit-scrollbar-thumb:hover,
+        #routes-chart-wrap::-webkit-scrollbar-thumb:hover { background:rgba(59,130,246,.5) }
+
+        /* Firefox */
+        .analytics-left, .analytics-right,
+        #delay-chart-wrap, #routes-chart-wrap { scrollbar-width:thin; scrollbar-color:rgba(59,130,246,.25) transparent }
+
         #loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999;transition:opacity .6s}
         #loading.gone{opacity:0;pointer-events:none}
         .load-logo{font-size:30px;font-weight:800;letter-spacing:-1px}
@@ -270,10 +298,121 @@
         }
 
         #analytics-view.active-view{
-            display:block;
-            overflow:auto;
+            display:flex;
+            flex-direction:column;
+            overflow:hidden;
         }
 
+/* =========================================
+   ANALYTICS FILTER BAR
+========================================= */
+
+        .filter-bar{
+            display:flex;
+            align-items:center;
+            flex-wrap:wrap;
+            gap:8px;
+            padding:10px 20px;
+            background:var(--panel);
+            border-bottom:1px solid var(--border);
+            flex-shrink:0;
+        }
+
+        .filter-sep{width:1px;height:22px;background:var(--border);margin:0 4px}
+
+        .preset-btn{
+            padding:5px 11px;
+            border-radius:6px;
+            border:1px solid var(--border);
+            background:rgba(255,255,255,.02);
+            color:var(--dim);
+            font-family:var(--mono);
+            font-size:10px;
+            letter-spacing:.4px;
+            cursor:pointer;
+            transition:all .18s;
+        }
+        .preset-btn:hover{border-color:rgba(59,130,246,.4);color:var(--text)}
+        .preset-btn.active{background:rgba(59,130,246,.14);border-color:var(--accent);color:var(--accent)}
+
+        .filter-date{
+            padding:5px 9px;
+            border-radius:6px;
+            border:1px solid var(--border);
+            background:var(--panel2);
+            color:var(--text);
+            font-family:var(--mono);
+            font-size:10px;
+            outline:none;
+            cursor:pointer;
+        }
+        .filter-date:focus{border-color:var(--accent)}
+        .filter-date::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.5}
+
+        .filter-select{
+            padding:5px 9px;
+            border-radius:6px;
+            border:1px solid var(--border);
+            background:var(--panel2);
+            color:var(--text);
+            font-family:var(--mono);
+            font-size:10px;
+            outline:none;
+            cursor:pointer;
+            max-width:160px;
+        }
+        .filter-select:focus{border-color:var(--accent)}
+
+        /* Route multi-select pill row */
+        .route-pills{display:flex;flex-wrap:wrap;gap:5px;align-items:center;max-width:300px}
+        .route-pill{
+            display:flex;align-items:center;gap:4px;
+            padding:3px 8px;border-radius:999px;
+            background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);
+            color:var(--accent);font-family:var(--mono);font-size:9px;cursor:pointer;
+        }
+        .route-pill .rpx{font-size:11px;line-height:1;margin-left:1px;opacity:.7}
+        .route-pill:hover .rpx{opacity:1}
+
+        /* Custom multi-select dropdown */
+        .route-dropdown-wrap{position:relative}
+        .route-dropdown{
+            position:absolute;top:calc(100% + 5px);left:0;
+            background:var(--panel);border:1px solid var(--border);
+            border-radius:10px;min-width:200px;z-index:999;
+            box-shadow:0 8px 24px rgba(0,0,0,.5);
+            display:none;overflow:hidden;
+        }
+        .route-dropdown.open{display:block}
+        .rdrop-header{
+            padding:8px 12px;border-bottom:1px solid var(--border);
+            font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1px;
+            display:flex;justify-content:space-between;
+        }
+        .rdrop-header span{cursor:pointer;color:var(--accent)}
+        .rdrop-item{
+            padding:7px 12px;display:flex;align-items:center;gap:8px;
+            font-family:var(--mono);font-size:10px;cursor:pointer;
+            transition:background .15s;
+        }
+        .rdrop-item:hover{background:rgba(255,255,255,.04)}
+        .rdrop-item input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+        .rdrop-item label{cursor:pointer;flex:1}
+
+        .apply-btn{
+            margin-left:auto;
+            padding:6px 14px;border-radius:6px;
+            background:var(--accent);color:white;
+            border:none;font-family:var(--mono);font-size:10px;
+            letter-spacing:.5px;cursor:pointer;transition:opacity .18s;
+            white-space:nowrap;
+        }
+        .apply-btn:hover{opacity:.85}
+
+        .filter-label{
+            font-family:var(--mono);font-size:9px;color:var(--dim);
+            letter-spacing:1px;white-space:nowrap;
+        }
 
 /* =========================================
    ANALYTICS DASHBOARD
@@ -282,24 +421,30 @@
         .analytics-dashboard{
             display:grid;
             grid-template-columns:320px 1fr;
+            grid-template-rows:1fr;
             gap:20px;
             padding:24px;
             width:100%;
-            height:100%;
-            overflow:auto;
+            flex:1;
+            min-height:0;
             background:var(--bg);
+            overflow:hidden;
         }
 
         .analytics-left{
             display:flex;
             flex-direction:column;
-            gap:20px;
+            gap:16px;
+            min-height:0;
+            overflow-y:auto;
         }
 
         .analytics-right{
             display:flex;
             flex-direction:column;
             gap:20px;
+            min-height:0;
+            overflow-y:auto;
         }
 
         .kpi-grid{
@@ -311,14 +456,13 @@
         .kpi-card{
             background:linear-gradient(180deg,#081120,#09162A);
             border:1px solid rgba(59,130,246,.12);
-            border-radius:16px;
+            border-radius:14px;
             padding:14px 16px;
-            min-height:88px;
             display:flex;
             flex-direction:column;
             justify-content:center;
-            gap:8px;
-            transition:all .25s ease;
+            gap:6px;
+            transition:border-color .25s ease;
         }
 
         .kpi-card:hover{
@@ -335,7 +479,7 @@
         }
 
         .kpi-value{
-            font-size:28px;
+            font-size:24px;
             font-weight:800;
             color:var(--accent);
             line-height:1;
@@ -344,7 +488,7 @@
 
         .kpi-sub{
             font-family:var(--mono);
-            font-size:10px;
+            font-size:9px;
             color:var(--dim);
         }
 
@@ -376,7 +520,7 @@
         }
 
         .big-chart{
-            height:360px;
+            /* height is determined by chart-wrap (280px) + header; no fixed override */
         }
 
         .medium-chart{
@@ -433,7 +577,7 @@
 
         .bottom-grid{
             display:grid;
-            grid-template-columns:1fr 1fr;
+            grid-template-columns:1fr;
             gap:20px;
         }
 
@@ -550,14 +694,24 @@
 ========================================= */
 
         .compact-kpis{
-            gap:12px;
+            grid-template-columns:1fr;
+            gap:10px;
+        }
+
+        .chart-empty{
+            text-align:center;
+            padding:40px 20px;
+            font-family:var(--mono);
+            font-size:10px;
+            color:var(--dim);
         }
 
         .kpi-row{
             display:flex;
             align-items:center;
             justify-content:space-between;
-            gap:10px;
+            gap:6px;
+            overflow:hidden;
         }
 
         .trend{
@@ -579,7 +733,7 @@
         }
 
         .small-chart{
-            flex:1;
+            flex-shrink:0;
         }
 
         .donut-wrapper{
@@ -717,6 +871,66 @@
 
 <div id="analytics-view" class="main-view">
 
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FILTER BAR                                                  -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="filter-bar" id="filterBar">
+
+        <!-- Time presets -->
+        <span class="filter-label">PERIOD</span>
+        <button class="preset-btn active" data-preset="today"     onclick="setPreset(this,'today')">Today</button>
+        <button class="preset-btn"        data-preset="yesterday" onclick="setPreset(this,'yesterday')">Yesterday</button>
+        <button class="preset-btn"        data-preset="week"      onclick="setPreset(this,'week')">Last 7 Days</button>
+        <button class="preset-btn"        data-preset="month"     onclick="setPreset(this,'month')">This Month</button>
+        <button class="preset-btn"        data-preset="lastmonth" onclick="setPreset(this,'lastmonth')">Last Month</button>
+        <button class="preset-btn"        data-preset="custom"    onclick="setPreset(this,'custom')">Custom</button>
+
+        <div id="customDateRange" style="display:none;align-items:center;gap:5px">
+            <input type="date" class="filter-date" id="filterFrom" title="From date">
+            <span style="font-family:var(--mono);font-size:10px;color:var(--dim)">→</span>
+            <input type="date" class="filter-date" id="filterTo"   title="To date">
+        </div>
+
+        <div class="filter-sep"></div>
+
+        <!-- Route multi-select -->
+        <span class="filter-label">ROUTES</span>
+        <div class="route-dropdown-wrap" id="routeDropdownWrap">
+            <button class="preset-btn" onclick="toggleRouteDropdown()" id="routeDropdownBtn">All Routes ▾</button>
+            <div class="route-dropdown" id="routeDropdown">
+                <div class="rdrop-header">
+                    <span>LINES</span>
+                    <span onclick="clearRoutes()">Clear all</span>
+                </div>
+                <div id="routeCheckList">
+                    <div class="rdrop-item" style="color:var(--dim);font-size:9px">Loading routes...</div>
+                </div>
+            </div>
+        </div>
+        <div class="route-pills" id="selectedRoutePills"></div>
+
+        <div class="filter-sep"></div>
+
+        <!-- Bus select -->
+        <span class="filter-label">BUS</span>
+        <select class="filter-select" id="filterBus" title="Filter by bus">
+            <option value="">All Buses</option>
+        </select>
+
+        <div class="filter-sep"></div>
+
+        <!-- Group by -->
+        <span class="filter-label">GROUP</span>
+        <select class="filter-select" id="filterGroupBy" style="max-width:90px" title="Group by hour or day">
+            <option value="hour">By Hour</option>
+            <option value="day">By Day</option>
+        </select>
+
+        <!-- Apply -->
+        <button class="apply-btn" onclick="applyFilters()">Apply Filters</button>
+
+    </div>
+
     <div class="analytics-dashboard">
 
         <!-- LEFT COLUMN -->
@@ -725,14 +939,12 @@
             <!-- KPI GRID -->
             <div class="kpi-grid compact-kpis">
 
-
-
                 <div class="kpi-card">
                     <div class="kpi-label">Average Delay</div>
                     <div class="kpi-row">
                         <div class="kpi-value" id="kpiDelay">—</div>
                     </div>
-                    <div class="kpi-sub">mean across all day's registers</div>
+                    <div class="kpi-sub" id="kpiDelaySub">mean across selected period</div>
                 </div>
 
                 <div class="kpi-card">
@@ -740,17 +952,23 @@
                     <div class="kpi-row">
                         <div class="kpi-value" id="kpiPassengers">—</div>
                     </div>
-                    <div class="kpi-sub">mean across all day's registers</div>
+                    <div class="kpi-sub" id="kpiPaxSub">mean passengers per slot</div>
                 </div>
 
                 <div class="kpi-card">
                     <div class="kpi-label">CO₂ Saved</div>
-
                     <div class="kpi-row">
-                        <div class="kpi-value">382kg</div>
+                        <div class="kpi-value" id="kpiCo2">—</div>
                     </div>
+                    <div class="kpi-sub" id="kpiCo2Sub">vs private cars</div>
+                </div>
 
-                    <div class="kpi-sub">vs private cars</div>
+                <div class="kpi-card">
+                    <div class="kpi-label">On-Time Performance</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value" id="kpiOnTimePct">—</div>
+                    </div>
+                    <div class="kpi-sub" id="kpiOnTimeSub">% buses on schedule (live)</div>
                 </div>
 
             </div>
@@ -812,14 +1030,17 @@
                             Network Punctuality
                         </div>
 
-                        <div class="chart-subtitle">
-                            Delay by line per hour
+                        <div class="chart-subtitle" id="delayChartSub">
+                            Delay by line · per hour
                         </div>
                     </div>
                 </div>
 
-                <div id="delay-chart-wrap" style="overflow-x:auto;">
-                    <canvas id="delayChart" height="260"></canvas>
+                <div id="delay-chart-wrap" style="overflow-x:auto;height:280px;position:relative;">
+                    <canvas id="delayChart" style="width:100%;height:100%;display:block;"></canvas>
+                </div>
+                <div id="delayChartEmpty" class="chart-empty" style="display:none">
+                    No data for the selected filters — try a different period or route.
                 </div>
 
             </div>
@@ -836,14 +1057,17 @@
                                 Network Occupancy
                             </div>
 
-                            <div class="chart-subtitle">
-                                Passenger demand by line per hour
+                            <div class="chart-subtitle" id="paxChartSub">
+                                Passenger demand by line · per hour
                             </div>
                         </div>
                     </div>
 
-                    <div id="routes-chart-wrap" style="overflow-x:auto;">
-                        <canvas id="routesChart" height="260"></canvas>
+                    <div id="routes-chart-wrap" style="overflow-x:auto;height:280px;position:relative;">
+                        <canvas id="routesChart" style="width:100%;height:100%;display:block;"></canvas>
+                    </div>
+                    <div id="routesChartEmpty" class="chart-empty" style="display:none">
+                        No data for the selected filters — try a different period or route.
                     </div>
 
                 </div>
@@ -913,38 +1137,8 @@
             }
         ).addTo(map);
 
-        const RUTA1=[
-            {id:'PIAZZA_CORTE',name:'Piazza Corte (Duomo)',lat:41.4937,lon:13.8281},
-            {id:'CORSO_REPUBBLICA',name:'Corso della Repubblica',lat:41.4910,lon:13.8312},
-            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4845,lon:13.8320},
-            {id:'VIA_SANTANGELO',name:'Via Sant\'Angelo',lat:41.4795,lon:13.8305},
-            {id:'UNIVERSITA',name:'Universita di Cassino',lat:41.4719,lon:13.8283},
-        ];
-        const RUTA2=[
-            {id:'VILLA_COMUNALE',name:'Villa Comunale',lat:41.4895,lon:13.8262},
-            {id:'LARGO_TESCIONE',name:'Largo Tescione',lat:41.4870,lon:13.8290},
-            {id:'STAZIONE_CENTRALE',name:'Stazione Centrale',lat:41.4845,lon:13.8320},
-            {id:'VIA_CASILINA_EST',name:'Via Casilina Est',lat:41.4835,lon:13.8420},
-            {id:'CENTRO_COMMERCIALE',name:'Centro Commerciale',lat:41.4829,lon:13.8559},
-        ];
-
-        // Polyline RUTA 1 (blu) e RUTA 2 (cyan)
-        L.polyline(RUTA1.map(s=>[s.lat,s.lon]),{color:'#3B82F6',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
-        L.polyline(RUTA2.map(s=>[s.lat,s.lon]),{color:'#06B6D4',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
-
-        // Stop markers
-        [...RUTA1,...RUTA2].forEach((s,i,arr)=>{
-            // Stazione Centrale è condivisa — colore viola
-            const shared=RUTA1.find(r=>r.id===s.id)&&RUTA2.find(r=>r.id===s.id);
-            const col=shared?'#8B5CF6':arr.indexOf(s)<RUTA1.length?'#3B82F6':'#06B6D4';
-            L.circleMarker([s.lat,s.lon],{
-                radius:7,fillColor:'#0f1623',color:col,weight:2,opacity:1,fillOpacity:1
-            }).addTo(map).bindPopup(`
-                <div style="padding:10px;min-width:150px">
-                    <div style="font-family:Syne,sans-serif;font-weight:700;color:${col};margin-bottom:5px">🚏 ${s.name}</div>
-                    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4B5563">${shared?'RUTA 1 + RUTA 2':arr.indexOf(s)<RUTA1.length?'RUTA 1':'RUTA 2'} · Magni Autoservizi</div>
-                </div>`);
-        });
+        // Load routes and stops from PostgreSQL
+        initRoutes();
 
         setTimeout(() => {
             map.invalidateSize();
@@ -952,6 +1146,64 @@
 
     });
 
+
+    const ROUTE_PALETTE = ['#3B82F6','#06B6D4','#8B5CF6','#10B981','#F59E0B','#EF4444','#F97316'];
+
+    async function initRoutes() {
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/routes-map`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!r.ok) throw new Error(r.status);
+            const routes = await r.json();
+            if (!routes || routes.length === 0) return;
+
+            // Count which stops are shared between routes
+            const stopRoutes = {};
+            routes.forEach(route => {
+                route.stops.forEach(stop => {
+                    if (!stopRoutes[stop.id]) stopRoutes[stop.id] = [];
+                    stopRoutes[stop.id].push(route.routeId);
+                });
+            });
+
+            const allLatLons = [];
+
+            routes.forEach((route, i) => {
+                const color = ROUTE_PALETTE[i % ROUTE_PALETTE.length];
+
+                if (route.stops.length > 1) {
+                    L.polyline(route.stops.map(s => [s.lat, s.lon]), {
+                        color, weight: 4, opacity: 0.8, dashArray: '8 8'
+                    }).addTo(map);
+                }
+
+                route.stops.forEach(stop => {
+                    allLatLons.push([stop.lat, stop.lon]);
+                    const sharedWith  = stopRoutes[stop.id] || [];
+                    const isShared    = sharedWith.length > 1;
+                    const markerColor = isShared ? '#8B5CF6' : color;
+                    const routeLabel  = isShared ? sharedWith.join(' + ') : route.routeId;
+                    L.circleMarker([stop.lat, stop.lon], {
+                        radius: 7, fillColor: '#0f1623', color: markerColor,
+                        weight: 2, opacity: 1, fillOpacity: 1
+                    }).addTo(map).bindPopup(`
+                        <div style="padding:10px;min-width:160px">
+                            <div style="font-family:Syne,sans-serif;font-weight:700;color:${markerColor};margin-bottom:5px">🚏 ${stop.name}</div>
+                            <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4B5563">${routeLabel} · Magni Autoservizi</div>
+                        </div>`);
+                });
+            });
+
+            // Fit map to the actual stops extent
+            if (allLatLons.length > 0) {
+                map.fitBounds(L.latLngBounds(allLatLons), { padding: [40, 40] });
+            }
+        } catch (e) {
+            console.error('initRoutes: failed to load routes from DB', e);
+        }
+    }
 
     const markers={},vehicleData={};
     let selectedVeh=null,lastUpdate=null;
@@ -990,6 +1242,7 @@
 
             updateMap(data);
             updateFleet(data);
+            if (typeof populateBusDropdown === 'function') populateBusDropdown(data);
 
         }catch(e){
             document.getElementById('hDot').className='dot dot-red';
@@ -1138,237 +1391,474 @@
 
     });
 
-    // ── ANALYTICS: passengers by trip ─────────────────────────────
-    let routesChartInstance = null;
+    // ═══════════════════════════════════════════════════════════
+    // ANALYTICS FILTER STATE
+    // ═══════════════════════════════════════════════════════════
 
-    async function loadPassengersByRoute() {
-        const canvas = document.getElementById('routesChart');
-        if (!canvas) return;
+    const activeFilters = {
+        preset:    'today',
+        startTime: null,
+        endTime:   null,
+        routeIds:  [],   // array of route ID strings
+        busId:     '',
+        groupBy:   'hour',
+        status:    ''
+    };
 
-        try {
-            const token = localStorage.getItem('cassitrack_token');
-            const r = await fetch(`${API}/analytics/passengers-by-route`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!r.ok) throw new Error(r.status);
-            const data = await r.json();
+    // Operating hours from schedule (loaded once)
+    let scheduleFirstHour = 6;
+    let scheduleLastHour  = 22;
 
-            const routeKeys = Object.keys(data);
-            if (routeKeys.length === 0) {
-                canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
-                return;
-            }
+    // ── Preset logic ──────────────────────────────────────────
 
-            // Franjas horarias: 06:00 -> 21:00 (1 por hora, coincide con el backend)
-            const labels = [];
-            for (let h = 6; h < 22; h++) {
-                labels.push(`${String(h).padStart(2, '0')}:00`);
-            }
+    function setPreset(btn, preset) {
+        document.querySelectorAll('.preset-btn[data-preset]')
+            .forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilters.preset = preset;
 
-            const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#22C55E', '#F59E0B', '#EF4444'];
+        const custom = document.getElementById('customDateRange');
+        custom.style.display = preset === 'custom' ? 'flex' : 'none';
 
-            const datasets = routeKeys.sort().map((key, i) => ({
-                label: key,
-                data: labels.map(slot => data[key][slot] ?? null),
-                backgroundColor: COLORS[i % COLORS.length],
-                borderRadius: 4,
-                maxBarThickness: 14
-            }));
+        if (preset !== 'custom') {
+            activeFilters.startTime = null;
+            activeFilters.endTime   = null;
+        }
+        syncGroupByToPreset(preset);
+    }
 
-            // Ancho dinámico (scroll horizontal) para que las 34 franjas no se aplasten
-            // Ahora son solo 4 rutas (sin bus) y 16 franjas, ya no hace falta tanto ancho
-            canvas.width = Math.max(700, labels.length * 90);
-
-            if (routesChartInstance) routesChartInstance.destroy();
-
-            routesChartInstance = new Chart(canvas, {
-                type: 'bar',
-                data: { labels, datasets },
-                options: {
-                    responsive: false,
-                    plugins: {
-                        legend: { labels: { color: '#E2E8F0', font: { family: 'DM Mono', size: 10 } } },
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0} pax` } }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
-                            grid: { color: 'rgba(255,255,255,.04)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Passengers', color: '#4B5563', font: { family: 'DM Mono', size: 10 } },
-                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
-                            grid: { color: 'rgba(255,255,255,.04)' }
-                        }
-                    }
-                }
-            });
-
-        } catch (e) {
-            console.error('Failed to load passengers by route', e);
-            canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
+    function syncGroupByToPreset(preset) {
+        const sel = document.getElementById('filterGroupBy');
+        if (preset === 'today' || preset === 'yesterday') {
+            sel.value = 'hour';
+            activeFilters.groupBy = 'hour';
+        } else {
+            sel.value = 'day';
+            activeFilters.groupBy = 'day';
         }
     }
 
-    // Cargar al abrir Analytics
-    let delayChartInstance = null;
+    function presetToRange(preset) {
+        const now  = new Date();
+        const pad  = n => String(n).padStart(2, '0');
+        const iso  = d => d.toISOString();
 
-    function buildHourlyLabels() {
+        const startOfDay = d => {
+            const x = new Date(d); x.setHours(0,0,0,0); return x;
+        };
+        const endOfDay = d => {
+            const x = new Date(d); x.setHours(23,59,59,999); return x;
+        };
+
+        switch (preset) {
+            case 'today':
+                return { start: iso(startOfDay(now)), stop: iso(endOfDay(now)) };
+            case 'yesterday': {
+                const y = new Date(now); y.setDate(y.getDate() - 1);
+                return { start: iso(startOfDay(y)), stop: iso(endOfDay(y)) };
+            }
+            case 'week': {
+                const w = new Date(now); w.setDate(w.getDate() - 6);
+                return { start: iso(startOfDay(w)), stop: iso(endOfDay(now)) };
+            }
+            case 'month': {
+                const m = new Date(now.getFullYear(), now.getMonth(), 1);
+                return { start: iso(startOfDay(m)), stop: iso(endOfDay(now)) };
+            }
+            case 'lastmonth': {
+                const lm  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const lme = new Date(now.getFullYear(), now.getMonth(), 0);
+                return { start: iso(startOfDay(lm)), stop: iso(endOfDay(lme)) };
+            }
+            case 'custom': {
+                const from = document.getElementById('filterFrom').value;
+                const to   = document.getElementById('filterTo').value;
+                if (!from) return { start: null, stop: null };
+                const s = new Date(from); s.setHours(0,0,0,0);
+                const e = to ? new Date(to) : new Date(from);
+                e.setHours(23,59,59,999);
+                return { start: iso(s), stop: iso(e) };
+            }
+            default:
+                return { start: null, stop: null };
+        }
+    }
+
+    // ── Build URL params from current filter state ─────────────
+
+    function buildFilterParams(overrideGroupBy) {
+        const p   = activeFilters.preset;
+        const grp = overrideGroupBy || document.getElementById('filterGroupBy').value || activeFilters.groupBy;
+        const { start, stop } = presetToRange(p);
+
+        const params = new URLSearchParams();
+        if (start) params.set('startTime', start);
+        if (stop)  params.set('endTime',   stop);
+        if (activeFilters.routeIds.length > 0)
+            params.set('routeIds', activeFilters.routeIds.join(','));
+        if (activeFilters.busId)
+            params.set('busId', activeFilters.busId);
+        params.set('groupBy', grp);
+        return params.toString();
+    }
+
+    // ── Route dropdown ─────────────────────────────────────────
+
+    let allRoutes = [];
+
+    async function loadRoutes() {
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/routes`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!r.ok) return;
+            allRoutes = await r.json();
+            renderRouteDropdown();
+        } catch(e) {
+            console.warn('Could not load routes', e);
+        }
+    }
+
+    function renderRouteDropdown() {
+        const list = document.getElementById('routeCheckList');
+        if (!allRoutes.length) {
+            list.innerHTML = '<div class="rdrop-item" style="color:var(--dim);font-size:9px">No routes found</div>';
+            return;
+        }
+        list.innerHTML = allRoutes.map(rt => `
+            <div class="rdrop-item">
+                <input type="checkbox" id="rc_${rt.id}" value="${rt.id}"
+                    ${activeFilters.routeIds.includes(rt.id) ? 'checked' : ''}
+                    onchange="toggleRoute('${rt.id}', this.checked)">
+                <label for="rc_${rt.id}">${rt.shortName || rt.id}${rt.longName ? ' — ' + rt.longName : ''}</label>
+            </div>`).join('');
+    }
+
+    function toggleRouteDropdown() {
+        document.getElementById('routeDropdown').classList.toggle('open');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', e => {
+        const wrap = document.getElementById('routeDropdownWrap');
+        if (wrap && !wrap.contains(e.target))
+            document.getElementById('routeDropdown').classList.remove('open');
+    });
+
+    function toggleRoute(routeId, checked) {
+        if (checked) {
+            if (!activeFilters.routeIds.includes(routeId)) activeFilters.routeIds.push(routeId);
+        } else {
+            activeFilters.routeIds = activeFilters.routeIds.filter(id => id !== routeId);
+        }
+        renderSelectedPills();
+        updateRouteDropdownBtn();
+    }
+
+    function clearRoutes() {
+        activeFilters.routeIds = [];
+        renderSelectedPills();
+        updateRouteDropdownBtn();
+        renderRouteDropdown();
+    }
+
+    function renderSelectedPills() {
+        const container = document.getElementById('selectedRoutePills');
+        container.innerHTML = activeFilters.routeIds.map(id => {
+            const rt = allRoutes.find(r => r.id === id);
+            const label = rt ? (rt.shortName || rt.id) : id;
+            return `<div class="route-pill" onclick="toggleRoute('${id}', false); renderRouteDropdown()">
+                        ${label}<span class="rpx">✕</span>
+                    </div>`;
+        }).join('');
+    }
+
+    function updateRouteDropdownBtn() {
+        const btn = document.getElementById('routeDropdownBtn');
+        const n   = activeFilters.routeIds.length;
+        btn.textContent = n === 0 ? 'All Routes ▾' : `${n} Route${n > 1 ? 's' : ''} ▾`;
+    }
+
+    // Populate bus dropdown from live vehicle list
+    function populateBusDropdown(vehicles) {
+        const sel  = document.getElementById('filterBus');
+        const prev = sel.value;
+        const ids  = [...new Set(vehicles.map(v => v.vehicle_id))].sort();
+        sel.innerHTML = '<option value="">All Buses</option>' +
+            ids.map(id => `<option value="${id}" ${prev === id ? 'selected' : ''}>${id}</option>`).join('');
+    }
+
+    // ── Operating hours from schedule ──────────────────────────
+
+    async function loadOperatingHours() {
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/operating-hours`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!r.ok) return;
+            const data = await r.json();
+            if (data._global) {
+                scheduleFirstHour = data._global.firstHour ?? 6;
+                scheduleLastHour  = data._global.lastHour  ?? 22;
+            }
+        } catch(e) {
+            console.warn('Could not load operating hours', e);
+        }
+    }
+
+    // ── Build chart labels (hours or dates) ────────────────────
+
+    function buildChartLabels(groupBy, data) {
+        if (groupBy === 'day') {
+            // Collect all unique date keys across all routes, sorted
+            const days = new Set();
+            Object.values(data).forEach(bySlot => Object.keys(bySlot).forEach(k => days.add(k)));
+            return [...days].sort();
+        }
+        // Hour labels from actual schedule
         const labels = [];
-        for (let h = 6; h < 22; h++) labels.push(`${String(h).padStart(2, '0')}:00`);
+        for (let h = scheduleFirstHour; h < scheduleLastHour; h++)
+            labels.push(`${String(h).padStart(2,'0')}:00`);
         return labels;
     }
 
-    async function loadDelayByRoute() {
-        const canvas = document.getElementById('delayChart');
-        if (!canvas) return;
+    // ── Chart rendering ────────────────────────────────────────
 
+    let routesChartInstance = null;
+    let delayChartInstance  = null;
+
+    const CHART_COLORS = ['#3B82F6','#06B6D4','#8B5CF6','#22C55E','#F59E0B','#EF4444'];
+
+    function renderBarChart(canvasId, instanceRef, data, tooltipUnit) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return instanceRef;
+
+        // ID convention: delayChart → delayChartEmpty, routesChart → routesChartEmpty
+        const emptyEl = document.getElementById(canvasId + 'Empty');
+        const wrap    = canvas.parentElement;
+
+        const groupBy   = document.getElementById('filterGroupBy').value || 'hour';
+        const routeKeys = Object.keys(data).sort();
+
+        if (routeKeys.length === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'block';
+            if (instanceRef) instanceRef.destroy();
+            return null;
+        }
+
+        // Show canvas (wrap is always visible — hiding the wrap causes Chart.js to lose its size reference)
+        canvas.style.display = '';
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        const labels   = buildChartLabels(groupBy, data);
+        const datasets = routeKeys.map((key, i) => ({
+            label:           key,
+            data:            labels.map(slot => data[key]?.[slot] ?? null),
+            backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+            borderRadius:    4,
+            maxBarThickness: groupBy === 'day' ? 18 : 14
+        }));
+
+        if (instanceRef) instanceRef.destroy();
+
+        return new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#E2E8F0', font: { family: 'DM Mono', size: 10 } } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0} ${tooltipUnit}` } }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 },
+                                 maxRotation: groupBy === 'day' ? 45 : 0 },
+                        grid: { color: 'rgba(255,255,255,.04)' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: tooltipUnit === 'pax' ? 'Passengers' : 'Delay (min)',
+                                 color: '#4B5563', font: { family: 'DM Mono', size: 10 } },
+                        ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
+                        grid: { color: 'rgba(255,255,255,.04)' }
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadPassengersByRoute() {
         try {
             const token = localStorage.getItem('cassitrack_token');
-            const r = await fetch(`${API}/analytics/delay-by-route`, {
+            const qs    = buildFilterParams();
+            const r = await fetch(`${API}/analytics/passengers-by-route?${qs}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!r.ok) throw new Error(r.status);
             const data = await r.json();
+            routesChartInstance = renderBarChart('routesChart', routesChartInstance, data, 'pax');
 
-            const routeKeys = Object.keys(data);
-            if (routeKeys.length === 0) {
-                canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">No data yet — run the simulator.</div>`;
-                return;
-            }
-
-            const labels = buildHourlyLabels();
-            const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#22C55E', '#F59E0B', '#EF4444'];
-
-            const datasets = routeKeys.sort().map((key, i) => ({
-                label: key,
-                data: labels.map(slot => data[key][slot] ?? null),
-                backgroundColor: COLORS[i % COLORS.length],
-                borderRadius: 4,
-                maxBarThickness: 14
-            }));
-
-            canvas.width = Math.max(700, labels.length * 90);
-
-            if (delayChartInstance) delayChartInstance.destroy();
-
-            delayChartInstance = new Chart(canvas, {
-                type: 'bar',
-                data: { labels, datasets },
-                options: {
-                    responsive: false,
-                    plugins: {
-                        legend: { labels: { color: '#E2E8F0', font: { family: 'DM Mono', size: 10 } } },
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0} min` } }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
-                            grid: { color: 'rgba(255,255,255,.04)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Delay (min)', color: '#4B5563', font: { family: 'DM Mono', size: 10 } },
-                            ticks: { color: '#4B5563', font: { family: 'DM Mono', size: 9 } },
-                            grid: { color: 'rgba(255,255,255,.04)' }
-                        }
-                    }
-                }
-            });
-
-        } catch (e) {
-            console.error('Failed to load delay by route', e);
-            canvas.parentElement.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;padding:20px">Error loading data.</div>`;
+            // Update average occupancy KPI
+            const allVals = [];
+            Object.values(data).forEach(s => Object.values(s).forEach(v => { if (v != null) allVals.push(v); }));
+            const avg = allVals.length > 0 ? Math.round(allVals.reduce((a,b)=>a+b,0)/allVals.length) : null;
+            document.getElementById('kpiPassengers').textContent = avg != null ? avg : '—';
+        } catch(e) {
+            console.error('Failed to load passengers by route', e);
         }
     }
 
-
-
-    async function loadSummaryKPIs() {
+    async function loadDelayByRoute() {
         try {
             const token = localStorage.getItem('cassitrack_token');
-
-            // ── Average Delay: media de todos los valores del delayChart ──
-            const rDelay = await fetch(`${API}/analytics/delay-by-route`, {
+            const qs    = buildFilterParams();
+            const r = await fetch(`${API}/analytics/delay-by-route?${qs}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (rDelay.ok) {
-                const data = await rDelay.json();
-                const allValues = [];
-                Object.values(data).forEach(bySlot => {
-                    Object.values(bySlot).forEach(v => {
-                        if (v != null) allValues.push(v);
-                    });
-                });
-                const avg = allValues.length > 0
-                    ? (allValues.reduce((a, b) => a + b, 0) / allValues.length).toFixed(1)
-                    : 0;
-                document.getElementById('kpiDelay').textContent = avg > 0 ? `+${avg}m` : '0m';
-            }
+            if (!r.ok) throw new Error(r.status);
+            const data = await r.json();
+            delayChartInstance = renderBarChart('delayChart', delayChartInstance, data, 'min');
 
-            // ── Avg Occupancy: media de todos los valores del routesChart ──
-            const rPax = await fetch(`${API}/analytics/passengers-by-route`, {
+            // Update average delay KPI
+            const allVals = [];
+            Object.values(data).forEach(s => Object.values(s).forEach(v => { if (v != null) allVals.push(v); }));
+            const avg = allVals.length > 0
+                ? (allVals.reduce((a,b)=>a+b,0)/allVals.length).toFixed(1) : 0;
+            document.getElementById('kpiDelay').textContent = avg > 0 ? `+${avg}m` : '0m';
+        } catch(e) {
+            console.error('Failed to load delay by route', e);
+        }
+    }
+
+    async function loadCo2Kpi() {
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const { start, stop } = presetToRange(activeFilters.preset);
+            const qs = new URLSearchParams();
+            if (start) qs.set('startTime', start);
+            if (stop)  qs.set('endTime',   stop);
+            if (activeFilters.routeIds.length > 0) qs.set('routeIds', activeFilters.routeIds.join(','));
+            if (activeFilters.busId) qs.set('busId', activeFilters.busId);
+
+            const r = await fetch(`${API}/analytics/co2?${qs}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (rPax.ok) {
-                const data = await rPax.json();
-                const allValues = [];
-                Object.values(data).forEach(bySlot => {
-                    Object.values(bySlot).forEach(v => {
-                        if (v != null) allValues.push(v);
-                    });
-                });
-                const avg = allValues.length > 0
-                    ? Math.round(allValues.reduce((a, b) => a + b, 0) / allValues.length)
-                    : null;
-                document.getElementById('kpiPassengers').textContent =
-                    avg != null ? `${avg}` : '—';
+            if (!r.ok) return;
+            const d = await r.json();
+
+            const kg = d.co2_saved_kg ?? 0;
+            document.getElementById('kpiCo2').textContent = kg >= 1000
+                ? `${(kg/1000).toFixed(1)}t` : `${kg}kg`;
+
+            if (d.passenger_km != null)
+                document.getElementById('kpiCo2Sub').textContent =
+                    `${d.passenger_km} pax-km saved`;
+        } catch(e) {
+            console.error('Failed to load CO2 KPI', e);
+        }
+    }
+
+    async function loadSummaryKPIs() {
+        // On-time % from live adherence
+        try {
+            const token = localStorage.getItem('cassitrack_token');
+            const r = await fetch(`${API}/analytics/adherence`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (r.ok) {
+                const d = await r.json();
+                const counts = d.status_counts || {};
+                const total  = d.total_active || 0;
+                const onTime = (counts.ON_TIME || 0) + (counts.EARLY || 0);
+                const pct    = total > 0 ? Math.round(onTime / total * 100) : 0;
+                document.getElementById('kpiOnTimePct').textContent = `${pct}%`;
+                document.getElementById('kpiOnTimeSub').textContent =
+                    `${onTime}/${total} buses on schedule`;
             }
 
-            // ── Fleet Status donut: 4 cuadrantes, uno por bus ──
-            const rVeh = await fetch(`${API}/vehicles`);
-            if (rVeh.ok) {
-                const vehs = await rVeh.json();
+            // Fleet donut from live vehicles
+            const rv = await fetch(`${API}/vehicles`);
+            if (rv.ok) {
+                const vehs = await rv.json();
                 updateFleetDonut(vehs);
             }
-
-        } catch (e) {
+        } catch(e) {
             console.error('Error loading summary KPIs', e);
         }
     }
 
     function updateFleetDonut(vehicles) {
-        const donut = document.querySelector('.fake-donut');
+        const donut   = document.querySelector('.fake-donut');
         const kpiSpan = document.getElementById('kpiOnTime');
         if (!donut || !vehicles.length) return;
 
-        kpiSpan.textContent = '';
-
-        const total = vehicles.length;
+        if (kpiSpan) kpiSpan.textContent = '';
+        const total    = vehicles.length;
         const onTime   = vehicles.filter(v => (v.delay_minutes || 0) <= 3).length;
         const slight   = vehicles.filter(v => (v.delay_minutes || 0) > 3 && (v.delay_minutes || 0) <= 6).length;
-        const late     = vehicles.filter(v => (v.delay_minutes || 0) > 6).length;
-
-        const onTimePct  = (onTime  / total) * 100;
-        const slightPct  = (slight  / total) * 100;
-        const latePct    = (late    / total) * 100;
-
+        const onTimePct = (onTime  / total) * 100;
+        const slightPct = (slight  / total) * 100;
         donut.style.background = `conic-gradient(
-        #22C55E 0% ${onTimePct}%,
-        #F59E0B ${onTimePct}% ${onTimePct + slightPct}%,
-        #EF4444 ${onTimePct + slightPct}% 100%
-    )`;
+            #22C55E 0% ${onTimePct}%,
+            #F59E0B ${onTimePct}% ${onTimePct + slightPct}%,
+            #EF4444 ${onTimePct + slightPct}% 100%
+        )`;
     }
+
+    // ── Apply filters (main refresh) ───────────────────────────
+
+    function applyFilters() {
+        activeFilters.busId   = document.getElementById('filterBus').value;
+        activeFilters.groupBy = document.getElementById('filterGroupBy').value;
+
+        // If custom preset, read date inputs
+        if (activeFilters.preset === 'custom') {
+            const { start, stop } = presetToRange('custom');
+            activeFilters.startTime = start;
+            activeFilters.endTime   = stop;
+        }
+
+        loadAllAnalytics();
+    }
+
+    function loadAllAnalytics() {
+        // Update chart subtitles to reflect active filters
+        const grp       = document.getElementById('filterGroupBy').value || 'hour';
+        const presetLbl = { today:'Today', yesterday:'Yesterday', week:'Last 7 Days',
+                            month:'This Month', lastmonth:'Last Month', custom:'Custom Range' };
+        const periodTxt = presetLbl[activeFilters.preset] || '';
+        const slotTxt   = grp === 'day' ? 'per day' : 'per hour';
+        const sub       = `${periodTxt} · ${slotTxt}`;
+        const ds = document.getElementById('delayChartSub');
+        const ps = document.getElementById('paxChartSub');
+        if (ds) ds.textContent = `Delay by line · ${sub}`;
+        if (ps) ps.textContent = `Passenger demand by line · ${sub}`;
+
+        loadPassengersByRoute();
+        loadDelayByRoute();
+        loadSummaryKPIs();
+        loadCo2Kpi();
+    }
+
+    // ── Wire up the Analytics nav button ──────────────────────
 
     document.querySelectorAll('.top-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.textContent.trim() === 'Analytics') {
-                loadPassengersByRoute();
-                loadDelayByRoute();
-                loadSummaryKPIs();
+                loadAllAnalytics();
             }
         });
+    });
+
+    // Load routes + operating hours once on page load
+    window.addEventListener('load', () => {
+        loadRoutes();
+        loadOperatingHours();
     });
 
 </script>

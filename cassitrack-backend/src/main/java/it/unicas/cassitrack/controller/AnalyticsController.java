@@ -7,15 +7,21 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Fleet analytics endpoints for the CASSITRACK dashboard.
+ * Fleet analytics endpoints for the CASSITRACK manager dashboard.
  *
- * Three views:
- *   GET /api/v1/analytics/summary       — today's overview
- *   GET /api/v1/analytics/adherence     — on-time breakdown
- *   GET /api/v1/analytics/busiest-hours — activity by hour
+ * All endpoints accept optional filter params:
+ *   startTime  — ISO-8601 instant (e.g. 2026-06-23T00:00:00Z)
+ *   endTime    — ISO-8601 instant
+ *   routeIds   — comma-separated route IDs (e.g. LINEA-16,LINEA-9)
+ *   busId      — single vehicle ID
+ *   groupBy    — "hour" (default) or "day"
  */
 @RestController
 @RequestMapping("/api/v1/analytics")
@@ -26,36 +32,94 @@ public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
 
+    // ── Existing endpoints (now with optional filter params) ──────────────────
+
     @GetMapping("/summary")
     @Operation(summary = "Today's fleet summary",
-        description = "Active buses, trips today, on-time percentage")
+        description = "Active buses, trips today, on-time percentage (live)")
     public ResponseEntity<Map<String, Object>> getSummary() {
         return ResponseEntity.ok(analyticsService.getSummary());
     }
 
     @GetMapping("/adherence")
     @Operation(summary = "Schedule adherence breakdown",
-        description = "On-time / late / early counts per bus")
+        description = "On-time / late / early counts per bus (live)")
     public ResponseEntity<Map<String, Object>> getAdherence() {
         return ResponseEntity.ok(analyticsService.getAdherenceBreakdown());
     }
 
     @GetMapping("/busiest-hours")
-    @Operation(summary = "Busiest hours of the day",
-        description = "Bus activity count per hour over last 24h")
+    @Operation(summary = "Busiest hours of the day")
     public ResponseEntity<Map<String, Object>> getBusiestHours() {
         return ResponseEntity.ok(analyticsService.getBusiestHours());
     }
 
     @GetMapping("/passengers-by-route")
-    @Operation(summary = "Passengers per route per hour (last 24h)")
-    public ResponseEntity<Map<String, Object>> getPassengersByRoute() {
-        return ResponseEntity.ok(analyticsService.getPassengersByRouteAndHour());
+    @Operation(summary = "Passengers per route per time slot",
+        description = "groupBy=hour (default) or day; filter by startTime/endTime/routeIds/busId")
+    public ResponseEntity<Map<String, Object>> getPassengersByRoute(
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) String routeIds,
+            @RequestParam(required = false) String busId,
+            @RequestParam(required = false, defaultValue = "hour") String groupBy) {
+        List<String> routes = parseRouteIds(routeIds);
+        return ResponseEntity.ok(
+            analyticsService.getPassengersByRouteAndHour(startTime, endTime, routes, busId, groupBy));
     }
 
     @GetMapping("/delay-by-route")
-    @Operation(summary = "Average delay per route per hour (last 24h)")
-    public ResponseEntity<Map<String, Object>> getDelayByRoute() {
-        return ResponseEntity.ok(analyticsService.getDelayByRouteAndHour());
+    @Operation(summary = "Average delay per route per time slot",
+        description = "groupBy=hour (default) or day; filter by startTime/endTime/routeIds/busId")
+    public ResponseEntity<Map<String, Object>> getDelayByRoute(
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) String routeIds,
+            @RequestParam(required = false) String busId,
+            @RequestParam(required = false, defaultValue = "hour") String groupBy) {
+        List<String> routes = parseRouteIds(routeIds);
+        return ResponseEntity.ok(
+            analyticsService.getDelayByRouteAndHour(startTime, endTime, routes, busId, groupBy));
+    }
+
+    // ── New endpoints ─────────────────────────────────────────────────────────
+
+    @GetMapping("/co2")
+    @Operation(summary = "CO2 saved vs private cars",
+        description = "Real calculation: passenger-km × (170 - 68) gCO2/km ÷ 1000, aligned with OmniMove GreenIndex")
+    public ResponseEntity<Map<String, Object>> getCo2(
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) String routeIds,
+            @RequestParam(required = false) String busId) {
+        List<String> routes = parseRouteIds(routeIds);
+        return ResponseEntity.ok(analyticsService.getCo2Saved(startTime, endTime, routes, busId));
+    }
+
+    @GetMapping("/operating-hours")
+    @Operation(summary = "Operating hours per route from schedule",
+        description = "Returns firstHour/lastHour derived from scheduled_stops table")
+    public ResponseEntity<Map<String, Object>> getOperatingHours() {
+        return ResponseEntity.ok(analyticsService.getOperatingHours());
+    }
+
+    @GetMapping("/routes")
+    @Operation(summary = "All routes for filter dropdowns")
+    public ResponseEntity<List<Map<String, Object>>> getRoutes() {
+        return ResponseEntity.ok(analyticsService.getRoutes());
+    }
+
+    @GetMapping("/routes-map")
+    @Operation(summary = "Routes with ordered stops for map rendering",
+        description = "Returns each active route with its stops in schedule order (from scheduled_stops table)")
+    public ResponseEntity<List<Map<String, Object>>> getRoutesMap() {
+        return ResponseEntity.ok(analyticsService.getRoutesWithStops());
+    }
+
+    // ── Utility ───────────────────────────────────────────────────────────────
+
+    private List<String> parseRouteIds(String routeIds) {
+        if (routeIds == null || routeIds.isBlank()) return Collections.emptyList();
+        return Arrays.asList(routeIds.split(","));
     }
 }
