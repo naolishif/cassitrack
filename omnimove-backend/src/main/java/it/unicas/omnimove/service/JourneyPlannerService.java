@@ -146,7 +146,17 @@ public class JourneyPlannerService {
                                 raining && !"BUS".equals(o.getMode()) ? 1 : 0)   // bus prima se piove
                         .thenComparingInt(JourneyOption::getDurationMinutes));
 
-        if (raining) options.removeIf(o -> "BIKE".equals(o.getMode()) || "SCOOTER".equals(o.getMode())|| "WALK".equals(o.getMode()));
+        boolean onlyBusWhenRaining = true; // default
+        if (req.getUserId() != null) {
+            onlyBusWhenRaining = preferencesRepository.findByUserId(req.getUserId())
+                    .map(p -> Boolean.TRUE.equals(p.getOnlyBusWhenRaining()))
+                    .orElse(true);
+        }
+        if (raining && onlyBusWhenRaining) {
+            options.removeIf(o -> "BIKE".equals(o.getMode())
+                    || "SCOOTER".equals(o.getMode())
+                    || "WALK".equals(o.getMode()));
+        }
 
         return JourneyResponse.builder()
             .options(options)

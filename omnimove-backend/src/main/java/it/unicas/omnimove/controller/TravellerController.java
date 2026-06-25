@@ -96,6 +96,7 @@ public class TravellerController {
                         .avoidHighOccupancy(false)
                         .showWalking(true)
                         .preferBikeOverBus(false)
+                        .onlyBusWhenRaining(true)
                         .notifyDelays(true)
                         .notifyTicketExpiry(true)
                         .notifyEcoTip(false)

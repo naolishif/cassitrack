@@ -1087,6 +1087,13 @@
                             </div>
                             <div class="toggle" id="prefBikeOverBus" onclick="togglePref(this)"></div>
                         </div>
+                        <div class="pref-row">
+                            <div>
+                                <div class="pref-label">Hide bike/scooter/walk when raining</div>
+                                <div class="pref-desc">Only show bus options when the weather is rainy</div>
+                            </div>
+                            <div class="toggle" id="prefOnlyBusRain" onclick="togglePref(this)"></div>
+                        </div>
                     </div>
                     <div class="settings-section">
                         <span class="section-label">Notifications</span>
@@ -1233,6 +1240,7 @@
             set('prefAvoidOccupancy', p.avoidHighOccupancy);
             set('prefShowWalking',    p.showWalking);
             set('prefBikeOverBus',    p.preferBikeOverBus);
+            set('prefOnlyBusRain',    p.onlyBusWhenRaining);
             set('prefNotifyDelays',   p.notifyDelays);
             set('prefNotifyTicket',   p.notifyTicketExpiry);
             set('prefNotifyEcoTip',   p.notifyEcoTip);
@@ -1258,6 +1266,7 @@
             avoidHighOccupancy: isOn('prefAvoidOccupancy'),
             showWalking:        isOn('prefShowWalking'),
             preferBikeOverBus:  isOn('prefBikeOverBus'),
+            onlyBusWhenRaining: isOn('prefOnlyBusRain'),
             notifyDelays:       isOn('prefNotifyDelays'),
             notifyTicketExpiry: isOn('prefNotifyTicket'),
             notifyEcoTip:       isOn('prefNotifyEcoTip')
@@ -1547,16 +1556,17 @@
             if (!navigator.geolocation) { reject('no_geolocation'); return; }
             navigator.geolocation.getCurrentPosition(
                 pos => {
+                    if (pos.coords.accuracy > 300) {
+                        reject(new Error('accuracy_too_low'));
+                        return;
+                    }
                     userLat = pos.coords.latitude;
                     userLon = pos.coords.longitude;
                     placeUserMarker(userLat, userLon);
                     resolve({ name: 'My Location', lat: userLat, lon: userLon, isGPS: true });
                 },
                 err => {
-                    // Friendly fallback so the demo still works
-                    userLat = 41.5020; userLon = 13.8200;
-                    placeUserMarker(userLat, userLon);
-                    resolve({ name: 'Via Folcara (approx)', lat: userLat, lon: userLon, isGPS: true });
+                    reject(err);
                 },
                 { timeout: 8000, maximumAge: 60000 }
             );
@@ -1843,7 +1853,7 @@
                         navigator.geolocation.getCurrentPosition(
                             p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
                             () => reject(),
-                            { timeout: 6000, maximumAge: 30000 }
+                            { timeout: 6000, maximumAge: 60000}
                         );
                     });
                     userLat = gpsPos.lat;
