@@ -15,9 +15,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -137,10 +143,28 @@ public class SecurityConfig {
                 "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
                 "img-src 'self' data: https:; " +
                 "connect-src 'self' wss:; " +
-                "frame-ancestors 'none';"
+                "frame-ancestors 'none'; " +
+                // ZAP [10055]: directives that do NOT fall back to default-src must be explicit
+                "object-src 'none'; " +
+                "base-uri 'self'; " +
+                "form-action 'self';"
             ))
         );
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // ZAP [10063] Permissions-Policy  |  ZAP [90004] Cross-Origin-Resource-Policy
+        http.addFilterAfter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res,
+                                            FilterChain chain) throws ServletException, IOException {
+                // Restrict browser features not needed by the fleet dashboard
+                res.setHeader("Permissions-Policy",
+                    "camera=(), microphone=(), geolocation=(self), payment=()");
+                // Prevent other origins from embedding our resources (images, scripts)
+                res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+                chain.doFilter(req, res);
+            }
+        }, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
