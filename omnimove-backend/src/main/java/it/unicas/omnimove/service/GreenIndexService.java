@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
  *   where MAX_CO2 = private car over same distance
  *
  * Required by CINI challenge specification
- * FR-OM-002 and the competition evaluation criteria.
+ * FR-OM-002 and the competition evaluation criteria.r
  */
 @Service
 public class GreenIndexService {
