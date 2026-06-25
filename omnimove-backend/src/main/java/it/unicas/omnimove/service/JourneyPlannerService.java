@@ -2,6 +2,7 @@ package it.unicas.omnimove.service;
 
 import it.unicas.omnimove.client.CassitrackClient;
 import it.unicas.omnimove.dto.*;
+import it.unicas.omnimove.model.ScheduledStop;
 import it.unicas.omnimove.model.UserPreferences;
 import it.unicas.omnimove.repository.UserPreferencesRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -210,7 +213,7 @@ public class JourneyPlannerService {
             }
             busMin    = seg.minutes();
             busMetres = seg.metres();
-            waitMin   = waitMinutesForLine(nearestStop, null, line.getShortName());
+            waitMin = waitMinutesForLine(nearestStop, line.getRouteId(), line.getShortName(), msgs);
 
             String tripId = line.getTripId();
             busLegs.add(JourneyLeg.builder().mode("BUS")
@@ -222,12 +225,12 @@ public class JourneyPlannerService {
         } else {
             Transfer t = findBestTransfer(nearestStop, destStop);
             if (t != null) {
-                waitMin = waitMinutesForLine(nearestStop, t.l1RouteId(), t.l1Short());
-                int changeWait = waitMinutesForLine(t.stop(), t.l2RouteId(), t.l2Short());
+                waitMin    = waitMinutesForLine(nearestStop, t.l1RouteId(), t.l1Short(), msgs);
+                int changeWait = waitMinutesForLine(t.stop(),    t.l2RouteId(), t.l2Short(), msgs);
 
                 SegTime s1 = busTimeBySegments(t.l1TripId(), nearestStop, t.stop());
                 SegTime s2 = busTimeBySegments(t.l2TripId(), t.stop(), destStop);
-                int    l1Min = (s1 != null) ? s1.minutes() : t.l1Min();   // ripiego: orario DB
+                int    l1Min = (s1 != null) ? s1.minutes() : t.l1Min();
                 int    l2Min = (s2 != null) ? s2.minutes() : t.l2Min();
                 double m1    = (s1 != null) ? s1.metres()  : 0.0;
                 double m2    = (s2 != null) ? s2.metres()  : 0.0;
@@ -240,7 +243,7 @@ public class JourneyPlannerService {
                         .from(fmtStop(nearestStop)).to(fmtStop(t.stop()))
                         .durationMinutes(l1Min).distanceMetres(m1)
                         .instruction(t.l1Label())
-                        .stopCoords(stopCoordsBetween(t.l1TripId(), nearestStop, t.stop()))  // ← aggiunto
+                        .stopCoords(stopCoordsBetween(t.l1TripId(), nearestStop, t.stop()))
                         .build());
                 busLegs.add(JourneyLeg.builder().mode("WAIT")
                         .from(fmtStop(t.stop())).to(fmtStop(t.stop()))
@@ -250,7 +253,7 @@ public class JourneyPlannerService {
                         .from(fmtStop(t.stop())).to(req.getDestName())
                         .durationMinutes(l2Min).distanceMetres(m2)
                         .instruction(t.l2Label())
-                        .stopCoords(stopCoordsBetween(t.l2TripId(), t.stop(), destStop))     // ← aggiunto
+                        .stopCoords(stopCoordsBetween(t.l2TripId(), t.stop(), destStop))
                         .build());
             } else {
             log.warn("BUS: nessuna linea diretta né cambio trovato tra {} e {}", nearestStop, destStop);
@@ -376,22 +379,6 @@ public class JourneyPlannerService {
             + Math.cos(Math.toRadians(lat1))*Math.cos(Math.toRadians(lat2))
             * Math.sin(dLon/2)*Math.sin(dLon/2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    /** Minuti di attesa a una fermata, dall'ETA reale di cassitrack (default 5). */
-    private int waitMinutesAt(String stopId) {
-        int waitMin = 5;
-        try {
-            var arrivals = cassitrackClient.getArrivalsAtStop(stopId);
-            if (!arrivals.isEmpty()) {
-                long etaSec = arrivals.get(0).getEstimatedArrival().getEpochSecond()
-                        - System.currentTimeMillis() / 1000;
-                waitMin = (int) Math.max(0, etaSec / 60);
-            }
-        } catch (Exception e) {
-            log.debug("ETA non disponibile a {}: {}", stopId, e.getMessage());
-        }
-        return waitMin;
     }
 
     /** Percorso reale su strada per la modalità Google data (walking/bicycling/driving). */
@@ -556,15 +543,44 @@ public class JourneyPlannerService {
                 x.getL1TripId(),  x.getL2TripId());
     }
 
-    /** Attesa per UNA linea specifica a una fermata; ripiega sul prossimo bus, poi su 5. */
-    private int waitMinutesForLine(String stopId, String routeId, String routeShort) {
+    /**
+     * Minuti di attesa per una linea specifica a una fermata, dall'ETA real-time di CassiTrack.
+     *
+     * Logica:
+     *   1. Cerca il match esatto sulla linea richiesta (per routeId, poi per routeShort parziale).
+     *   2. Se non trova la linea nei dati RT, usa il prossimo bus generico alla fermata
+     *      e aggiunge un avviso in msgs.
+     *   3. Se CassiTrack non risponde o la lista è vuota, cade su waitMinutesFromSchedule (DB).
+     */
+    private int waitMinutesForLine(String stopId, String routeId, String routeShort,
+                                   List<String> msgs) {
         try {
-            var arrivals = cassitrackClient.getArrivalsAtStop(stopId);
-            var match = arrivals.stream()
-                    .filter(a -> (routeShort != null && routeShort.equals(a.getRouteName()))
-                            || (routeId != null && routeId.equals(a.getRouteId())))
-                    .findFirst()
-                    .orElse(arrivals.isEmpty() ? null : arrivals.get(0));   // fallback: prossimo bus
+            List<StopArrivalDTO> arrivals = cassitrackClient.getArrivalsAtStop(stopId);
+
+            Optional<StopArrivalDTO> exactMatch = arrivals.stream()
+                    .filter(a -> (routeId    != null && routeId.equals(a.getRouteId()))
+                            || (routeShort != null && a.getRouteName() != null
+                            && a.getRouteName().contains(routeShort)))
+                    .findFirst();
+
+            StopArrivalDTO match;
+            if (exactMatch.isPresent()) {
+                match = exactMatch.get();
+            } else if (!arrivals.isEmpty()) {
+                // Fallback: prossimo bus generico alla fermata
+                match = arrivals.get(0);
+                if (msgs != null) {
+                    String lineLabel = routeShort != null ? routeShort : routeId;
+                    msgs.add("ℹ️ Real-time data is not available for route" + lineLabel
+                            + " — Estimated wait time based on the next bus currently in service "
+                            + fmtStop(stopId) + ".");
+                }
+                log.debug("waitMinutesForLine: fallback bus generico per linea {} a {}",
+                        routeShort, stopId);
+            } else {
+                match = null;
+            }
+
             if (match != null && match.getEstimatedArrival() != null) {
                 long etaSec = match.getEstimatedArrival().getEpochSecond()
                         - System.currentTimeMillis() / 1000;
@@ -573,7 +589,34 @@ public class JourneyPlannerService {
         } catch (Exception e) {
             log.debug("ETA per linea non disponibile a {}: {}", stopId, e.getMessage());
         }
-        return 5;
+
+        // Fallback finale: orario statico nel DB
+        return waitMinutesFromSchedule(stopId, routeShort);
+    }
+
+    /**
+     * Calcola i minuti al prossimo passaggio di una linea a questa fermata
+     * usando l'orario statico nel DB (arrivalSeconds = secondi dalla mezzanotte).
+     *
+     * Usato quando CassiTrack non è disponibile o non ha dati per quella linea.
+     * Restituisce 5 solo se non ci sono più corse oggi (ultima corsa già passata).
+     */
+    private int waitMinutesFromSchedule(String stopId, String routeShort) {
+        int nowSec = LocalTime.now(ZoneId.of("Europe/Rome")).toSecondOfDay();
+
+        List<ScheduledStop> candidates = (routeShort != null)
+                ? scheduledStopRepository.findByStopIdAndRouteShort(stopId, routeShort)
+                : scheduledStopRepository.findByStopId(stopId);
+
+        return candidates.stream()
+                .mapToInt(ScheduledStop::getArrivalSeconds)
+                .filter(sec -> sec > nowSec)            // solo corse non ancora passate
+                .map(sec -> sec - nowSec)               // secondi rimanenti
+                .min()
+                .stream()
+                .mapToObj(diff -> (int) Math.ceil(diff / 60.0))
+                .findFirst()
+                .orElse(5);   // nessuna corsa rimasta oggi → stima minima
     }
 
 }

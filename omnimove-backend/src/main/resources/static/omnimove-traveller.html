@@ -1767,7 +1767,12 @@
     // selectMode — only highlights the card and shows the Start Journey banner.
     // The actual map drawing happens in startJourney so GPS is resolved first.
     function selectMode(mode, label, greenIndex, distanceMetres,costEuros) {
-        selectedJourney = { mode, label, greenIndex, distanceKm: distanceMetres / 1000, costEuros };
+        selectedJourney = {
+        mode, label, greenIndex,
+        distanceKm: distanceMetres / 1000,
+        costEuros,
+        durationMinutes: window._routeOptions[mode]?.duration_minutes  // ← aggiunto
+    };
 
         if (window._routeOptions && window._routeOptions[mode]) {
             selectedJourney.legs = window._routeOptions[mode].legs || [];
@@ -1942,7 +1947,7 @@
             map.fitBounds(allPoints, { padding: [50, 50] });
 
             // 10) Pannello "in progress"
-            const durationMin = Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
+            const durationMin = selectedJourney.durationMinutes || Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
             const modeEmoji   = MODE_ICONS[mode];
 
             document.querySelector('.routes-list').innerHTML =
