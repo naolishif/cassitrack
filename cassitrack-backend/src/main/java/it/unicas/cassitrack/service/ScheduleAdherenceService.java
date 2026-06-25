@@ -83,6 +83,9 @@ public class ScheduleAdherenceService {
             }
 
             if (pos.getTripId() == null) {
+                log.warn("Bus {} sta trasmettendo posizione [{},{}] ma non ha tripId — " +
+                                "bus attivo senza corsa assegnata. Verificare assegnazione.",
+                        pos.getVehicleId(), pos.getLat(), pos.getLon());
                 pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
                 return;
             }

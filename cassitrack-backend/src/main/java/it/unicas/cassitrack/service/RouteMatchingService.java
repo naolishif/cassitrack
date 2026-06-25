@@ -62,21 +62,6 @@ public class RouteMatchingService {
         return nearestId;
     }
 
-    /** Fermata più vicina cercata su TUTTA la rete (ancora per l'ETA). */
-    public String findNearestStopId(double lat, double lon) {
-        String nearestId = null;
-        double nearestDist = Double.MAX_VALUE;
-
-        for (Stop stop : stopRepository.findAll()) {
-            if (stop.getLat() == null || stop.getLon() == null) continue;
-            double dist = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestId = stop.getId();
-            }
-        }
-        return nearestId;
-    }
     /**
      * Get the scheduled arrival time (seconds after midnight)
      * for a specific stop on a specific route,

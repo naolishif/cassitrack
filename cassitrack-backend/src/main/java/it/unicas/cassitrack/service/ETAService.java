@@ -160,10 +160,8 @@ public class ETAService {
 
         String anchorStop = (bus.getNearestStopId() != null)
                 ? bus.getNearestStopId()
-                : (bus.getLat() != null && bus.getLon() != null
-                ? (bus.getTripId() != null
-                    ? routeMatchingService.findNearestStopOnTrip(bus.getTripId(), bus.getLat(), bus.getLon())
-                    : routeMatchingService.findNearestStopId(bus.getLat(), bus.getLon()))
+                : (bus.getTripId() != null && bus.getLat() != null && bus.getLon() != null
+                ? routeMatchingService.findNearestStopOnTrip(bus.getTripId(), bus.getLat(), bus.getLon())
                 : null);
         if (anchorStop != null && targetStopId.equals(anchorStop)) return 0L;
 

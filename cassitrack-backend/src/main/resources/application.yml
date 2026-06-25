@@ -129,13 +129,3 @@ anthropic:
     model: ${ANTHROPIC_API_MODEL:claude-sonnet-4-20250514} # alternative models: claude-haiku-4-5-20251001, claude-3-5-haiku-latest
     version: ${ANTHROPIC_API_VERSION:2023-06-01}
 
-# ── Weather Service (OpenWeatherMap) ─────────────────────────
-# Get free key at: https://openweathermap.org/api
-# Set as env variable WEATHER_API_KEY in IntelliJ
-# If not configured, defaults to CLEAR weather (safe fallback)
-weather:
-  api:
-    key: ${WEATHER_API_KEY:}
-    url: https://api.openweathermap.org/data/2.5/weather
-    city: Cassino
-    country: IT

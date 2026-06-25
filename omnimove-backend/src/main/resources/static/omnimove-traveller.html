@@ -1662,7 +1662,7 @@
             const payload = {
                 origin_lat: origin.lat, origin_lon: origin.lon, origin_name: origin.name, origin_is_gps: origin.isGPS === true,
                 dest_lat:   dest.lat,   dest_lon:   dest.lon,   dest_name:   dest.name,
-                user_id: _user.id
+                user_id: _user.id, dest_stop_id:   dest.id,    origin_stop_id: origin.isGPS ? null : origin.id
             };
             // Only constrain modes when the traveler picked specific ones via the
             // Bus/Bike/Scooter chips.
@@ -1752,6 +1752,16 @@
         </button>
     </div>`;
         }).join('');
+
+        // messaggi di errore/avviso dal backend
+        if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+                const el = document.createElement('div');
+                el.style.cssText = 'background:#fef2f2;border:1px solid #fee2e2;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:600;color:#ef4444;margin-top:10px;';
+                el.textContent = msg;
+                list.appendChild(el);
+            });
+        }
     }
 
     // selectMode — only highlights the card and shows the Start Journey banner.

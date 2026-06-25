@@ -1,6 +1,8 @@
 package it.unicas.omnimove.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+
+import java.util.ArrayList;
 import java.util.List;
 @Data
 public class JourneyRequest {
@@ -12,5 +14,10 @@ public class JourneyRequest {
     @JsonProperty("dest_name") private String destName;
     @JsonProperty("origin_is_gps") private Boolean originIsGps;
     @JsonProperty("user_id") private Long userId;
+    @JsonProperty("origin_stop_id") private String originStopId;
+    @JsonProperty("dest_stop_id")   private String destStopId;
+    @JsonProperty("messages") private List<String> messages = new ArrayList<>();
+
+    public void addMessage(String msg) { this.messages.add(msg); }
     private List<String> modes;
 }
