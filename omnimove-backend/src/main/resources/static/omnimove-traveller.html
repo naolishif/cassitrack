@@ -1815,7 +1815,17 @@
 
     async function startJourney() {
         if (!selectedJourney) return;
-        if (window._journeyStarting) return;
+
+        // Pulisci viaggio precedente se in corso
+        if (window._journeyStarting) {
+            ['_routeLine','_routeLineGps','_journeyDestMarker','_journeyOriginMarker','_journeyGpsMarker']
+                .forEach(k => { if (window[k]) { map.removeLayer(window[k]); window[k] = null; } });
+            if (window._busRouteLines) {
+                window._busRouteLines.forEach(l => map.removeLayer(l));
+                window._busRouteLines = [];
+            }
+        }
+
         window._journeyStarting = true;
         const _startBtn = document.querySelector('#start-banner button');
         if (_startBtn) { _startBtn.disabled = true; _startBtn.textContent = '⏳ Starting…'; }
@@ -1947,41 +1957,71 @@
             map.fitBounds(allPoints, { padding: [50, 50] });
 
             // 10) Pannello "in progress"
-            const durationMin = selectedJourney.durationMinutes || Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
-            const modeEmoji   = MODE_ICONS[mode];
+            const durationMin = selectedJourney.durationMinutes
+                || Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
+            const modeEmoji = MODE_ICONS[mode];
+            const fmtD = m => m < 1000 ? Math.round(m) + ' m' : (m/1000).toFixed(1) + ' km';
+
+            // Breakdown dai leg per BUS; layout semplice per gli altri modi
+            let gridHtml = '';
+            if (mode === 'BUS' && selectedJourney.legs && selectedJourney.legs.length > 0) {
+                const legs = selectedJourney.legs;
+                const walkLegs = legs.filter(l => l.mode === 'WALK');
+                const waitLegs = legs.filter(l => l.mode === 'WAIT');
+                const busLegs  = legs.filter(l => l.mode === 'BUS');
+
+                const walkMin = walkLegs.reduce((s, l) => s + (l.duration_minutes || 0), 0);
+                const waitMin = waitLegs.reduce((s, l) => s + (l.duration_minutes || 0), 0);
+                const busMin  = busLegs.reduce((s,  l) => s + (l.duration_minutes || 0), 0);
+                const walkM   = walkLegs.reduce((s, l) => s + (l.distance_metres  || 0), 0);
+                const busM    = busLegs.reduce((s,  l) => s + (l.distance_metres  || 0), 0);
+
+                const cell = (label, top, sub) =>
+                    `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                        <div style="font-size:9px;opacity:0.75;font-weight:700;text-transform:uppercase;margin-bottom:3px">${label}</div>
+                        <div style="font-size:15px;font-weight:800">${top}</div>
+                        ${sub ? `<div style="font-size:10px;opacity:0.75;margin-top:2px">${sub}</div>` : ''}
+                     </div>`;
+
+                gridHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px">'
+                    + cell('Walk', walkMin > 0 ? `🚶 ${walkMin} min` : '🚶 —', walkMin > 0 ? fmtD(walkM) : 'already at stop')
+                    + cell('Bus wait', `🕐 ${waitMin} min`, '')
+                    + cell('On bus', `🚌 ${busMin} min`, fmtD(busM))
+                    + '</div>'
+                    + `<div style="margin-top:10px;font-size:11px;opacity:0.8;text-align:center">
+                        Total: <span id="etaCounter" style="font-weight:800">${durationMin} min</span>
+                        &nbsp;·&nbsp; 🌱 ${greenIndex}
+                    </div>`;
+            } else {
+                // Bici, monopattino, piedi: layout originale
+                gridHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">'
+                    + `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                        <div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Distance</div>
+                        <div style="font-size:16px;font-weight:800">${distanceKm.toFixed(1)} km</div>
+                       </div>`
+                    + `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                        <div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">ETA</div>
+                        <div style="font-size:16px;font-weight:800" id="etaCounter">${durationMin} min</div>
+                       </div>`
+                    + `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                        <div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Green</div>
+                        <div style="font-size:16px;font-weight:800">🌱 ${greenIndex}</div>
+                       </div>`
+                    + '</div>';
+            }
 
             document.querySelector('.routes-list').innerHTML =
                 '<div style="padding:16px 0">'
                 + '<div style="background:linear-gradient(135deg,#10b981,#3b82f6);border-radius:20px;padding:20px;color:white;margin-bottom:16px;text-align:center">'
                 + `<div style="font-size:36px;margin-bottom:8px">${modeEmoji}</div>`
-                + '<div style="font-size:18px;font-weight:800;margin-bottom:4px">Journey in Progress</div>'
+                + '<div style="font-size:18px;font-weight:800;margin-bottom:4px">Journey In Progress</div>'
                 + `<div style="font-size:13px;opacity:0.85">${label}</div>`
-                + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">'
-                + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
-                + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Distance</div>'
-                + `<div style="font-size:16px;font-weight:800">${distanceKm.toFixed(1)} km</div></div>`
-                + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
-                + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">ETA</div>'
-                + `<div style="font-size:16px;font-weight:800" id="etaCounter">${durationMin} min</div></div>`
-                + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
-                + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Green</div>'
-                + `<div style="font-size:16px;font-weight:800">🌱 ${greenIndex}</div></div>`
-                + '</div></div>'
+                + gridHtml
+                + '</div>'
                 + '<button class="action-btn" onclick="endJourney()" style="width:100%;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;font-size:14px;padding:13px;margin-bottom:12px">🏁 End Journey</button>'
                 + '<div style="text-align:center;font-size:11px;color:var(--text-soft);font-weight:600">📡 Live tracking active</div>'
                 + '</div>';
 
-            let remaining = durationMin;
-            window._etaInterval = setInterval(() => {
-                if (remaining > 0) {
-                    remaining--;
-                    const el = document.getElementById('etaCounter');
-                    if (el) el.textContent = remaining + ' min';
-                } else {
-                    clearInterval(window._etaInterval);
-                    showToast('🎉 You have arrived!');
-                }
-            }, 60000);
 
             showToast(`🚀 Journey started! ${durationMin} min to destination`);
 
@@ -1994,7 +2034,6 @@
     }
 
     function endJourney() {
-        clearInterval(window._etaInterval);
         selectedJourney = null;
         window._journeyStarting = false;   // allow starting a new journey
 
@@ -2021,7 +2060,7 @@
             + '<div style="font-size:12px;margin-top:6px">Search a new route above</div>'
             + '</div>';
 
-        showToast('🏁 Journey ended — great trip!');
+        showToast('🏁 Journey ended — 🎉 You have arrived!');
         loadEcoStats();
     }
 
