@@ -746,6 +746,157 @@
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+        /* ── Stop arrivals bottom sheet ──────────────────────────────── */
+        .stop-sheet-overlay {
+            position: fixed; inset: 0;
+            background: rgba(15,23,42,0.45);
+            z-index: 3000;
+            display: none;
+            align-items: flex-end;
+        }
+        .stop-sheet-overlay.open { display: flex; }
+
+        .stop-sheet {
+            background: var(--bg-white);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -8px 40px rgba(15,23,42,0.18);
+            width: 100%;
+            max-height: 78vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .stop-sheet-handle {
+            width: 40px; height: 4px;
+            background: var(--border-mid);
+            border-radius: 2px;
+            margin: 12px auto 0;
+            flex-shrink: 0;
+        }
+        .stop-sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px 10px;
+            border-bottom: 1px solid var(--border-light);
+            flex-shrink: 0;
+        }
+        .stop-sheet-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+        .stop-sheet-subtitle {
+            font-size: 11px;
+            color: var(--text-soft);
+            margin-top: 1px;
+        }
+        .stop-sheet-close {
+            background: var(--bg-soft);
+            border: none;
+            border-radius: 50%;
+            width: 30px; height: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-soft);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .stop-sheet-list {
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+            padding: 12px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .stop-sheet-list::-webkit-scrollbar { width: 3px; }
+        .stop-sheet-list::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+        .arrival-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-mid);
+            border-left: 3px solid var(--primary);
+            border-radius: 14px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: box-shadow 0.15s;
+        }
+        .arrival-card:hover { box-shadow: var(--shadow-sm); }
+        .arrival-card.late      { border-left-color: #f59e0b; }
+        .arrival-card.very-late { border-left-color: #ef4444; }
+        .arrival-card.early     { border-left-color: #3b82f6; }
+        .arrival-card.scheduled { border-left-color: var(--border-mid); }
+
+        .arrival-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .arrival-route-info { flex: 1; min-width: 0; padding-right: 10px; }
+        .arrival-route-short {
+            display: block;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.1;
+        }
+        .arrival-route-long {
+            display: block;
+            font-size: 11px;
+            color: var(--text-soft);
+            font-weight: 500;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .arrival-eta {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .arrival-eta.amber { color: #f59e0b; }
+        .arrival-eta.red   { color: #ef4444; }
+
+        .arrival-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .arrival-badge {
+            font-size: 9px;
+            font-weight: 800;
+            padding: 3px 7px;
+            border-radius: 5px;
+            letter-spacing: 0.3px;
+        }
+        .arrival-times {
+            font-size: 10px;
+            color: var(--text-soft);
+            margin-left: auto;
+        }
+        .stop-check-btn {
+            margin-top: 8px;
+            padding: 7px 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm, 8px);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.15s;
+        }
+        .stop-check-btn:hover { background: var(--primary-dark, #059669); }
     </style>
 </head>
 <body>
@@ -1446,49 +1597,139 @@
         className: '', iconSize: [28, 28]
     });
 
+    function escHtml(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                              .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Delegated listener for "Check next buses" buttons inside Leaflet popups.
+    // Using data-attributes avoids the double-quote conflict that inline onclick
+    // has with JSON.stringify (JSON uses " which breaks onclick="...").
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.stop-check-btn');
+        if (btn) showStopArrivals(btn.dataset.stopId, btn.dataset.stopName);
+    });
+
     function renderStopMarkers() {
         window._stopMarkers.forEach(m => map.removeLayer(m));
         window._stopMarkers = [];
         Object.values(STOPS).forEach(stop => {
+            const safeName = escHtml(stop.name);
+            const popup =
+                `<b>${safeName}</b><br>` +
+                `<button class="stop-check-btn" ` +
+                `data-stop-id="${escAttr(stop.id)}" data-stop-name="${escAttr(stop.name)}">` +
+                `Check next buses</button>`;
             const marker = L.marker([stop.lat, stop.lon], { icon: STOP_ICON })
                 .addTo(map)
-                .bindPopup('<b>' + stop.name + '</b><br><span style="color:#94a3b8">Caricamento arrivi…</span>');
-
-            marker.on('click', () => loadStopArrivals(stop, marker));
+                .bindPopup(popup);
             window._stopMarkers.push(marker);
         });
     }
 
-    async function loadStopArrivals(stop, marker) {
-        try {
-            const r = await apiFetch('/journeys/stops/' + encodeURIComponent(stop.id) + '/arrivals');
-            if (!r.ok) throw new Error('arrivals ' + r.status);
-            const arrivals = await r.json();
+    // ── Bottom-sheet constants ────────────────────────────────────────
+    const STATUS_BG = {
+        ON_TIME:'background:#d1fae5;color:#065f46',
+        EARLY:'background:#dbeafe;color:#1e40af',
+        SLIGHTLY_LATE:'background:#fef9c3;color:#92400e',
+        SIGNIFICANTLY_LATE:'background:#fee2e2;color:#991b1b',
+        SCHEDULED:'background:#f1f5f9;color:#475569',
+    };
+    const STATUS_LABEL = {
+        ON_TIME:'On Time', EARLY:'Early', SLIGHTLY_LATE:'Slightly Late',
+        SIGNIFICANTLY_LATE:'Late', SCHEDULED:'Scheduled',
+    };
+    const CARD_CLASS = {
+        SLIGHTLY_LATE:'late', SIGNIFICANTLY_LATE:'very-late',
+        EARLY:'early', SCHEDULED:'scheduled',
+    };
+    const CROWDING_BG = {
+        LOW:'background:#d1fae5;color:#065f46',
+        MEDIUM:'background:#fef9c3;color:#92400e',
+        HIGH:'background:#fed7aa;color:#9a3412',
+        VERY_HIGH:'background:#fee2e2;color:#991b1b',
+    };
+    const CROWDING_LABEL = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', VERY_HIGH:'Very High' };
 
-            let html = '<b>' + stop.name + '</b>';
-            if (!Array.isArray(arrivals) || arrivals.length === 0) {
-                html += '<br><span style="color:#94a3b8">Nessun bus in arrivo</span>';
-            } else {
-                const now = Date.now();
-                html += '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">'
-                    + arrivals.slice(0, 5).map(a => {
-                        const line = a.route_name || a.route_id || 'Bus';
-                        const etaMin = a.estimated_arrival
-                            ? Math.max(0, Math.round((new Date(a.estimated_arrival).getTime() - now) / 60000))
-                            : null;
-                        const when = etaMin === null ? '—' : (etaMin === 0 ? 'in arrivo' : etaMin + ' min');
-                        const late = (a.delay_minutes && a.delay_minutes > 0)
-                            ? ' <span style="color:#ef4444">+' + a.delay_minutes + '</span>' : '';
-                        return '<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px">'
-                            + '<span style="font-weight:700">🚌 ' + line + '</span>'
-                            + '<span>' + when + late + '</span></div>';
-                    }).join('')
-                    + '</div>';
-            }
-            marker.setPopupContent(html);
-        } catch (e) {
-            marker.setPopupContent('<b>' + stop.name + '</b><br><span style="color:#ef4444">Arrivi non disponibili</span>');
+    async function showStopArrivals(stopId, stopName) {
+        const overlay  = document.getElementById('stopSheetOverlay');
+        const title    = document.getElementById('stopSheetTitle');
+        const subtitle = document.getElementById('stopSheetSubtitle');
+        const list     = document.getElementById('stopSheetList');
+
+        title.textContent    = stopName;
+        subtitle.textContent = 'Loading next buses…';
+        list.innerHTML       = '';
+        overlay.classList.add('open');
+
+        try {
+            const r = await apiFetch(
+                '/journeys/stops/' + encodeURIComponent(stopId) + '/arrivals?limit=10');
+            if (!r.ok) throw new Error(r.status);
+            const arrivals = await r.json();
+            subtitle.textContent = arrivals.length
+                ? `Next ${arrivals.length} bus${arrivals.length > 1 ? 'es' : ''}`
+                : 'No upcoming buses found';
+            renderArrivals(list, arrivals);
+        } catch(e) {
+            subtitle.textContent = 'Could not load arrivals';
+            list.innerHTML = '<p style="color:var(--text-soft);text-align:center;padding:24px 0">Service unavailable</p>';
         }
+    }
+
+    function closeStopSheet() {
+        document.getElementById('stopSheetOverlay').classList.remove('open');
+    }
+
+    function handleSheetBackdrop(e) {
+        if (e.target === document.getElementById('stopSheetOverlay')) closeStopSheet();
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStopSheet(); });
+
+    function renderArrivals(list, arrivals) {
+        if (!arrivals.length) { list.innerHTML = ''; return; }
+        const now = Date.now();
+        list.innerHTML = arrivals.map(a => {
+            const eta     = a.estimated_arrival ? new Date(a.estimated_arrival).getTime() : now;
+            const diffMin = Math.max(0, Math.round((eta - now) / 60000));
+            const diffSec = Math.max(0, Math.round((eta - now) / 1000));
+            const etaText  = diffMin > 0 ? `${diffMin} min` : diffSec > 0 ? `${diffSec} sec` : 'Now';
+            const etaClass = diffMin <= 2 ? 'red' : diffMin <= 5 ? 'amber' : '';
+
+            const status    = a.schedule_status || '';
+            const cardClass = CARD_CLASS[status] || '';
+            const statusBadge = (status && status !== 'UNKNOWN' && STATUS_BG[status])
+                ? `<span class="arrival-badge" style="${STATUS_BG[status]}">${STATUS_LABEL[status] || escHtml(status)}</span>`
+                : '';
+            const crowding = a.crowding_level;
+            const crowdBadge = (crowding && CROWDING_BG[crowding])
+                ? `<span class="arrival-badge" style="${CROWDING_BG[crowding]}">Crowding: ${CROWDING_LABEL[crowding]}</span>`
+                : '';
+
+            const routeShort = escHtml(a.route_short_name || a.route_name || '?');
+            const routeLong  = (a.route_short_name && a.route_name) ? escHtml(a.route_name) : '';
+            const schTime = a.scheduled_arrival
+                ? new Date(a.scheduled_arrival).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})
+                : '—';
+            const estTime = a.estimated_arrival
+                ? new Date(a.estimated_arrival).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})
+                : '—';
+
+            return `<div class="arrival-card ${cardClass}">
+                <div class="arrival-top">
+                    <div class="arrival-route-info">
+                        <span class="arrival-route-short">${routeShort}</span>
+                        ${routeLong ? `<span class="arrival-route-long">${routeLong}</span>` : ''}
+                    </div>
+                    <span class="arrival-eta ${etaClass}">${etaText}</span>
+                </div>
+                <div class="arrival-meta">
+                    ${statusBadge}${crowdBadge}
+                    <span class="arrival-times">Sched: ${schTime} · ETA: ${estTime}</span>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     // ── Load stops from the backend → fill dropdowns + map markers ─────
@@ -2205,5 +2446,20 @@
     // ── Initial load: populate stops (dropdowns + map markers) ─────────
     loadStops();
 </script>
+
+<!-- ── Stop arrivals bottom sheet ──────────────────────────────────── -->
+<div class="stop-sheet-overlay" id="stopSheetOverlay" onclick="handleSheetBackdrop(event)">
+    <div class="stop-sheet" id="stopSheet">
+        <div class="stop-sheet-handle"></div>
+        <div class="stop-sheet-header">
+            <div>
+                <div class="stop-sheet-title" id="stopSheetTitle">Next buses</div>
+                <div class="stop-sheet-subtitle" id="stopSheetSubtitle">Loading…</div>
+            </div>
+            <button class="stop-sheet-close" onclick="closeStopSheet()" aria-label="Close">✕</button>
+        </div>
+        <div class="stop-sheet-list" id="stopSheetList"></div>
+    </div>
+</div>
 </body>
 </html>
