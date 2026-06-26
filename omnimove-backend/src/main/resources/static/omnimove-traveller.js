@@ -1,9 +1,10 @@
 //  FRONTEND ROUTE GUARD
-if (!localStorage.getItem('omnimove_token')) {
+// V-04 FIX: Token is in httpOnly cookie (sent automatically). User data is in sessionStorage.
+const _user = JSON.parse(sessionStorage.getItem('omnimove_user') || '{}');
+if (!_user.name && !_user.email) {
     window.location.href = 'omnimove-login.html';
 }
 
-const _user = JSON.parse(localStorage.getItem('omnimove_user') || '{}');
 document.getElementById('sidebarName').textContent  = _user.name || _user.username || 'Utente';
 document.getElementById('sidebarEmail').textContent = _user.email || '';
 document.getElementById('profileName').textContent  = _user.name  || _user.username || 'Utente';
