@@ -100,17 +100,6 @@ public class VehicleService {
                 .build();
     }
 
-    /**
-     * Translates a route ID into a human-readable name.
-     * Will be replaced by a DB lookup once routes are stored.
-     */
-    private String resolveRouteName(String routeId) {
-        if (routeId == null) return null;
-        return switch (routeId) {
-            case "LINEA-16" -> "Linea 16 - Campus Folcara / Stazione";
-            default -> routeId;
-        };
-    }
 
     /**
      * Rough crowding classification.

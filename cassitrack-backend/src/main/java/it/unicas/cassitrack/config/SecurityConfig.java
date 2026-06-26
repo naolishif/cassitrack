@@ -69,18 +69,16 @@ public class SecurityConfig {
                         // ── 1. Public Access points (UI and Auth) ───────────────
                         .requestMatchers("/error", "/", "/cassitrack-login.html", "/api/v1/auth/login").permitAll()
 
-                        // ── 2. Public APIs (GTFS, Live Tracking, Swagger) ───────────────
+                        // ── 2. Public APIs (Live Tracking, Swagger) ───────────────
                         .requestMatchers(org.springframework.http.HttpMethod.GET, // Public for OMNIMOVE
                                 "/api/v1/vehicles/**",
                                 "/api/v1/stops/**",
                                 "/api/v1/routes/**",
                                 "/api/v1/siri/**",
-                                "/api/v1/feed/**",
                                 "/api/v1/journeys/**",
                                 "/api/v1/telemetry/latest",
                                 "/api/v1/telemetry/stream"
-                         ).permitAll()
-
+                        ).permitAll()
                         .requestMatchers( // Dev tools — H2 console removed (disabled in application.yml)
                                 "/ws/**",
                                 "/api/docs/**",

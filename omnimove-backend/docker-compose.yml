@@ -26,7 +26,7 @@ services:
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=omnimove_admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=password_influx_omnimove
+      - DOCKER_INFLUXDB_INIT_PASSWORD=omnimove_admin
       - DOCKER_INFLUXDB_INIT_ORG=omnimove_org
       - DOCKER_INFLUXDB_INIT_BUCKET=omnimove_bucket
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=omnimove-dev-token-change-in-production
