@@ -8,7 +8,8 @@ services:
 
   # 1. Database Relazionale (Postgres)
   omnimove-postgres:
-    image: postgres:15-alpine
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: postgres@sha256:cd17e2ac98240fce1541ad2a803b34009b4eea5aec8a832363cdc7eca62e722e  # 15-alpine
     container_name: omnimove-postgres-container
     ports:
       - "127.0.0.1:5432:5432"   # V-09: localhost only
@@ -26,7 +27,8 @@ services:
 
   # 2. Database Temporale (InfluxDB)
   omnimove-influxdb:
-    image: influxdb:2.7-alpine
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: influxdb@sha256:991673dc2d237bd79b15d6627410d72de111387e7dac673dbb92cf3333ffcc8c  # 2.7-alpine
     container_name: omnimove-influxdb-container
     ports:
       - "127.0.0.1:8087:8086"   # V-09: localhost only
@@ -42,7 +44,8 @@ services:
 
   # 3. Cache / NoSQL (Redis)
   omnimove-redis:
-    image: redis:7-alpine
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99  # 7-alpine
     container_name: omnimove-redis-container
     # V-08 fix (OWASP A05): Redis requires a password loaded from .env SPRING_REDIS_PASSWORD
     command: redis-server --requirepass ${SPRING_REDIS_PASSWORD}

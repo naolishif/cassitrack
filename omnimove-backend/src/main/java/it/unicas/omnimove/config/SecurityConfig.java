@@ -37,7 +37,8 @@ public class SecurityConfig {
                         // ── 1. Public — login page, static assets, auth endpoints ──────
                         .requestMatchers(
                                 "/", "/error", "/omnimove-login.html", "/reset-password.html",
-                                "/favicon.ico", "/*.css", "/*.js"
+                                "/favicon.ico", "/omnimove-login.css", "/omnimove-login.js",
+                                "/reset-password.css","/reset-password.js"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/login",
@@ -53,12 +54,16 @@ public class SecurityConfig {
                         // ── 2. Admin only ────────────────────────────────────────────────
                         .requestMatchers(
                                 "/omnimove-admin.html",
+                                "/omnimove-admin.css",
+                                "/omnimove-admin.js",
                                 "/api/v1/admin/**"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
                         // ── 3. Traveller only ────────────────────────────────────────────
                         .requestMatchers(
                                 "/omnimove-traveller.html",
+                                "/omnimove-traveller.css",
+                                "/omnimove-traveller.js",
                                 "/api/v1/traveller/**"
                         ).hasAnyAuthority("TRAVELLER", "ROLE_TRAVELLER")
 
@@ -76,7 +81,26 @@ public class SecurityConfig {
                         // ── 6. Everything else requires authentication ────────────────────
                         .anyRequest().authenticated()
                 )
-                .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+                .headers(h -> h
+                        .frameOptions(f -> f.deny())
+                        .xssProtection(xss -> xss.disable())
+                        .contentTypeOptions(ct -> {})
+                        .httpStrictTransportSecurity(hsts ->
+                                hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; " +
+                                        // A08 FIX: standardised on jsdelivr for Leaflet/Chart.js, now loaded with SRI integrity=; unpkg/cdnjs dropped
+                                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+                                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+                                        "font-src 'self' https://fonts.gstatic.com; " +
+                                        "img-src 'self' data: https://*.tile.openstreetmap.org; " +
+                                        "connect-src 'self'; " +
+                                        "frame-ancestors 'none'; " +
+                                        "object-src 'none'; " +
+                                        "base-uri 'self'; " +
+                                        "form-action 'self';"
+                        ))
+                )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
