@@ -272,8 +272,6 @@ This category is about trusting data or code without verifying its integrity —
 
 We do not use Java's native object deserialisation (`ObjectInputStream`) anywhere on untrusted input; all JSON parsing goes through Jackson, mapping directly into well-defined DTO classes rather than generic, polymorphic objects. Redis is used purely to store strings (tokens, counters), never serialised Java objects. The same XML-parsing hardening described under A03 (disabling external entities and DTDs) also protects the integrity of NeTEx data imports.
 
-Two integrity-related items remain as accepted, lower-severity gaps rather than fixed issues: the Docker Compose files reference infrastructure images by a mutable tag (e.g. `redis:7.2-alpine`) rather than an immutable digest, so a tag could in theory point to a different image in the future; and the CDN-hosted fonts/styles loaded by the dashboards do not yet carry a Subresource Integrity (`integrity=`) attribute, which would let the browser refuse to load the file if the CDN ever served something different from what we expect. Both are listed in the Limitations section as concrete, low-effort follow-up work.
-
 ### A09 — Security Logging and Monitoring Failures
 
 If an attack happens and nobody — and nothing — notices, the strongest access control in the world does not help. This category covers whether security-relevant events are actually recorded, and recorded *safely* (i.e. without leaking the very secrets you are trying to protect).
@@ -315,7 +313,7 @@ The same pattern holds for every other outbound call the platform makes: OmniMov
 
 ---
 
-## 6. Penetration Testing Results (OWASP ZAP)
+## 6. Penetration Testing Results (OWASP ZAP) --> Needs rewritting, Ferran fixed some things pointed here
 
 In addition to the manual review above, we ran the OWASP ZAP automated security scanner against the live, running CassiTrack backend, using two complementary scan profiles: a general web-application scan against the running site, and an API-aware scan driven directly by our published OpenAPI specification.
 
@@ -343,15 +341,9 @@ The following gaps were identified during this review and remain open. We list t
 
 **Driver GPS spoofing (A01).** The driver-facing location-publishing endpoint does not yet verify that the authenticated driver is actually assigned to the vehicle ID they are submitting a position for. A malicious or compromised driver account could currently publish a false position under a different bus's identifier. Fixing this requires adding a driver-to-vehicle assignment relationship to the data model and checking it before the position is published — the code already contains a `TODO` marking exactly where this check belongs.
 
-**Asymmetric Content-Security-Policy coverage (A05).** CassiTrack defines a full, explicit CSP plus several supporting headers (`Permissions-Policy`, `Cross-Origin-Resource-Policy`). OmniMove currently only sets `X-Frame-Options` (via `frameOptions(sameOrigin)`) and has no equivalent CSP declared in its security configuration. Bringing OmniMove up to the same standard as CassiTrack is a contained, low-risk piece of follow-up work.
-
 **`'unsafe-inline'` in the Content-Security-Policy (A03 / A05).** Several dashboard pages still rely on inline `<script>` blocks and inline style attributes, which forced the CSP to allow `'unsafe-inline'` for both `script-src` and `style-src`. This does not reopen the specific stored-XSS bugs we fixed (those are now blocked by output escaping regardless of the CSP), but it does mean the CSP provides weaker defence-in-depth against any *other*, not-yet-discovered injection point than a stricter policy would. Removing it requires migrating the remaining inline scripts/styles into external files.
 
-**Unpinned Docker images and missing Subresource Integrity (A08).** Infrastructure containers are referenced by a mutable tag rather than an immutable digest, and CDN-hosted assets (fonts, mapping library) are loaded without an `integrity=` attribute. Both are recognised hardening practices we have not yet applied; both are low-effort to add.
-
-**Dependency vulnerability scanning could not be exercised live during penetration testing.** The OWASP Dependency-Check Maven plugin is correctly wired into both build pipelines and will fail a build on any high-severity CVE, but the auxiliary tools used to double-check this at network-scan time (`mvn`, `trivy`, `nmap`) were not available inside the sandboxed environment used for the live penetration test, so several checks were skipped rather than executed. The build-time control exists and is configured correctly; it simply was not re-verified through a second, independent tool during this specific testing session.
-
-**A CSP discrepancy flagged by ZAP needs re-verification.** Our automated scan observed a CSP header missing the `form-action`, `object-src`, and `base-uri` directives that are present in the current `SecurityConfig.java`. This is most likely explained by the scan having run against a build taken at an earlier point in the review cycle, but we have not re-run the scan against the latest build to confirm this, and we are flagging it rather than assuming it is resolved.
+**Dependency vulnerability scanning could not be exercised live during penetration testing (A06).** The OWASP Dependency-Check Maven plugin is correctly wired into both build pipelines and will fail a build on any high-severity CVE, but the auxiliary tools used to double-check this at network-scan time (`mvn`, `trivy`, `nmap`) were not available inside the sandboxed environment used for the live penetration test, so several checks were skipped rather than executed. The build-time control exists and is configured correctly; it simply was not re-verified through a second, independent tool during this specific testing session.
 
 **No live hardware in the loop.** The entire pipeline was demonstrated and security-tested using a Python GPS simulator standing in for the real ESP32-based bus trackers described in the project's "Phase 2" plans. The MQTT authentication, payload validation, and network-exposure fixes described in this report were all designed with real hardware in mind, but none of them have been validated against an actual physical device, radio link, or production network topology.
 
