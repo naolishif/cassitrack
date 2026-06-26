@@ -5,35 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
     <title>CASSITRACK — Sign In</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-    <style>
-        *{box-sizing:border-box;margin:0;padding:0}
-        :root{--bg:#07090F;--panel:#0F1623;--panel2:#141E2E;--border:#1A2744;
-            --accent:#3B82F6;--cyan:#06B6D4;--green:#22C55E;--red:#EF4444;
-            --text:#E2E8F0;--dim:#4B5563;
-            --mono:'DM Mono',monospace;--display:'Syne',sans-serif;}
-        body{background:var(--bg);color:var(--text);font-family:var(--display);
-            min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-        .container{width:100%;max-width:400px}
-        .logo{font-size:32px;font-weight:800;text-align:center;margin-bottom:32px}
-        .logo span{color:var(--accent)}
-        .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px}
-        .form{display:flex;flex-direction:column;gap:14px}
-        .label{font-family:var(--mono);font-size:10px;color:var(--dim);
-            text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
-        .input{width:100%;padding:11px 14px;background:var(--panel2);
-            color:var(--text);border:1px solid var(--border);border-radius:8px;
-            font-family:var(--mono);font-size:13px;outline:none}
-        .input:focus{border-color:var(--accent)}
-        .btn{width:100%;padding:13px;background:var(--accent);color:white;
-            border:none;border-radius:8px;font-family:var(--mono);font-size:13px;
-            font-weight:700;cursor:pointer;transition:opacity .2s;letter-spacing:.5px}
-        .btn:hover{opacity:.85}
-        .btn:disabled{opacity:.5;cursor:not-allowed}
-        .msg{font-family:var(--mono);font-size:11px;text-align:center;padding:8px;
-            border-radius:6px;display:none;margin-bottom:14px}
-        .msg.ok{background:rgba(34,197,94,.1);color:var(--green);display:block}
-        .msg.err{background:rgba(239,68,68,.1);color:var(--red);display:block}
-    </style>
+    <link href="cassitrack-login.css" rel="stylesheet">
 </head>
 <body>
 <div class="container">
@@ -42,7 +14,7 @@
     <div class="card">
         <div id="msg" class="msg"></div>
 
-        <form class="form" id="loginForm" onsubmit="handleLogin(event)">
+        <form class="form" id="loginForm">
             <div>
                 <div class="label">Email</div>
                 <input class="input" type="email" id="loginEmail" placeholder="xxxxx@gmail.com" required/>
@@ -56,76 +28,6 @@
     </div>
 </div>
 
-<script>
-    const CASSITRACK = '/api/v1';
-
-    // Role redirection dictionary (Easy to scale later!)
-    const roleRoutes = {
-        'FLEET_MANAGER': '/cassitrack-fleetmanager.html',
-        'ADMIN': '/cassitrack-admin.html',
-        'DRIVER': '/cassitrack-driver.html'
-    };
-
-    function showMsg(text, type) {
-        const el = document.getElementById('msg');
-        el.textContent = text;
-        el.className = 'msg ' + type;
-    }
-
-    async function handleLogin(e) {
-        e.preventDefault();
-        const btn = document.getElementById('loginBtn');
-        btn.disabled = true;
-        btn.textContent = 'Signing in...';
-
-        try {
-            // 1. Authenticate with the backend
-            const r = await fetch(`${CASSITRACK}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: document.getElementById('loginEmail').value,
-                    password: document.getElementById('loginPassword').value
-                })
-            });
-
-            if (!r.ok) {
-                const errorText = await r.text();
-                showMsg(errorText || 'Username or password incorrect!!', 'err');
-                return;
-            }
-
-            const data = await r.json();
-
-            if (data.token) {
-                // V-04 FIX (OWASP A02/A07): Token is stored in an httpOnly cookie by the server.
-                // We do NOT store it in localStorage (XSS-accessible).
-                // V-11 FIX (OWASP A03): Redirect via window.location — no document.write() XSS risk.
-
-                const userRole = data.role ? data.role.toUpperCase() : 'USER';
-                showMsg(`Success! Verified role: ${userRole}.`, 'ok');
-
-                // Find the correct landing page for this role
-                const targetHtmlUrl = roleRoutes[userRole];
-
-                if (targetHtmlUrl) {
-                    // Wait 1 second so the user sees the success message, then navigate normally.
-                    // The httpOnly cookie is sent automatically with the GET request.
-                    setTimeout(() => {
-                        window.location.replace(targetHtmlUrl);
-                    }, 1000);
-                } else {
-                    showMsg('No landing page configured for your role.', 'err');
-                }
-            }
-        } catch(e) {
-            showMsg('Network error or server unreachable.', 'err');
-        } finally {
-            // Reset button if there was an error (if successful, the page will be replaced anyway)
-            btn.disabled = false;
-            btn.textContent = 'Sign In';
-        }
-    }
-</script>
+<script src="cassitrack-login.js"></script>
 </body>
 </html>

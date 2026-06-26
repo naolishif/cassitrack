@@ -9,11 +9,7 @@
 
 ## 1. Introduction
 
-This report documents the design and the security engineering work carried out on CassiTrack and OmniMove, the two systems we built for the Distributed Programming and Networking course project. The first half of the report explains, in plain terms, what the systems do and how they are put together, so that the architecture can be understood from a deeper distibuted system point of view. The second half is the core security deliverable: a walk-through of the OWASP Top 10 (2021) vulnerability categories, explaining what each category means and, concretely, what in our codebase prevents or mitigates it, backed by real code snippets. The report closes with the results of the automated penetration testing we ran with OWASP ZAP, a conclusion, and an honest account of the limitations of our work.
-
----
-
-## 2. CassiTrack and OmniMove
+This report documents the design and the security engineering work carried out on CassiTrack and OmniMove, the two systems we built for the Distributed Programming and Networking course project. The first half explains, in plain terms, what the systems do and how they are put together, so the architecture can be understood from a deeper distributed-systems point of view. The second half is the core security deliverable: a walk-through of the OWASP Top 10 (2021) vulnerability categories, explaining what each category means and, concretely, what in our codebase prevents or mitigates it. The report closes with the results of the automated penetration testing we ran with OWASP ZAP, a conclusion, and an honest account of the limitations of our work.
 
 **CassiTrack** is a real-time bus fleet monitoring system built for MAGNI Autoservizi, the bus company that operates in Cassino's city centre and surroundings. The motivation behind it is simple and personal: Buses currently have no live tracking that's reliable enough to be useful for the citizens. CassiTrack aims to solve this by receiving GPS positions from the buses, storing them, computing arrival predictions, and exposing that information through a web dashboard and a user-friendly app.
 
@@ -25,7 +21,7 @@ Both systems also include role-based web dashboards: an administrator panel for 
 
 ---
 
-## 3. System Architecture
+## 2. System Architecture
 
 At a high level, data flows through the platform in one direction — from the bus to the passenger — and is enriched at every stage:
 
@@ -39,21 +35,21 @@ Both backends share the same overall security model rather than reinventing it i
 
 ---
 
-## 4. Security Assessment Methodology
+## 3. Security Assessment Methodology
 
 Our security work followed three complementary approaches:
 
 - **Manual code review against the OWASP Top 10 (2021).** We went through both backends' controllers, security configuration, data-access code, and the static HTML/JS dashboards, checking each OWASP category against the actual implementation.
 - **STRIDE-style threat modelling.** For each component (web frontends, REST APIs, the MQTT pipeline, the supporting databases), we evaluated which of the six STRIDE threats — Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege — applied, and verified whether a corresponding control existed.
-- **Automated dynamic testing with OWASP ZAP**, run against the live, running CassiTrack and OmniMove backend, both as a general web-application scan and as an API-aware scan driven by our OpenAPI specification. The results are discussed in Section 6.
+- **Automated dynamic testing with OWASP ZAP**, run against the live, running CassiTrack and OmniMove backend, both as a general web-application scan and as an API-aware scan driven by our OpenAPI specification. The results are discussed in Section 5.
 
 Findings were studied and several were fixed after the review cycle; a small number remain open and are listed transparently in the Limitations section.
 
 ---
 
-## 5. OWASP Top 10 (2021): Vulnerability Evaluation and Prevention
+## 4. OWASP Top 10 (2021): Vulnerability Evaluation and Prevention
 
-This section goes through each of the ten OWASP categories. For each one we explain, in general terms, what the vulnerability class consists of, and then describe specifically what in CassiTrack/OmniMove prevents or mitigates it, with a short snippet of the actual code responsible.
+This section goes through each of the ten OWASP categories. For each one we explain, in general terms, what the vulnerability class consists of, and then describe specifically what in CassiTrack/OmniMove prevents or mitigates it, referencing the actual file and mechanism responsible.
 
 ### A01 — Broken Access Control
 
@@ -313,21 +309,21 @@ The same pattern holds for every other outbound call the platform makes: OmniMov
 
 ---
 
-## 6. Penetration Testing Results (OWASP ZAP) --> Needs rewritting, Ferran fixed some things pointed here
+## 5. Penetration Testing Results (OWASP ZAP)
 
-In addition to the manual review above, we ran the OWASP ZAP automated security scanner against the live, running CassiTrack backend, using two complementary scan profiles: a general web-application scan against the running site, and an API-aware scan driven directly by our published OpenAPI specification.
+We ran OWASP ZAP against the live backends in two modes: a general web-application scan, and an API-aware scan driven by our OpenAPI specification.
 
-The general web-application scan reported zero high-risk alerts. It did surface five medium-risk findings, all of them refinements to our Content-Security-Policy rather than missing protections outright. ZAP flagged that the policy allows `'unsafe-inline'` for both scripts and styles; this is a real, acknowledged trade-off — several of our dashboard pages still use inline `<script>` blocks and inline style attributes, and tightening this would require moving that code into external files, which we have not yet done. It also flagged the `img-src` directive for allowing any HTTPS source (we deliberately left this open because the live map loads tiles from an external map-tile provider), and it flagged a small number of CDN-hosted assets (fonts and the mapping library) for not carrying a Subresource Integrity hash — the same gap already noted under A08 above. Interestingly, ZAP also reported that the version of the CSP header it observed on the live server did not include the `form-action`, `object-src`, and `base-uri` directives that are present in our `SecurityConfig.java` source; we are flagging this discrepancy transparently rather than quietly resolving it, since it suggests either a stale build was running at scan time or an inconsistency in how the header is rendered, and it is worth re-verifying against a fresh deployment before the project is handed over.
+The web-application scan reported zero high-risk alerts. Its five medium-risk findings were all Content-Security-Policy refinements. `'unsafe-inline'` is still allowed for scripts and styles — several dashboard pages still rely on inline `<script>` blocks and inline style attributes, a known and accepted trade-off. `img-src` allows any HTTPS source, which is deliberate since the live map loads tiles from an external provider. ZAP also flagged a small number of CDN-hosted assets for lacking a Subresource Integrity hash; this has since been fixed — the mapping and charting libraries now carry a verified `integrity=` attribute, and every infrastructure container image is pinned by SHA-256 digest rather than a mutable tag (Google Fonts CSS stays excluded by design, since its content varies per browser). Separately, ZAP reported that the live server's CSP header omitted the `form-action`, `object-src`, and `base-uri` directives present in our source — a discrepancy we flag transparently, since it suggests either a stale build at scan time or a rendering inconsistency worth re-verifying against a fresh deployment.
 
-Four low-risk findings concerned newer browser cross-origin isolation headers — `Cross-Origin-Embedder-Policy`, `Cross-Origin-Opener-Policy`, and, on some responses, `Cross-Origin-Resource-Policy` and `Permissions-Policy` — being absent or inconsistent across different routes, even though the latter two are explicitly set for some endpoints in our security configuration. This points to the headers not yet being applied uniformly to every route, which is a reasonable next-step hardening item rather than an active exploit path. The remaining three informational findings were not security issues: ZAP noticed that some of our own internal code comments (including the very fix-tracking comments quoted earlier in this report, such as references to specific fix identifiers) are visible in client-delivered JavaScript files, which is a minor information-disclosure hygiene point worth cleaning up before any public release, and it correctly classified the application as a modern, JavaScript-driven web app with non-cacheable dynamic content, both of which are expected and benign observations.
+Four low-risk findings concerned newer cross-origin isolation headers (`Cross-Origin-Embedder-Policy`, `Cross-Origin-Opener-Policy`, and inconsistent `Cross-Origin-Resource-Policy`/`Permissions-Policy`) not being applied uniformly across every route — a reasonable next hardening step, not an active exploit path. The remaining informational findings were benign: some internal fix-tracking code comments are visible in client-delivered JavaScript, and ZAP correctly identified the app as a modern, non-cacheable JavaScript application.
 
-The second scan, run against our OpenAPI specification so that ZAP understood the shape of the REST API, reported zero high- and zero medium-risk alerts. The single low-risk finding was a false trigger: ZAP expected every endpoint listed in the API spec to return JSON, and flagged the root path for returning an HTML login page instead — which is correct behaviour, since that route is the human-facing login screen, not an API endpoint. The informational findings were, if anything, a positive signal: seventeen instances were logged of the server correctly returning an HTTP 403 (Forbidden) response when ZAP's automated scanner probed protected routes — including the actuator health endpoint, generic API paths, and a randomly generated numeric path — without a valid authenticated session. In other words, the scanner's own attempts at unauthorized access were consistently and correctly rejected rather than silently succeeding or leaking data, which is exactly the behaviour we want our access-control layer to exhibit under hostile probing.
+The API-aware scan reported zero high- and medium-risk alerts. Its one low-risk finding was a false trigger (the root path returning an HTML login page instead of JSON, which is correct behaviour). More notably, seventeen unauthorized probes against protected routes — including the actuator health endpoint and a randomly generated numeric path — were all correctly rejected with HTTP 403, confirming the access-control layer holds up under automated hostile probing.
 
-Taken together, the dynamic scan results corroborate the manual review: no SQL injection, no reflected or DOM-based XSS, no broken authentication, and no missing access control were found by the automated tooling. The open items are all hardening refinements around the Content-Security-Policy and a small number of newer, optional security headers, plus one discrepancy between source and a scanned build that should be re-checked before the system is considered production-ready.
+Taken together, the dynamic scan corroborates the manual review: no SQL injection, XSS, broken authentication, or missing access control was found. The remaining open items are CSP hardening refinements, a handful of optional cross-origin headers, and one source/build discrepancy to re-verify before the system is considered production-ready.
 
 ---
 
-## 7. Conclusion
+## 6. Conclusion
 
 CassiTrack and OmniMove were designed and reviewed with a "secure by default, fix what's found" approach: stateless JWT authentication, role-based access control enforced centrally in the Spring Security filter chain, BCrypt password hashing, parameterised database queries, and dedicated services for rate limiting, brute-force lockout, token revocation, and security audit logging are present across both backends from the start, not bolted on afterwards. The review process described in this report — manual analysis against all ten OWASP Top 10 (2021) categories, STRIDE-based threat modelling, and dynamic scanning with OWASP ZAP — surfaced a meaningful number of real issues over the course of the project, almost all of which (anonymous MQTT access, infrastructure ports exposed to the network, an unauthenticated Redis instance, stored XSS in both admin dashboards, tokens readable via JavaScript, a dead access-control rule on the AI endpoint, and a missing Content-Security-Policy) were identified and fixed during the review cycle itself, with the fix and the reasoning behind it documented in the code. The automated ZAP scan, run independently against the live system, did not surface any high- or medium-risk finding that the manual review had missed, which gives us reasonable confidence that the security posture documented here reflects the system as it actually behaves, not just as it is intended to behave on paper.
 
@@ -335,11 +331,9 @@ At the same time, we do not consider the system "finished" from a security stand
 
 ---
 
-## 8. Limitations
+## 7. Limitations
 
 The following gaps were identified during this review and remain open. We list them explicitly, together with what would be required to close each one, rather than omitting them:
-
-**Driver GPS spoofing (A01).** The driver-facing location-publishing endpoint does not yet verify that the authenticated driver is actually assigned to the vehicle ID they are submitting a position for. A malicious or compromised driver account could currently publish a false position under a different bus's identifier. Fixing this requires adding a driver-to-vehicle assignment relationship to the data model and checking it before the position is published — the code already contains a `TODO` marking exactly where this check belongs.
 
 **`'unsafe-inline'` in the Content-Security-Policy (A03 / A05).** Several dashboard pages still rely on inline `<script>` blocks and inline style attributes, which forced the CSP to allow `'unsafe-inline'` for both `script-src` and `style-src`. This does not reopen the specific stored-XSS bugs we fixed (those are now blocked by output escaping regardless of the CSP), but it does mean the CSP provides weaker defence-in-depth against any *other*, not-yet-discovered injection point than a stricter policy would. Removing it requires migrating the remaining inline scripts/styles into external files.
 
