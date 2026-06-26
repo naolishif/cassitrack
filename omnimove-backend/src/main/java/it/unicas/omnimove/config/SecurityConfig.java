@@ -37,7 +37,8 @@ public class SecurityConfig {
                         // ── 1. Public — login page, static assets, auth endpoints ──────
                         .requestMatchers(
                                 "/", "/error", "/omnimove-login.html", "/reset-password.html",
-                                "/favicon.ico", "/*.css", "/*.js"
+                                "/favicon.ico", "/omnimove-login.css", "/omnimove-login.js",
+                                "/reset-password.css","/reset-password.js"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/login",
@@ -53,12 +54,16 @@ public class SecurityConfig {
                         // ── 2. Admin only ────────────────────────────────────────────────
                         .requestMatchers(
                                 "/omnimove-admin.html",
+                                "/omnimove-admin.css",
+                                "/omnimove-admin.js",
                                 "/api/v1/admin/**"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
                         // ── 3. Traveller only ────────────────────────────────────────────
                         .requestMatchers(
                                 "/omnimove-traveller.html",
+                                "/omnimove-traveller.css",
+                                "/omnimove-traveller.js",
                                 "/api/v1/traveller/**"
                         ).hasAnyAuthority("TRAVELLER", "ROLE_TRAVELLER")
 
