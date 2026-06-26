@@ -68,7 +68,6 @@ public class AuthController {
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(AuthResponse.builder()
-                            .token("MOCK_TOKEN_UNTIL_LOGIN")
                             .email(saved.getEmail())
                             .name(saved.getName())
                             .role(saved.getRole())

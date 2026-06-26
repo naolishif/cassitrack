@@ -76,7 +76,26 @@ public class SecurityConfig {
                         // ── 6. Everything else requires authentication ────────────────────
                         .anyRequest().authenticated()
                 )
-                .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+                .headers(h -> h
+                        .frameOptions(f -> f.deny())
+                        .xssProtection(xss -> xss.disable())
+                        .contentTypeOptions(ct -> {})
+                        .httpStrictTransportSecurity(hsts ->
+                                hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; " +
+                                        // A08 FIX: standardised on jsdelivr for Leaflet/Chart.js, now loaded with SRI integrity=; unpkg/cdnjs dropped
+                                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+                                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+                                        "font-src 'self' https://fonts.gstatic.com; " +
+                                        "img-src 'self' data: https://*.tile.openstreetmap.org; " +
+                                        "connect-src 'self'; " +
+                                        "frame-ancestors 'none'; " +
+                                        "object-src 'none'; " +
+                                        "base-uri 'self'; " +
+                                        "form-action 'self';"
+                        ))
+                )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

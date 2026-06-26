@@ -138,9 +138,10 @@ public class SecurityConfig {
                 hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
             .contentSecurityPolicy(csp -> csp.policyDirectives(
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline'; " +
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
-                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+                // A08 FIX: jsdelivr added for Leaflet/Chart.js, now loaded with SRI integrity=; cdnjs dropped (was unused by any page)
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+                "font-src 'self' https://fonts.gstatic.com; " +
                 "img-src 'self' data: https:; " +
                 "connect-src 'self' wss:; " +
                 "frame-ancestors 'none'; " +

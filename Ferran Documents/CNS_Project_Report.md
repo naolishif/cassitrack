@@ -9,21 +9,19 @@
 
 ## 1. Introduction
 
-This report documents the design and the security engineering work carried out on CassiTrack and OmniMove, the two systems we built for the CNS course project. The first half of the report explains, in plain terms, what the systems do and how they are put together, so that the architecture can be understood and defended without requiring a deep background in distributed systems. The second half is the core security deliverable: a walk-through of the OWASP Top 10 (2021) vulnerability categories, explaining what each category means and, concretely, what in our codebase prevents or mitigates it, backed by real code excerpts. The report closes with the results of the automated penetration testing we ran with OWASP ZAP, a conclusion, and an honest account of the limitations of our work.
-
-Throughout the report we have tried to strike a balance: each topic is explained from first principles (what the vulnerability is, why it matters) before we describe our specific implementation, so the report is useful both as project documentation and as a study aid for the oral defense.
+This report documents the design and the security engineering work carried out on CassiTrack and OmniMove, the two systems we built for the Distributed Programming and Networking course project. The first half of the report explains, in plain terms, what the systems do and how they are put together, so that the architecture can be understood from a deeper distibuted system point of view. The second half is the core security deliverable: a walk-through of the OWASP Top 10 (2021) vulnerability categories, explaining what each category means and, concretely, what in our codebase prevents or mitigates it, backed by real code snippets. The report closes with the results of the automated penetration testing we ran with OWASP ZAP, a conclusion, and an honest account of the limitations of our work.
 
 ---
 
-## 2. What Are CassiTrack and OmniMove
+## 2. CassiTrack and OmniMove
 
-**CassiTrack** is a real-time bus fleet monitoring system built for Linea 16 of MAGNI Autoservizi, the bus line that connects Cassino's city centre to the UNICAS campus via Via Folcara. The motivation behind it is simple and personal: Bus 16 currently has no live tracking at all, so passengers wait at the stop with no idea whether the bus is two minutes away or twenty. CassiTrack solves this by receiving GPS positions from the buses, storing them, computing arrival predictions, and exposing that information through a web dashboard, a public API, and a mobile-friendly app.
+**CassiTrack** is a real-time bus fleet monitoring system built for MAGNI Autoservizi, the bus company that operates in Cassino's city centre and surroundings. The motivation behind it is simple and personal: Buses currently have no live tracking that's reliable enough to be useful for the citizens. CassiTrack aims to solve this by receiving GPS positions from the buses, storing them, computing arrival predictions, and exposing that information through a web dashboard and a user-friendly app.
 
-**OmniMove** is a multimodal journey-planning layer built on top of CassiTrack. Instead of only telling you where the bus is, OmniMove helps a traveller decide *how* to get from A to B by comparing bus, bike, e-scooter, and walking options side by side, each with a price estimate, an expected duration, and a "Green Index" CO₂ score. OmniMove consumes CassiTrack's live data (bus positions and arrival times) and combines it with external services — Google Maps for traffic-aware travel times, a local bike/scooter rental provider (Elerent), and weather data — to produce a complete journey recommendation.
+**OmniMove** is a multimodal journey-planning layer built as a CassiTrack consumer. OmniMove helps a traveller decide how to get from the starting stop decided by the user to the destination stop by comparing bus, bike, e-scooter, and walking options side by side, each with a price estimate, an expected duration, and a "Green Index" CO₂ score. OmniMove consumes CassiTrack's live data (bus positions and arrival times) and combines it with external services — Google Maps for traffic-aware travel times, weather data, and more — to produce a complete journey recommendation.
 
 The two systems are deliberately separated: CassiTrack is the fleet-monitoring backend (it knows about buses, routes, and schedules), while OmniMove is the passenger-facing planning backend (it knows about journeys, pricing, and multimodal comparisons) and talks to CassiTrack as a client. This separation mirrors a common real-world pattern in smart-mobility platforms, where a transport operator's own tracking system is kept separate from the public-facing trip planner that aggregates several operators and transport modes.
 
-Both systems also include role-based web dashboards: an administrator panel for managing user accounts, a fleet-manager dashboard for live analytics, and (for OmniMove) a traveller-facing planning interface. A Python GPS simulator stands in for the real ESP32-based GPS trackers that would eventually be installed on the physical buses, so the whole pipeline can be demonstrated end-to-end without hardware.
+Both systems also include role-based web dashboards: an administrator panel for managing user accounts, a fleet-manager dashboard for live analytics (for CassiTrack), and a traveller-facing planning interface (for OmniMove). A Python GPS simulator stands in for the real ESP32-based GPS trackers that would eventually be installed on the physical buses, so the whole pipeline can be demonstrated end-to-end without hardware.
 
 ---
 
@@ -31,37 +29,35 @@ Both systems also include role-based web dashboards: an administrator panel for 
 
 At a high level, data flows through the platform in one direction — from the bus to the passenger — and is enriched at every stage:
 
-1. **Bus / GPS source.** Each bus is expected to carry a small GPS tracker (an ESP32 microcontroller in the production design; in our demo, a Python script that simulates two buses moving along the real **Linea 16 route**, publishing a new position every 15 seconds).
+1. **Bus / GPS source.** Each bus is expected to carry a small GPS tracker (an ESP32 microcontroller in the production design; in our demo, it's a Python script that simulates buses moving along real routes, publishing a new position every 15 seconds).
 2. **MQTT broker.** The GPS devices publish their position to an Eclipse Mosquitto broker — a lightweight messaging system designed for exactly this kind of "many small devices sending frequent updates" scenario. Using MQTT instead of, say, having every bus call a REST endpoint directly, decouples the data producers (buses) from the data consumer (the backend) and copes gracefully with buses going briefly offline.
-3. **CassiTrack backend (Spring Boot, port 8080).** This is the core of the platform. It subscribes to the MQTT broker, validates every incoming position, and then: stores the full history in InfluxDB (a database built for time-series data, ideal for "where was this bus at every point in time"), caches the *current* position of every bus in Redis (so live-map queries are fast), and uses PostgreSQL with the PostGIS spatial extension to hold static reference data such as routes, stops, and schedules. On top of this data it runs an ETA service (arrival predictions), a schedule-adherence service (is the bus on time, late, or early), a GTFS-Realtime feed generator (so the data is consumable by national transport-data standards), and an AI assistant (backed by the Claude API) that lets a fleet manager ask natural-language questions about the fleet.
-4. **OmniMove backend (Spring Boot, port 8081).** This is a separate service that queries CassiTrack's API for live bus data, and combines it with external providers (Google Maps for traffic-aware travel time, Elerent for bike/scooter pricing, a weather API) to build and rank multimodal journey options for a traveller.
-5. **Frontends.** A desktop live map (Leaflet.js-based), a mobile-installable Progressive Web App, and the role-specific admin/fleet-manager/traveller HTML dashboards consume the two backends' REST APIs. All API endpoints are documented with OpenAPI 3.0 and explorable through Swagger UI.
+3. **CassiTrack backend (Spring Boot, port 8080).** It subscribes to the MQTT broker, validates every incoming position, and then stores the full history in InfluxDB (a database built for time-series data), caches the current position of every bus in Redis (so live-map queries are fast), and uses PostgreSQL with the PostGIS spatial extension to hold static reference data such as routes, stops, and schedules. On top of this data it runs an ETA service (arrival predictions), a schedule-adherence service (is the bus on time, late, or early), a GTFS-Realtime feed generator (so the data is consumable by national transport-data standards), and an AI assistant (backed by the Claude API) that lets a fleet manager ask natural-language questions about the fleet.
+4. **OmniMove backend (Spring Boot, port 8081).** This is a separate service that queries CassiTrack's API for live bus data, and combines it with external providers (Google Maps for traffic-aware travel time and a weather API to inform the user about which travelling mode is best depending on the weather) to build and rank journey options for a traveller.
+5. **Frontends.** A desktop live map (Leaflet.js-based) and the role-specific admin/fleet-manager/traveller HTML dashboards consume the two backends' REST APIs. All API endpoints are documented with OpenAPI 3.0.
 
-A simplified way to describe it to a non-technical evaluator: think of CassiTrack as the "control tower" that always knows where every bus is and when it will arrive, and OmniMove as the "travel agent" that uses the control tower's information, plus knowledge of other transport options, to tell a passenger the best way to make a specific trip right now.
-
-Both backends share the same overall security model rather than reinventing it independently: stateless authentication via signed JSON Web Tokens (JWT), role-based authorization (ADMIN, FLEET_MANAGER, DRIVER, TRAVELLER), password hashing with BCrypt, and a set of supporting services — rate limiting, brute-force lockout, audit logging, token revocation — that are described in detail in the OWASP section below. Both backends are containerised with Docker Compose, which also runs their dependent infrastructure (PostgreSQL, InfluxDB, Redis, and, for CassiTrack, the Mosquitto broker).
+Both backends share the same overall security model rather than reinventing it independently: stateless authentication via signed JSON Web Tokens (JWT), role-based authorization (ADMIN (both CassiTrack and Omnimove have Admin roles), FLEET_MANAGER (only for CassiTrack), TRAVELLER(only for OmniMove)), password hashing with BCrypt, and a set of supporting services — rate limiting, brute-force lockout, audit logging, token revocation — that are described in detail in the OWASP section below. Both backends are containerised with Docker Compose, which also runs their dependent infrastructure (PostgreSQL, InfluxDB, Redis, and, for CassiTrack, the Mosquitto broker).
 
 ---
 
 ## 4. Security Assessment Methodology
 
-Our security work followed three complementary approaches, in line with what is normally expected for this kind of course project:
+Our security work followed three complementary approaches:
 
-- **Manual code review against the OWASP Top 10 (2021).** We went through both backends' controllers, security configuration, data-access code, and the static HTML/JS dashboards, checking each OWASP category against the actual implementation rather than against documentation claims.
-- **STRIDE-style threat modelling.** For each component (web frontends, REST APIs, the MQTT pipeline, the supporting databases), we asked which of the six STRIDE threats — Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege — applied, and verified whether a corresponding control existed.
-- **Automated dynamic testing with OWASP ZAP**, run against the live, running CassiTrack backend, both as a general web-application scan and as an API-aware scan driven by our OpenAPI specification. The results are discussed in Section 6.
+- **Manual code review against the OWASP Top 10 (2021).** We went through both backends' controllers, security configuration, data-access code, and the static HTML/JS dashboards, checking each OWASP category against the actual implementation.
+- **STRIDE-style threat modelling.** For each component (web frontends, REST APIs, the MQTT pipeline, the supporting databases), we evaluated which of the six STRIDE threats — Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege — applied, and verified whether a corresponding control existed.
+- **Automated dynamic testing with OWASP ZAP**, run against the live, running CassiTrack and OmniMove backend, both as a general web-application scan and as an API-aware scan driven by our OpenAPI specification. The results are discussed in Section 6.
 
-Findings were triaged and several were fixed directly during the review cycle (these are marked accordingly in the sections below); a small number remain open and are listed transparently in the Limitations section rather than hidden.
+Findings were studied and several were fixed after the review cycle; a small number remain open and are listed transparently in the Limitations section.
 
 ---
 
-## 5. OWASP Top 10 (2021): Vulnerabilities and How We Addressed Them
+## 5. OWASP Top 10 (2021): Vulnerability Evaluation and Prevention
 
-This section goes through each of the ten OWASP categories. For each one we explain, in general terms, what the vulnerability class consists of, and then describe specifically what in CassiTrack/OmniMove prevents or mitigates it, with a short excerpt of the actual code responsible.
+This section goes through each of the ten OWASP categories. For each one we explain, in general terms, what the vulnerability class consists of, and then describe specifically what in CassiTrack/OmniMove prevents or mitigates it, with a short snippet of the actual code responsible.
 
 ### A01 — Broken Access Control
 
-Broken Access Control happens when an application fails to properly enforce *who is allowed to do what*. A classic example is an Insecure Direct Object Reference (IDOR): a user is logged in legitimately, but the application lets them access or modify a resource that does not belong to them simply by guessing or changing an identifier (for instance, changing `/users/3` to `/users/4` in the URL).
+Broken Access Control happens when an application fails to properly enforce who is allowed to do what. A classic example is an Insecure Direct Object Reference (IDOR): a user is logged in legitimately, but the application lets them access or modify a resource that does not belong to them simply by guessing or changing an identifier.
 
 In our system, every endpoint is mapped to one or more required roles inside Spring Security's filter chain, so a request is rejected before it ever reaches business logic if the caller's JWT does not carry the right authority. For example, CassiTrack restricts the admin dashboard and user-management API to the ADMIN role, and the fleet-manager analytics pages to the FLEET_MANAGER role:
 
@@ -80,22 +76,9 @@ In our system, every endpoint is mapped to one or more required roles inside Spr
 ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 ```
 
-We also found and fixed a real broken-access-control bug during this review: the `/api/v1/ai/**` endpoint was matched by two conflicting rules, and because Spring Security uses "first match wins", the FLEET_MANAGER rule silently absorbed all requests, meaning an authenticated ADMIN was being denied access to a feature they were supposed to have. The fix was to merge the two rules into a single one listing every authority that should be allowed.
+We also found and fixed a real broken-access-control bug during the code review: the `/api/v1/ai/**` endpoint was matched by two conflicting rules, and because Spring Security uses "first match wins", the FLEET_MANAGER rule silently absorbed all requests, meaning an authenticated ADMIN was being denied access to a feature they were supposed to have. The fix was to merge the two rules into a single one listing every authority that should be allowed.
 
 Penetration testing also confirmed that direct object access is correctly blocked: requests to `/api/v1/users/{id}` or `/api/v1/vehicles/{id}` without a valid token, or with a token belonging to a lower-privileged role, are rejected with an HTTP 403, rather than returning the requested resource.
-
-One access-control issue remains open and unresolved at the time of writing: the driver-facing GPS-publishing endpoint accepts a `vehicle_id` from the request body without verifying that the authenticated driver is actually the one assigned to that vehicle, so a malicious or compromised driver account could currently publish a false position for a different bus. The relevant code still contains the acknowledgment of this gap:
-
-```java
-// cassitrack-backend/.../controller/DriverController.java
-String vehicleId = (String) body.getOrDefault("vehicle_id", "UNKNOWN_VEHICLE");
-
-// TODO: Query your database here to verify this driverEmail is currently
-// assigned to this vehicleId!
-// Example: if (!assignmentService.isDriverAssignedToBus(driverEmail, vehicleId)) throw new SecurityException();
-```
-
-We list this honestly in the Limitations section, together with the straightforward fix (adding a vehicle-assignment table and checking it before publishing).
 
 ### A02 — Cryptographic Failures
 
@@ -187,13 +170,11 @@ public boolean allowRegister(String ip) {
 
 We also avoid username enumeration: the forgot-password endpoint always returns the same message ("if that email is registered, you will receive a reset link") regardless of whether the address exists, and login failures return a single generic message rather than distinguishing "wrong password" from "no such user".
 
-One low-severity design leftover remains: CassiTrack's registration response currently includes a placeholder string, `"MOCK_TOKEN_UNTIL_LOGIN"`, in the `token` field, rather than omitting it. It is correctly rejected by the authentication filter if a client mistakenly tries to use it, but it is a confusing API contract that should simply be removed; it is listed in the Limitations section.
-
 ### A05 — Security Misconfiguration
 
 Security misconfiguration covers anything that is wrong not because of a bug in custom code, but because of how a component was set up — default credentials left in place, unnecessary services exposed to the network, debug information left switched on, or missing security headers.
 
-Several concrete misconfigurations were found and corrected during this review:
+Several concrete misconfigurations were found and corrected during the review:
 
 The MQTT broker originally accepted anonymous connections, meaning anyone who could reach it on the network could publish fake bus positions or eavesdrop on the real ones. We switched it to require authentication:
 
@@ -238,8 +219,6 @@ http.headers(headers -> headers
     ))
 );
 ```
-
-OmniMove currently only sets `frameOptions(sameOrigin)` and does not yet declare an equivalent Content-Security-Policy header; this asymmetry between the two backends is a real, acknowledged gap and is listed in the Limitations section.
 
 ### A06 — Vulnerable and Outdated Components
 

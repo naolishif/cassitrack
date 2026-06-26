@@ -27,7 +27,8 @@ services:
 
   # ── PostgreSQL + PostGIS ─────────────────────────────────────
   postgres:
-    image: postgis/postgis:16-3.4
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5  # 16-3.4
     container_name: cassitrack-postgres
     restart: unless-stopped
     environment:
@@ -46,7 +47,8 @@ services:
 
   # ── InfluxDB (time-series for GPS telemetry) ─────────────────
   influxdb:
-    image: influxdb:2.7
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: influxdb@sha256:b8d940ca9376f85118260f5b6bd236b8a00b1749c3350c5578d4cde8e27f31f2  # 2.7
     container_name: cassitrack-influxdb
     restart: unless-stopped
     environment:
@@ -68,7 +70,8 @@ services:
 
   # ── Redis (cache + sessions) ──────────────────────────────────
   redis:
-    image: redis:7.2-alpine
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: redis@sha256:dfa18828cbc07b3ae6a95ec7343f6c214fdee2d836197b4be8e9904420762cd8  # 7.2-alpine
     container_name: cassitrack-redis
     restart: unless-stopped
     command: redis-server --requirepass ${SPRING_REDIS_PASSWORD}
@@ -84,7 +87,8 @@ services:
 
   # ── Eclipse Mosquitto (MQTT broker) ──────────────────────────
   mosquitto:
-    image: eclipse-mosquitto:2.0
+    # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
+    image: eclipse-mosquitto@sha256:212f89e1eaeb2c322d6441b64396e3346026674db8fa9c27beac293405c32b3c  # 2.0
     container_name: cassitrack-mosquitto
     restart: unless-stopped
     ports:
