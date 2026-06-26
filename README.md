@@ -50,7 +50,7 @@ Spring Boot Backend (port 8080)
          ↓
 REST API (OpenAPI 3.0 documented)
          ↓
-├── cassitrack-map-v4.html   (desktop live map)
+├── cassitrack-fleetmanager.html   (desktop dashboard, includes live map)
 └── cassitrack-pwa/          (mobile PWA, installable)
 ```
 
@@ -95,7 +95,7 @@ cassitrack-complete-v2/
 ├── cassitrack-pwa/            # PWA for mobile (served on port 3000)
 ├── mosquitto/                 # MQTT broker config
 ├── gps_simulator.py           # Python GPS simulator for Bus 16
-├── cassitrack-map-v4.html     # Main fleet map (open in browser)
+├── cassitrack-login.html      # CASSITRACK entry point (live map is inside the fleet manager dashboard after login)
 ├── omnimove-login.html        # OMNIMOVE login page
 └── docker-compose.yml         # All infrastructure in one file
 ```
@@ -223,7 +223,7 @@ python -m http.server 3000
 ```
 
 Then open in browser:
-- **CASSITRACK map**: http://localhost:3000/cassitrack-map-v4.html
+- **CASSITRACK**: http://localhost:8080/cassitrack-login.html (log in — the live map is the default view inside the fleet manager dashboard)
 - **OMNIMOVE**: http://localhost:3000/omnimove-login.html
 
 ---
@@ -289,7 +289,7 @@ To install: **Share button → Add to Home Screen → Add**
 | AI chat says "Sorry, I could not process your request" | Check ANTHROPIC_API_KEY is set in IntelliJ Run Configurations |
 | Java compile error `Unexpected token 'class'` | You are using Java 25. Switch to Java 21 in Project Structure |
 | No buses on map | Run `python gps_simulator.py` |
-| Phone can't access the app on LAN | Run `ipconfig` in PowerShell, get your laptop IP, update `API` variable in `cassitrack-map-v4.html` and `CASSITRACK_API` in `cassitrack-pwa/app.js` |
+| Phone can't access the app on LAN | Run `ipconfig` in PowerShell, get your laptop IP, and update `CASSITRACK_API` in `cassitrack-pwa/app.js` |
 | `ANTHROPIC_API_KEY` not found | Environment variables set in PowerShell are invisible to IntelliJ — set them in Run Configurations instead |
 
 ---
@@ -434,7 +434,6 @@ cassitrack-fresh/
 ├── docker-compose.yml                    ← Infrastructure
 ├── gps_simulator.py                      ← Bus GPS simulator
 ├── mosquitto/config/mosquitto.conf       ← MQTT broker config
-├── cassitrack-map-v4.html                ← Desktop live map
 ├── cassitrack-pwa/                       ← Mobile PWA
 │   ├── index.html                        ← App shell
 │   ├── app.js                            ← All app logic
