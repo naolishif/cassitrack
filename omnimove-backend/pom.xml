@@ -79,16 +79,16 @@
           <!-- NVD API key — pass via: -DnvdApiKey=YOUR_KEY -->
           <!-- Retry on transient NVD API timeouts (HTTP 524 etc.) -->
           <nvdMaxRetryCount>5</nvdMaxRetryCount>
-          <nvdDelayBetweenRequests>4000</nvdDelayBetweenRequests>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-</project>
+            <!--<nvdDelayBetweenRequests>4000</nvdDelayBetweenRequests> -->
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </build>
+  </project>
