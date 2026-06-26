@@ -398,8 +398,8 @@ def main():
     parser.add_argument("--interval",       type=int, default=10,                      help="Publish interval in seconds (default: 10)")
     parser.add_argument("--db-host",        default=DB_CONFIG["host"])
     parser.add_argument("--db-port",        type=int, default=DB_CONFIG["port"])
-    parser.add_argument("--mqtt-username",  default=os.environ.get("MQTT_USERNAME", ""), help="MQTT broker username (set MQTT_USERNAME env var or leave blank for no auth)")
-    parser.add_argument("--mqtt-password",  default=os.environ.get("MQTT_PASSWORD", ""), help="MQTT broker password (set MQTT_PASSWORD env var or leave blank for no auth)")
+    parser.add_argument("--mqtt-username",  default=os.environ.get("MQTT_BUS_USERNAME", "cassitrack-bus"), help="MQTT broker username (set MQTT_USERNAME env var or leave blank for no auth)")
+    parser.add_argument("--mqtt-password",  default=os.environ.get("MQTT_BUS_PASSWORD", "bus-password"), help="MQTT broker password (set MQTT_PASSWORD env var or leave blank for no auth)")
     args = parser.parse_args()
 
     # ── Connect to PostgreSQL ─────────────────────────────────────
