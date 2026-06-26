@@ -131,7 +131,7 @@ anthropic:
 
 # ── Weather Service (OpenWeatherMap) ─────────────────────────
 # Get free key at: https://openweathermap.org/api
-# Set as env variable WEATHER_API_KEY in IntelliJ
+# Set as .env variable WEATHER_API_KEY in IntelliJ
 # If not configured, defaults to CLEAR weather (safe fallback)
 weather:
   api:

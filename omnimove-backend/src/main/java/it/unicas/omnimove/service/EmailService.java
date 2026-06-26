@@ -61,7 +61,7 @@ public class EmailService {
             mailSender.send(message);
             log.info("[EMAIL] Sent '{}' to {}", subject, to);
         } catch (Exception e) {
-            log.warn("[EMAIL] Could not send email to {}: {}. Check MAIL_USERNAME / MAIL_PASSWORD env vars.", to, e.getMessage());
+            log.warn("[EMAIL] Could not send email to {}: {}. Check MAIL_USERNAME / MAIL_PASSWORD .env vars.", to, e.getMessage());
         }
     }
 
