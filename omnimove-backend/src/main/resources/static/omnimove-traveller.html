@@ -1175,11 +1175,11 @@
 
 <script>
     //  FRONTEND ROUTE GUARD
-    if (!localStorage.getItem('omnimove_token')) {
+    if (!sessionStorage.getItem('omnimove_token')) {
         window.location.href = 'omnimove-login.html';
     }
 
-    const _user = JSON.parse(localStorage.getItem('omnimove_user') || '{}');
+    const _user = JSON.parse(sessionStorage.getItem('omnimove_user') || '{}');
     document.getElementById('sidebarName').textContent  = _user.name || _user.username || 'Utente';
     document.getElementById('sidebarEmail').textContent = _user.email || '';
     document.getElementById('profileName').textContent  = _user.name  || _user.username || 'Utente';
@@ -1387,7 +1387,7 @@
     loadPreferences();
 
     async function apiFetch(path, options = {}) {
-        const token = localStorage.getItem('omnimove_token');
+        const token = sessionStorage.getItem('omnimove_token');
         return fetch(API_BASE + path, {
             ...options,
             headers: {
@@ -2109,15 +2109,15 @@
     }
 
     async function logout() {
-        const token = localStorage.getItem('omnimove_token');
+        const token = sessionStorage.getItem('omnimove_token');
         if (token) {
             await fetch('/api/v1/auth/logout', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + token }
             }).catch(() => {});
         }
-        localStorage.removeItem('omnimove_token');
-        localStorage.removeItem('omnimove_user');
+        sessionStorage.removeItem('omnimove_token');
+        sessionStorage.removeItem('omnimove_user');
         window.location.href = 'omnimove-login.html';
     }
 
@@ -2132,15 +2132,15 @@
         btn.textContent = 'Deleting…';
 
         try {
-            const token = localStorage.getItem('omnimove_token');
+            const token = sessionStorage.getItem('omnimove_token');
             const r = await fetch('/api/v1/auth/account', {
                 method: 'DELETE',
                 headers: { 'Authorization': 'Bearer ' + token }
             });
 
             if (r.ok) {
-                localStorage.removeItem('omnimove_token');
-                localStorage.removeItem('omnimove_user');
+                sessionStorage.removeItem('omnimove_token');
+                sessionStorage.removeItem('omnimove_user');
                 window.location.href = 'omnimove-login.html';
             } else {
                 const data = await r.json().catch(() => ({}));

@@ -339,10 +339,10 @@ function secureRedirect(role) {
 }
 
 function saveSession(data) {
-    // V-04 FIX: Token is stored in an httpOnly cookie by the server — not here.
-    // We only keep non-sensitive display info in sessionStorage (cleared on tab close).
+    // V-04 FIX: sessionStorage (cleared on tab close) instead of localStorage.
     let role = data.role || (data.roles && data.roles[0]) || 'TRAVELLER';
     if (role === 'USER') role = 'TRAVELLER';
+    sessionStorage.setItem('omnimove_token', data.token || '');
     sessionStorage.setItem('omnimove_user', JSON.stringify({
         name:  data.name  || data.username || 'User',
         email: data.email || '',

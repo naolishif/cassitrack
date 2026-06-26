@@ -827,10 +827,11 @@
     }
 
     // ── Route guard: solo ADMIN può accedere ──────────────────────────────
+    // V-04 FIX: token is in httpOnly cookie — not readable by JS.
+    // Use sessionStorage for display info only; API calls send cookie automatically.
     (function checkAdminAuth() {
-        const token   = localStorage.getItem('omnimove_token');
-        const userRaw = localStorage.getItem('omnimove_user');
-        if (!token || !userRaw) {
+        const userRaw = sessionStorage.getItem('omnimove_user');
+        if (!userRaw) {
             window.location.href = 'omnimove-login.html';
             return;
         }
@@ -842,7 +843,7 @@
                 window.location.href = 'omnimove-login.html';
             }
         } catch (e) {
-            localStorage.clear();
+            sessionStorage.clear();
             window.location.href = 'omnimove-login.html';
         }
     })();
@@ -851,7 +852,8 @@
     const API_BASE = '/api/v1';  // relativo — OMNIMOVE porta 8081
 
     async function apiFetch(path, options = {}) {
-        const token = localStorage.getItem('omnimove_token');
+        // V-04 FIX: token in sessionStorage (interim fix — backend doesn't yet set httpOnly cookie).
+        const token = sessionStorage.getItem('omnimove_token') || '';
         return fetch(API_BASE + path, {
             ...options,
             headers: {
@@ -987,17 +989,13 @@
         }
     }
 
-    // log out
+    // log out — V-04 FIX: cookie cleared server-side, sessionStorage cleared client-side
     async function logout() {
-        const token = localStorage.getItem('omnimove_token');
-        if (token) {
-            await fetch('/api/v1/auth/logout', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token }
-            }).catch(() => {});
-        }
-        localStorage.removeItem('omnimove_token');
-        localStorage.removeItem('omnimove_user');
+        await fetch('/api/v1/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+        }).catch(() => {});
+        sessionStorage.removeItem('omnimove_user');
         window.location.href = 'omnimove-login.html';
     }
 
