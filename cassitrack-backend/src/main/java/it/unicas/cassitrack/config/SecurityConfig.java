@@ -73,7 +73,12 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
 
                         // ── 1. Public Access points (UI and Auth) ───────────────
-                        .requestMatchers("/error", "/", "/cassitrack-login.html", "/api/v1/auth/login").permitAll()
+                        // V-13 FIX (OWASP A05): the login page's own CSS/JS must be reachable by
+                        // unauthenticated visitors too — without this, the page itself was permitAll()
+                        // but its stylesheet/script fell under the anyRequest().authenticated() catch-all
+                        // below and would 401, leaving an unstyled/non-functional login page.
+                        .requestMatchers("/error", "/", "/cassitrack-login.html", "/cassitrack-login.css",
+                                "/cassitrack-login.js", "/api/v1/auth/login").permitAll()
 
                         // ── 2. Public APIs (GTFS, Live Tracking, Swagger) ───────────────
                         .requestMatchers(org.springframework.http.HttpMethod.GET, // Public for OMNIMOVE
@@ -100,10 +105,15 @@ public class SecurityConfig {
                         ).authenticated()
 
                         // ── 3. Role-Specific Protected HTML ───────────────
+                        // cassitrack-analytics.html was an earlier standalone analytics page;
+                        // its functionality now lives inside the Analytics tab of cassitrack-fleetmanager.html,
+                        // so the dedicated route was removed along with the unused file.
+                        // V-13 FIX (OWASP A05): gate the page's external CSS/JS the same as the page itself
                         .requestMatchers(
                                 "/cassitrack-fleetmanager.html",
-                                "/api/v1/analytics/**",
-                                "/cassitrack-analytics.html"
+                                "/cassitrack-fleetmanager.css",
+                                "/cassitrack-fleetmanager.js",
+                                "/api/v1/analytics/**"
                         ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
 
                         // V-10 FIX (OWASP A01): /api/v1/ai/** was mapped to two conflicting rules;
@@ -112,8 +122,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/ai/**"
                         ).hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER", "ADMIN", "ROLE_ADMIN")
 
+                        // V-13 FIX (OWASP A05): gate the page's external CSS/JS the same as the page itself
                         .requestMatchers(
                                 "/cassitrack-admin.html",
+                                "/cassitrack-admin.css",
+                                "/cassitrack-admin.js",
                                 "/api/v1/users/**",
                                 "/api/v1/auth/register"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
@@ -136,8 +149,11 @@ public class SecurityConfig {
             .contentSecurityPolicy(csp -> csp.policyDirectives(
                 "default-src 'self'; " +
                 // A08 FIX: jsdelivr added for Leaflet/Chart.js, now loaded with SRI integrity=; cdnjs dropped (was unused by any page)
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+                // V-13 FIX (OWASP A05): 'unsafe-inline' dropped from both directives now that every
+                // cassitrack-*.html page has its inline <style>/<script>/onX="" content extracted into
+                // external .css/.js files — removes the single biggest XSS-mitigation gap CSP can close.
+                "script-src 'self' https://cdn.jsdelivr.net; " +
+                "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
                 "font-src 'self' https://fonts.gstatic.com; " +
                 "img-src 'self' data: https:; " +
                 "connect-src 'self' wss:; " +
