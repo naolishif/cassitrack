@@ -118,9 +118,6 @@ public class SecurityConfig {
                                 "/api/v1/auth/register"
                         ).hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
-                        .requestMatchers("/api/v1/driver/**"
-                        ).hasAnyAuthority("DRIVER", "ROLE_DRIVER")
-
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/vehicles/**", "/api/v1/stops/**", "/api/v1/journeys/**").hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/vehicles/**", "/api/v1/stops/**", "/api/v1/journeys/**").hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/v1/vehicles/**", "/api/v1/stops/**", "/api/v1/journeys/**").hasAnyAuthority("FLEET_MANAGER", "ROLE_FLEET_MANAGER")
