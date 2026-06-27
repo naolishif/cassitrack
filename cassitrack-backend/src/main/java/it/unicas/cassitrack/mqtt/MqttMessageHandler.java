@@ -68,19 +68,18 @@ public class MqttMessageHandler implements MessageHandler {
             String nextStop = routeMatchingService.nextStopName(
                     pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId());
 
-            // ── Step 5: Scrittura su InfluxDB ─────────────────────
-            try {
-                writeToInflux(pos, busId, wheelchairAccessible, nextStop);
-            } catch (Exception influxError) {
-                log.warn("InfluxDB unavailable, skipping time-series write for vehicle {}: {}",
-                        pos.getVehicleId(), influxError.getMessage());
-            }
-
-            // ── Step 6: Salva in REDIS (Cache arricchita con i dati statici del bus) ──
+            // ── Step 5: Calcolo aderenza (ritardo + stato) PRIMA di Influx ──
             VehiclePosition entity = toEntity(pos, busId, wheelchairAccessible, numeroPosti, nextStop);
             scheduleAdherenceService.processBusAdherence(entity);
             vehicleStateCache.update(pos.getVehicleId(), entity);
 
+            // ── Step 6: Scrittura su InfluxDB col ritardo CALCOLATO da cassitrack ──
+            try {
+                writeToInflux(pos, busId, wheelchairAccessible, nextStop, entity.getDelayMinutes());
+            } catch (Exception influxError) {
+                log.warn("InfluxDB unavailable, skipping time-series write for vehicle {}: {}",
+                        pos.getVehicleId(), influxError.getMessage());
+            }
             log.info("Processed [{}] -> Bus ID: {}, Wheelchair: {} | lat={}, lon={}, Trip ID:={} Last Stop={}, Next Stop={}",
                     pos.getVehicleId(), busId, wheelchairAccessible, pos.getLat(), pos.getLon(), pos.getTripId(), pos.getLastStopRegistered(), nextStop);
 
@@ -99,7 +98,7 @@ public class MqttMessageHandler implements MessageHandler {
         return ageSeconds <= MAX_AGE_SECONDS;
     }
 
-    private void writeToInflux(MqttPositionPayload pos, Integer busId, Boolean wheelchairAccessible, String nextStop) {
+    private void writeToInflux(MqttPositionPayload pos, Integer busId, Boolean wheelchairAccessible, String nextStop, Integer delayMinutes) {
         Point point = Point
                 .measurement("vehicle_position")
                 .addTag("vehicle_id", pos.getVehicleId())
@@ -117,8 +116,8 @@ public class MqttMessageHandler implements MessageHandler {
         if (pos.getBatteryVoltage() != null) point.addField("battery_voltage", pos.getBatteryVoltage());
         if (pos.getPassengers() != null) point.addField("passengers", pos.getPassengers());
         if (pos.getCapacity()   != null) point.addField("capacity",   pos.getCapacity());
-        if (pos.getDelayMinutes() != null) {
-            point.addField("delay", pos.getDelayMinutes());
+        if (delayMinutes != null) {
+            point.addField("delay", delayMinutes);
         }
         if (pos.getLastStopRegistered() != null) {
             point.addField("last_stop_registered", pos.getLastStopRegistered());
@@ -147,7 +146,6 @@ public class MqttMessageHandler implements MessageHandler {
                 .firmwareVersion(pos.getFirmwareVersion())
                 .passengers(pos.getPassengers())
                 .capacity(pos.getCapacity())
-                .delayMinutes(pos.getDelayMinutes())
                 .lastStopRegistered(pos.getLastStopRegistered())
                 .lastStopRegisteredId(pos.getLastStopRegisteredId())
                 .tripId(pos.getTripId())

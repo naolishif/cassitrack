@@ -78,34 +78,26 @@ public class ETAService {
         try {
             Long seqEta = computeSequenceEta(bus, targetStopId);
             if (seqEta == null) return null;
-
             if (seqEta > 1800) return null;
+
             Instant estimatedArrival = Instant.now().plusSeconds(seqEta);
 
             String routeId = bus.getRouteId() != null
                     ? bus.getRouteId() : bus.getMatchedRouteId();
             Route route = routeId != null ? routeMap.get(routeId) : null;
 
-            // Long name from DB; fall back to simulator's routeName
             String routeName = route != null && route.getLongName() != null
                     ? route.getLongName()
                     : (bus.getRouteName() != null ? bus.getRouteName() : routeId);
             String routeShortName = route != null ? route.getShortName() : null;
 
-            int nowSeconds = LocalTime.now(ITALY_TZ).toSecondOfDay();
-            int scheduledSec = routeId != null
-                    ? routeMatchingService.getScheduledArrival(routeId, targetStopId, nowSeconds)
-                    : -1;
-
-            // scheduledArrival is a fixed timetable instant; null when no schedule data.
-            // Do NOT fall back to estimatedArrival — that changes every refresh.
-            Instant scheduledArrival = scheduledSec > 0
-                    ? Instant.now().plusSeconds(scheduledSec - nowSeconds)
-                    : null;
-            int delayMinutes = scheduledSec > 0
-                    ? (int)((estimatedArrival.getEpochSecond()
-                             - scheduledArrival.getEpochSecond()) / 60)
-                    : 0;
+            // Ritardo e stato vengono da ScheduleAdherenceService — fonte unica di verità.
+            // Non ricalcoliamo nulla qui: usiamo quello che è già stato calcolato
+            // all'ultimo arrivo reale del bus a una fermata.
+            int delayMinutes = bus.getDelayMinutes() != null ? bus.getDelayMinutes() : 0;
+            String scheduleStatus = bus.getScheduleStatus() != null
+                    ? bus.getScheduleStatus().name()
+                    : VehiclePosition.ScheduleStatus.UNKNOWN.name();
 
             return StopArrivalDTO.builder()
                     .vehicleId(bus.getVehicleId())
@@ -114,10 +106,9 @@ public class ETAService {
                     .routeName(routeName)
                     .routeShortName(routeShortName)
                     .crowdingLevel(estimateCrowding(bus))
-                    .scheduledArrival(scheduledArrival)
                     .estimatedArrival(estimatedArrival)
                     .delayMinutes(delayMinutes)
-                    .scheduleStatus(ScheduleAdherenceService.statusFromDelay(delayMinutes).name())
+                    .scheduleStatus(scheduleStatus)
                     .build();
 
         } catch (Exception e) {
@@ -135,17 +126,6 @@ public class ETAService {
         if (pax < 25)  return "MEDIUM";
         if (pax < 40)  return "HIGH";
         return "VERY_HIGH";
-    }
-
-    /**
-     * Returns the coordinates of a known stop.
-     * Returns null if the stop ID is not recognised.
-     */
-    private double[] getStopCoords(String stopId) {
-        return stopRepository.findById(stopId)
-                .filter(s -> s.getLat() != null && s.getLon() != null)
-                .map(s -> new double[]{s.getLat(), s.getLon()})
-                .orElse(null);
     }
 
     /** ETA in secondi sommando i tratti dal DB, o null se non calcolabile. */
