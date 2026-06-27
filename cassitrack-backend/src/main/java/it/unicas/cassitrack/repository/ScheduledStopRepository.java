@@ -51,4 +51,5 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
             "s.id, s.name, s.lat, s.lon " +
             "ORDER BY ss.trip.route.id, MIN(ss.stopSequence)")
     List<Object[]> findStopsGroupedByRoute();
+
 }

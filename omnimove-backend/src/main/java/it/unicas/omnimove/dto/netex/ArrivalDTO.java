@@ -4,8 +4,8 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import lombok.Data;
 
 @Data
-public class RefDTO {
+public class ArrivalDTO {
 
-    @JacksonXmlProperty(isAttribute = true, localName = "ref")
-    private String ref;
+    @JacksonXmlProperty(localName = "Time")
+    private String time; // formato HH:mm:ss
 }

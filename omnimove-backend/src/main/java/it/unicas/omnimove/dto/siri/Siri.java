@@ -8,26 +8,24 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-@JacksonXmlRootElement(localName = "Siri")
+@JacksonXmlRootElement(localName = "Siri", namespace = "http://www.siri.org.uk/siri")
 public class Siri {
+
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version = "2.0";
 
     @JacksonXmlProperty(localName = "ServiceDelivery")
     private ServiceDelivery serviceDelivery;
 
-    // --- Costruttore vuoto necessario per Jackson ---
     public Siri() {}
+    public Siri(ServiceDelivery serviceDelivery) { this.serviceDelivery = serviceDelivery; }
 
-    public Siri(ServiceDelivery serviceDelivery) {
-        this.serviceDelivery = serviceDelivery;
-    }
-
+    public String getVersion() { return version; }
+    public void setVersion(String version) { this.version = version; }
     public ServiceDelivery getServiceDelivery() { return serviceDelivery; }
-    public void setServiceDelivery(ServiceDelivery serviceDelivery) { this.serviceDelivery = serviceDelivery; }
+    public void setServiceDelivery(ServiceDelivery sd) { this.serviceDelivery = sd; }
 
-    // ==========================================
-    // CLASSI INTERNE PER LA GERARCHIA XML
-    // ==========================================
-
+    // ── ServiceDelivery ────────────────────────────────────────────────────────
     public static class ServiceDelivery {
         @JacksonXmlProperty(localName = "ResponseTimestamp")
         private String responseTimestamp;
@@ -35,28 +33,37 @@ public class Siri {
         @JacksonXmlProperty(localName = "VehicleMonitoringDelivery")
         private VehicleMonitoringDelivery vehicleMonitoringDelivery;
 
-        public ServiceDelivery() {
-            this.responseTimestamp = Instant.now().toString(); // Genera il timestamp in automatico
-        }
+        public ServiceDelivery() { this.responseTimestamp = Instant.now().toString(); }
 
         public String getResponseTimestamp() { return responseTimestamp; }
-        public void setResponseTimestamp(String responseTimestamp) { this.responseTimestamp = responseTimestamp; }
+        public void setResponseTimestamp(String v) { this.responseTimestamp = v; }
         public VehicleMonitoringDelivery getVehicleMonitoringDelivery() { return vehicleMonitoringDelivery; }
-        public void setVehicleMonitoringDelivery(VehicleMonitoringDelivery vehicleMonitoringDelivery) { this.vehicleMonitoringDelivery = vehicleMonitoringDelivery; }
+        public void setVehicleMonitoringDelivery(VehicleMonitoringDelivery v) { this.vehicleMonitoringDelivery = v; }
     }
 
+    // ── VehicleMonitoringDelivery ──────────────────────────────────────────────
     public static class VehicleMonitoringDelivery {
+        @JacksonXmlProperty(localName = "ResponseTimestamp")
+        private String responseTimestamp;
 
-        // Questo tag "useWrapping = false" evita che Jackson crei un brutto tag <VehicleActivityList>
+        @JacksonXmlProperty(localName = "Status")
+        private boolean status = true;
+
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "VehicleActivity")
         private List<VehicleActivity> vehicleActivity = new ArrayList<>();
 
-        // Getters e Setters
+        public VehicleMonitoringDelivery() { this.responseTimestamp = Instant.now().toString(); }
+
+        public String getResponseTimestamp() { return responseTimestamp; }
+        public void setResponseTimestamp(String v) { this.responseTimestamp = v; }
+        public boolean isStatus() { return status; }
+        public void setStatus(boolean status) { this.status = status; }
         public List<VehicleActivity> getVehicleActivity() { return vehicleActivity; }
-        public void setVehicleActivity(List<VehicleActivity> vehicleActivity) { this.vehicleActivity = vehicleActivity; }
+        public void setVehicleActivity(List<VehicleActivity> v) { this.vehicleActivity = v; }
     }
 
+    // ── VehicleActivity ────────────────────────────────────────────────────────
     public static class VehicleActivity {
         @JacksonXmlProperty(localName = "RecordedAtTime")
         private String recordedAtTime;
@@ -64,77 +71,91 @@ public class Siri {
         @JacksonXmlProperty(localName = "MonitoredVehicleJourney")
         private MonitoredVehicleJourney monitoredVehicleJourney;
 
-        public VehicleActivity() {
-            this.recordedAtTime = Instant.now().toString();
-        }
+        public VehicleActivity() { this.recordedAtTime = Instant.now().toString(); }
 
-        // Getters e Setters
         public String getRecordedAtTime() { return recordedAtTime; }
-        public void setRecordedAtTime(String recordedAtTime) { this.recordedAtTime = recordedAtTime; }
+        public void setRecordedAtTime(String v) { this.recordedAtTime = v; }
         public MonitoredVehicleJourney getMonitoredVehicleJourney() { return monitoredVehicleJourney; }
-        public void setMonitoredVehicleJourney(MonitoredVehicleJourney monitoredVehicleJourney) { this.monitoredVehicleJourney = monitoredVehicleJourney; }
+        public void setMonitoredVehicleJourney(MonitoredVehicleJourney v) { this.monitoredVehicleJourney = v; }
     }
 
-    // ── HERE IS THE SUBCLASS TO MODIFY ─────────────────────────────────
+    // ── MonitoredVehicleJourney ────────────────────────────────────────────────
     public static class MonitoredVehicleJourney {
+
         @JacksonXmlProperty(localName = "VehicleRef")
         private String vehicleRef;
+
+        @JacksonXmlProperty(localName = "FramedVehicleJourneyRef")
+        private FramedVehicleJourneyRef framedVehicleJourneyRef;
 
         @JacksonXmlProperty(localName = "VehicleLocation")
         private VehicleLocation vehicleLocation;
 
-        @JacksonXmlProperty(localName = "Velocity")
-        private double velocity;
+        @JacksonXmlProperty(localName = "Bearing")
+        private Double bearing;
 
-        // 🚌 NUOVI CAMPI INSERITI QUI DENTRO PER IL PROTOCOLLO SIRI
-        @JacksonXmlProperty(localName = "WheelchairAccessible")
-        private String wheelchairAccessible;
+        @JacksonXmlProperty(localName = "Occupancy")
+        private String occupancy;
 
-        @JacksonXmlProperty(localName = "NumberOfSeats")
-        private Integer numberOfSeats;
-
-        // ← AGGIUNGI QUESTI TRE CAMPI
         @JacksonXmlProperty(localName = "Delay")
-        private Integer delay;
+        private String delay;
 
-        @JacksonXmlProperty(localName = "LastStopRef")
-        private String lastStopRef;
+        @JacksonXmlProperty(localName = "Accessibility")
+        private Accessibility accessibility;
 
-        @JacksonXmlProperty(localName = "FramedVehicleJourneyRef")
-        private String framedVehicleJourneyRef;
+        @JacksonXmlProperty(localName = "MonitoredCall")
+        private MonitoredCall monitoredCall;
 
-        @JacksonXmlProperty(localName = "Passengers")
-        private Integer passengers;
+        @JacksonXmlElementWrapper(localName = "PreviousCalls")
+        @JacksonXmlProperty(localName = "PreviousCall")
+        private List<PreviousCall> previousCalls;
 
-        @JacksonXmlProperty(localName = "Capacity")
-        private Integer capacity;
+        @JacksonXmlProperty(localName = "Extensions")
+        private Extensions extensions;
 
-        // Getters e Setters esistenti
         public String getVehicleRef() { return vehicleRef; }
-        public void setVehicleRef(String vehicleRef) { this.vehicleRef = vehicleRef; }
+        public void setVehicleRef(String v) { this.vehicleRef = v; }
+        public FramedVehicleJourneyRef getFramedVehicleJourneyRef() { return framedVehicleJourneyRef; }
+        public void setFramedVehicleJourneyRef(FramedVehicleJourneyRef v) { this.framedVehicleJourneyRef = v; }
         public VehicleLocation getVehicleLocation() { return vehicleLocation; }
-        public void setVehicleLocation(VehicleLocation vehicleLocation) { this.vehicleLocation = vehicleLocation; }
-        public double getVelocity() { return velocity; }
-        public void setVelocity(double velocity) { this.velocity = velocity; }
-
-        // 🚌 NUOVI Getters e Setters aggiunti dentro la classe
-        public String getWheelchairAccessible() { return wheelchairAccessible; }
-        public void setWheelchairAccessible(String wheelchairAccessible) { this.wheelchairAccessible = wheelchairAccessible; }
-        public Integer getNumberOfSeats() { return numberOfSeats; }
-        public void setNumberOfSeats(Integer numberOfSeats) { this.numberOfSeats = numberOfSeats; }
-        // ← I TRE NUOVI getter/setter
-        public Integer getDelay() { return delay; }
-        public void setDelay(Integer delay) { this.delay = delay; }
-        public String getLastStopRef() { return lastStopRef; }
-        public void setLastStopRef(String lastStopRef) { this.lastStopRef = lastStopRef; }
-        public String getFramedVehicleJourneyRef() { return framedVehicleJourneyRef; }
-        public void setFramedVehicleJourneyRef(String framedVehicleJourneyRef) { this.framedVehicleJourneyRef = framedVehicleJourneyRef; }
-        public Integer getPassengers() {return passengers;}
-        public void setPassengers(Integer passengers) {this.passengers = passengers;}
-        public Integer getCapacity() {return capacity;}
-        public void setCapacity(Integer capacity) {this.capacity = capacity;}
+        public void setVehicleLocation(VehicleLocation v) { this.vehicleLocation = v; }
+        public Double getBearing() { return bearing; }
+        public void setBearing(Double v) { this.bearing = v; }
+        public String getOccupancy() { return occupancy; }
+        public void setOccupancy(String v) { this.occupancy = v; }
+        public String getDelay() { return delay; }
+        public void setDelay(String v) { this.delay = v; }
+        public Accessibility getAccessibility() { return accessibility; }
+        public void setAccessibility(Accessibility v) { this.accessibility = v; }
+        public MonitoredCall getMonitoredCall() { return monitoredCall; }
+        public void setMonitoredCall(MonitoredCall v) { this.monitoredCall = v; }
+        public List<PreviousCall> getPreviousCalls() { return previousCalls; }
+        public void setPreviousCalls(List<PreviousCall> v) { this.previousCalls = v; }
+        public Extensions getExtensions() { return extensions; }
+        public void setExtensions(Extensions v) { this.extensions = v; }
     }
 
+    // ── FramedVehicleJourneyRef ────────────────────────────────────────────────
+    public static class FramedVehicleJourneyRef {
+        @JacksonXmlProperty(localName = "DataFrameRef")
+        private String dataFrameRef;
+
+        @JacksonXmlProperty(localName = "DatedVehicleJourneyRef")
+        private String datedVehicleJourneyRef;
+
+        public FramedVehicleJourneyRef() {}
+        public FramedVehicleJourneyRef(String dataFrameRef, String datedVehicleJourneyRef) {
+            this.dataFrameRef = dataFrameRef;
+            this.datedVehicleJourneyRef = datedVehicleJourneyRef;
+        }
+
+        public String getDataFrameRef() { return dataFrameRef; }
+        public void setDataFrameRef(String v) { this.dataFrameRef = v; }
+        public String getDatedVehicleJourneyRef() { return datedVehicleJourneyRef; }
+        public void setDatedVehicleJourneyRef(String v) { this.datedVehicleJourneyRef = v; }
+    }
+
+    // ── VehicleLocation ────────────────────────────────────────────────────────
     public static class VehicleLocation {
         @JacksonXmlProperty(localName = "Longitude")
         private double longitude;
@@ -143,16 +164,71 @@ public class Siri {
         private double latitude;
 
         public VehicleLocation() {}
-
         public VehicleLocation(double longitude, double latitude) {
             this.longitude = longitude;
             this.latitude = latitude;
         }
 
-        // Getters e Setters
         public double getLongitude() { return longitude; }
-        public void setLongitude(double longitude) { this.longitude = longitude; }
+        public void setLongitude(double v) { this.longitude = v; }
         public double getLatitude() { return latitude; }
-        public void setLatitude(double latitude) { this.latitude = latitude; }
+        public void setLatitude(double v) { this.latitude = v; }
+    }
+
+    // ── Accessibility ──────────────────────────────────────────────────────────
+    public static class Accessibility {
+        @JacksonXmlProperty(localName = "WheelchairAccess")
+        private Boolean wheelchairAccess;
+
+        public Accessibility() {}
+        public Accessibility(Boolean wheelchairAccess) { this.wheelchairAccess = wheelchairAccess; }
+
+        public Boolean getWheelchairAccess() { return wheelchairAccess; }
+        public void setWheelchairAccess(Boolean v) { this.wheelchairAccess = v; }
+    }
+
+    // ── MonitoredCall ──────────────────────────────────────────────────────────
+    public static class MonitoredCall {
+        @JacksonXmlProperty(localName = "StopPointName")
+        private String stopPointName;
+
+        @JacksonXmlProperty(localName = "VehicleAtStop")
+        private boolean vehicleAtStop = false;
+
+        public MonitoredCall() {}
+        public MonitoredCall(String stopPointName) { this.stopPointName = stopPointName; }
+
+        public String getStopPointName() { return stopPointName; }
+        public void setStopPointName(String v) { this.stopPointName = v; }
+        public boolean isVehicleAtStop() { return vehicleAtStop; }
+        public void setVehicleAtStop(boolean v) { this.vehicleAtStop = v; }
+    }
+
+    // ── PreviousCall ───────────────────────────────────────────────────────────
+    public static class PreviousCall {
+        @JacksonXmlProperty(localName = "StopPointName")
+        private String stopPointName;
+
+        public PreviousCall() {}
+        public PreviousCall(String stopPointName) { this.stopPointName = stopPointName; }
+
+        public String getStopPointName() { return stopPointName; }
+        public void setStopPointName(String v) { this.stopPointName = v; }
+    }
+
+    // ── Extensions ────────────────────────────────────────────────────────────
+    public static class Extensions {
+        @JacksonXmlProperty(localName = "Velocity")
+        private Double velocity;
+
+        @JacksonXmlProperty(localName = "NumberOfSeats")
+        private Integer numberOfSeats;
+
+        public Extensions() {}
+
+        public Double getVelocity() { return velocity; }
+        public void setVelocity(Double v) { this.velocity = v; }
+        public Integer getNumberOfSeats() { return numberOfSeats; }
+        public void setNumberOfSeats(Integer v) { this.numberOfSeats = v; }
     }
 }

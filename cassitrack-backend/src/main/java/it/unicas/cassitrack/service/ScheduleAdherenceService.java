@@ -115,20 +115,6 @@ public class ScheduleAdherenceService {
             pos.setDelayMinutes(delayMinutes);
             pos.setScheduleStatus(statusFromDelay(delayMinutes));
 
-            // Write historical "Stop Arrival" event to InfluxDB for the Analytics Dashboard
-            int estimatedPassengers = pos.getBleDeviceCount() != null ? (int)(pos.getBleDeviceCount() * 0.6) : 0;
-
-            Point arrivalEvent = Point.measurement("stop_arrival")
-                    .addTag("vehicle_id", pos.getVehicleId())
-                    .addTag("stop_id", nearestStopId)
-                    .addTag("route_id", routeId)
-                    .addField("bus_id", pos.getBusId() != null ? pos.getBusId() : 0)
-                    .addField("delay_minutes", delayMinutes)
-                    .addField("estimated_passengers", estimatedPassengers)
-                    .time(Instant.now(), WritePrecision.S);
-
-            influxWriteApi.writePoint(arrivalEvent);
-
             log.debug("Vehicle {} at stop {}: {} minutes delay → {}",
                     pos.getVehicleId(), nearestStopId, delayMinutes, pos.getScheduleStatus());
 

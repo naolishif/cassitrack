@@ -34,15 +34,42 @@ public class OmnimoveApplication {
         SpringApplication.run(OmnimoveApplication.class, args);
     }
 
-    // 3. 👈 Adesso questo metodo funzionerà alla perfezione!
+    private static final int MAX_ATTEMPTS    = 10;
+    private static final long INITIAL_DELAY_MS = 5_000;   // 5s
+    private static final long MAX_DELAY_MS     = 60_000;  // 60s
+
     @EventListener(ApplicationReadyEvent.class)
     public void runOnStartup() {
-        System.out.println("Applicazione avviata! Faccio partire la sincronizzazione...");
-        try {
-            netexImportService.importDataFromCassitrack();
-        } catch (Exception e) {
-            System.err.println("Errore durante la sincronizzazione all'avvio:");
-            e.printStackTrace();
+        System.out.println("[OMNIMOVE] Applicazione avviata — avvio sincronizzazione NeTEx...");
+
+        long delay = INITIAL_DELAY_MS;
+
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                netexImportService.importDataFromCassitrack();
+                System.out.println("[OMNIMOVE] Sincronizzazione NeTEx completata al tentativo " + attempt + ".");
+                return; // successo, usciamo
+            } catch (Exception e) {
+                System.err.printf("[OMNIMOVE] Tentativo %d/%d fallito: %s%n",
+                        attempt, MAX_ATTEMPTS, e.getMessage());
+
+                if (attempt == MAX_ATTEMPTS) {
+                    System.err.println("[OMNIMOVE] Tutti i tentativi esauriti. " +
+                            "OmniMove partirà con tabelle vuote — riprovare manualmente o riavviare.");
+                    return;
+                }
+
+                System.out.printf("[OMNIMOVE] Prossimo tentativo tra %ds...%n", delay / 1000);
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+
+                // Backoff esponenziale con limite massimo
+                delay = Math.min(delay * 2, MAX_DELAY_MS);
+            }
         }
     }
 }

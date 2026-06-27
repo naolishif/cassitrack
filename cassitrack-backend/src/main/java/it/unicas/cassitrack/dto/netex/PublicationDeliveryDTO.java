@@ -3,17 +3,20 @@ package it.unicas.cassitrack.dto.netex;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import lombok.Data;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @JacksonXmlRootElement(localName = "PublicationDelivery")
 public class PublicationDeliveryDTO {
 
-    @JacksonXmlProperty(isAttribute = true)
-    private String version = "1.0";
+    @JacksonXmlProperty(isAttribute = true, localName = "xmlns")
+    private String xmlns = "http://www.netex.org.uk/netex";
+
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version = "1.1";
 
     @JacksonXmlProperty(localName = "PublicationTimestamp")
-    private LocalDateTime publicationTimestamp = LocalDateTime.now();
+    private String publicationTimestamp = Instant.now().toString();
 
     @JacksonXmlProperty(localName = "ParticipantRef")
     private String participantRef = "CASSITRACK";

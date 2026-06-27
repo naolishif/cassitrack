@@ -26,7 +26,7 @@ public class VehiclePosition {
     private Integer busId; // 🚌
 
     private Integer numeroPosti;
-    private Boolean postoDisabili;
+    private Boolean wheelchairAccessible;
 
     private Instant timestamp;
     private Double lat;
@@ -44,6 +44,7 @@ public class VehiclePosition {
     private String  tripId;
     private String  routeId;
     private String  routeName;        // from simulator
+    private String  nextStop;         // computed server-side
 
     // Server-side processing fields
     private String matchedRouteId;

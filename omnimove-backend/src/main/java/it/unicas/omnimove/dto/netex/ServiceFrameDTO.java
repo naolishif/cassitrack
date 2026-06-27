@@ -2,30 +2,23 @@ package it.unicas.omnimove.dto.netex;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import it.unicas.omnimove.dto.netex.ServiceJourneyDTO;
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlElementWrapper;
 import lombok.Data;
-
 import java.util.List;
 
 @Data
 public class ServiceFrameDTO {
 
-    @JacksonXmlProperty(isAttribute = true)
-    private String id = "Cassitrack:ServiceFrame:1";
+    @JacksonXmlProperty(isAttribute = true, localName = "id")
+    private String id;
 
-    // Qui inseriremo i dati della tabella "routes"
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version;
+
     @JacksonXmlElementWrapper(localName = "lines")
     @JacksonXmlProperty(localName = "Line")
     private List<LineDTO> lines;
 
-    // Qui inseriremo i dati delle tabelle "trips" + "scheduled_stops"
-    @JacksonXmlElementWrapper(localName = "serviceJourneys")
+    @JacksonXmlElementWrapper(localName = "vehicleJourneys")
     @JacksonXmlProperty(localName = "ServiceJourney")
     private List<ServiceJourneyDTO> serviceJourneys;
-
-    @XmlElementWrapper(name = "Buses")
-    @XmlElement(name = "Bus")
-    private List<BusDTO> buses;
 }

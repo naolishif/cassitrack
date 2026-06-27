@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class SiteFrameDTO {
+public class ResourceFrameDTO {
 
     @JacksonXmlProperty(isAttribute = true, localName = "id")
     private String id;
@@ -14,7 +14,7 @@ public class SiteFrameDTO {
     @JacksonXmlProperty(isAttribute = true, localName = "version")
     private String version;
 
-    @JacksonXmlElementWrapper(localName = "scheduledStopPoints")
-    @JacksonXmlProperty(localName = "ScheduledStopPoint")
-    private List<ScheduledStopPointDTO> stopPoints;
+    @JacksonXmlElementWrapper(localName = "vehicles")
+    @JacksonXmlProperty(localName = "Vehicle")
+    private List<VehicleDTO> vehicles;
 }

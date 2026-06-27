@@ -1,12 +1,14 @@
 package it.unicas.omnimove.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper; // 👈 Nuovo import per convertire in JSON
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
 import com.influxdb.client.WriteApiBlocking;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import it.unicas.omnimove.dto.BusTelemetryDTO;
+import it.unicas.omnimove.dto.siri.Siri;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -19,7 +21,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -27,8 +34,9 @@ import java.util.List;
 public class TelemetrySyncService {
 
     private final RestClient restClient;
-    private final StringRedisTemplate redisTemplate; // 👈 Field per Redis
-    private final ObjectMapper objectMapper;         // 👈 Field per JSON
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+    private final XmlMapper xmlMapper = new XmlMapper();
 
     @Value("${cassitrack.api.base-url}")
     private String cassitrackBaseUrl;
@@ -79,14 +87,13 @@ public class TelemetrySyncService {
                     var writeApi = influxClient.getWriteApiBlocking();
 
                     for (BusTelemetryDTO bus : data) {
-                        Point point = Point.measurement("bus_telemetry")
+                            Point point = Point.measurement("bus_telemetry")
                                 .addTag("bus_id", bus.getBusId())
                                 .addField("latitude", bus.getLatitude())
                                 .addField("longitude", bus.getLongitude())
                                 .addField("speed", bus.getSpeed())
-                                .addField("ble_device_count", bus.getBleDeviceCount())
-                                .addField("numero_posti", bus.getNumeroPosti() != null ? bus.getNumeroPosti() : 0)
-                                .addField("posto_disabili", bus.getPostoDisabili() != null ? bus.getPostoDisabili() : false)
+                                // Removed ble_device_count and numero_posti as per cleanup request
+                                .addField("wheelchair_accessible", bus.getWheelchairAccessible() != null ? bus.getWheelchairAccessible() : false)
                                 .time(bus.getTimestamp(), WritePrecision.MS);
 
                         writeApi.writePoint(point);
@@ -108,36 +115,44 @@ public class TelemetrySyncService {
     public void startStreamingSubscription() {
         System.out.println("=== [OMNIMOVE] Avvio sottoscrizione allo stream SSE di Cassitrack... ===");
 
+        // Sopprime il rumore di un bug noto in reactor-netty: quando un SSE stream
+        // si chiude normalmente, Netty può tentare di liberare un buffer già rilasciato.
+        // L'eccezione viene droppata (non propagata) ma genera log spuri. La filtriamo qui.
+        Hooks.onErrorDropped(e -> {
+            if (!(e instanceof io.netty.util.IllegalReferenceCountException)) {
+                log.error("[OMNIMOVE] onErrorDropped inatteso: {}", e.getMessage());
+            }
+        });
+
         WebClient webClient = WebClient.create(cassitrackBaseUrl);
 
-        Flux<ServerSentEvent<List<BusTelemetryDTO>>> telemetryStream = webClient.get()
+        webClient.get()
                 .uri("/telemetry/stream")
-                .header("X-Api-Key", cassitrackApiToken) // The SEE API key is passed here in the header of the GET telemetry Stream.
+                .header("X-Api-Key", cassitrackApiToken)
                 .retrieve()
-                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<List<BusTelemetryDTO>>>() {});
-
-        telemetryStream
+                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
                 .filter(event -> "telemetry-update".equals(event.event()))
+                .retryWhen(Retry.fixedDelay(Long.MAX_VALUE, Duration.ofSeconds(5))
+                        .doBeforeRetry(signal -> System.out.println(
+                                "[OMNIMOVE] Stream interrotto (" + signal.failure().getMessage() +
+                                "), riconnessione in 5 secondi... (tentativo " + (signal.totalRetries() + 1) + ")")))
                 .subscribe(
                         event -> {
-                            List<BusTelemetryDTO> data = event.data();
-                            if (data != null && !data.isEmpty()) {
-                                System.out.println("[OMNIMOVE] Ricevuto aggiornamento push in tempo reale: " + data.size() + " record.");
-                                saveToInfluxDB(data);
-
-                                // 🚀 INTERCETTAZIONE: Salviamo lo streaming in tempo reale su Redis
-                                saveToRedis(data);
-                            }
-                        },
-                        error -> {
-                            System.err.println("[OMNIMOVE] Errore nello stream: " + error.getMessage() + ". Tentativo di riconnessione tra 5 secondi...");
+                            String xml = event.data();
+                            if (xml == null || xml.isBlank()) return;
                             try {
-                                Thread.sleep(5000);
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
+                                Siri siri = xmlMapper.readValue(xml, Siri.class);
+                                List<BusTelemetryDTO> data = siriToDto(siri);
+                                if (!data.isEmpty()) {
+                                    System.out.println("[OMNIMOVE] Ricevuto pacchetto SIRI XML via SSE: " + data.size() + " attività.");
+                                    saveToInfluxDB(data);
+                                    saveToRedis(data);
+                                }
+                            } catch (Exception e) {
+                                System.err.println("[OMNIMOVE] Errore deserializzazione SIRI XML: " + e.getMessage());
                             }
-                            startStreamingSubscription();
                         },
+                        error -> System.err.println("[OMNIMOVE] Errore fatale nello stream (non recuperabile): " + error.getMessage()),
                         () -> System.out.println("[OMNIMOVE] Stream completato (chiuso dal server).")
                 );
     }
@@ -153,15 +168,16 @@ public class TelemetrySyncService {
                         .addField("lat", bus.getLatitude())
                         .addField("lon", bus.getLongitude())
                         .addField("speed_kmh", bus.getSpeed())
-                        .addField("ble_device_count", bus.getBleDeviceCount())
-                        .addField("numero_posti", bus.getNumeroPosti() != null ? bus.getNumeroPosti() : 0)
-                        .addField("posto_disabili", bus.getPostoDisabili() != null ? bus.getPostoDisabili() : false)
+                        // Removed ble_device_count and numero_posti fields from Omnimove Influx writes
+                        .addField("wheelchair_accessible", bus.getWheelchairAccessible() != null ? bus.getWheelchairAccessible() : false)
                         .addField("delay", bus.getDelay() != null ? bus.getDelay() : 0)
                         .addField("last_stop_registered", bus.getLastStopRegistered() != null ? bus.getLastStopRegistered() : "")
                         .addField("trip_id", bus.getTripId() != null ? bus.getTripId() : "")
                         .addField("passengers", bus.getPassengers() != null ? bus.getPassengers() : 0)
                         .addField("capacity", bus.getCapacity() != null ? bus.getCapacity() : 0)
                         .time(bus.getTimestamp(), WritePrecision.MS);
+
+                if (bus.getNextStop() != null) point.addField("next_stop", bus.getNextStop());
 
                 writeApi.writePoint(point);
             }
@@ -173,8 +189,80 @@ public class TelemetrySyncService {
         }
     }
 
-    // 🟢 NUOVO METODO: Salva lo stato istantaneo su Redis (Porta 6380)
-    private void saveToRedis(List<BusTelemetryDTO> telemetryList) {
+    private List<BusTelemetryDTO> siriToDto(Siri siri) {
+        List<BusTelemetryDTO> result = new ArrayList<>();
+        if (siri.getServiceDelivery() == null
+                || siri.getServiceDelivery().getVehicleMonitoringDelivery() == null) return result;
+
+        List<Siri.VehicleActivity> activities = siri.getServiceDelivery()
+                .getVehicleMonitoringDelivery().getVehicleActivity();
+        if (activities == null) return result;
+
+        for (Siri.VehicleActivity activity : activities) {
+            Siri.MonitoredVehicleJourney journey = activity.getMonitoredVehicleJourney();
+            if (journey == null) continue;
+
+            // Wheelchair: da Accessibility.wheelchairAccess (Boolean)
+            Boolean wheelchair = journey.getAccessibility() != null
+                    ? journey.getAccessibility().getWheelchairAccess() : null;
+
+            // TripId: da FramedVehicleJourneyRef.datedVehicleJourneyRef
+            String tripId = journey.getFramedVehicleJourneyRef() != null
+                    ? journey.getFramedVehicleJourneyRef().getDatedVehicleJourneyRef() : null;
+
+            // NextStop: da MonitoredCall.stopPointName
+            String nextStop = journey.getMonitoredCall() != null
+                    ? journey.getMonitoredCall().getStopPointName() : null;
+
+            // LastStop: da PreviousCalls (prima voce)
+            String lastStop = (journey.getPreviousCalls() != null && !journey.getPreviousCalls().isEmpty())
+                    ? journey.getPreviousCalls().get(0).getStopPointName() : null;
+
+            // Delay: da stringa ISO 8601 a minuti interi (es. "PT2M" → 2)
+            Integer delayMinutes = parseDelayMinutes(journey.getDelay());
+
+            // Velocity e NumberOfSeats: da Extensions
+            float speed = 0f;
+            Integer numeroPosti = null;
+            if (journey.getExtensions() != null) {
+                speed = journey.getExtensions().getVelocity() != null
+                        ? journey.getExtensions().getVelocity().floatValue() : 0f;
+                numeroPosti = journey.getExtensions().getNumberOfSeats();
+            }
+
+            result.add(BusTelemetryDTO.builder()
+                    .busId(journey.getVehicleRef())
+                    .latitude(journey.getVehicleLocation() != null ? (float) journey.getVehicleLocation().getLatitude()  : 0f)
+                    .longitude(journey.getVehicleLocation() != null ? (float) journey.getVehicleLocation().getLongitude() : 0f)
+                    .speed(speed)
+                    .timestamp(activity.getRecordedAtTime() != null ? Instant.parse(activity.getRecordedAtTime()) : Instant.now())
+                    .wheelchairAccessible(wheelchair)
+                    .numeroPosti(numeroPosti)
+                    .delay(delayMinutes)
+                    .lastStopRegistered(lastStop)
+                    .tripId(tripId)
+                    .nextStop(nextStop)
+                    .build());
+        }
+        return result;
+    }
+
+    /** Converte durata ISO 8601 in minuti interi. Supporta PT0S, PT2M, -PT1M. */
+    private Integer parseDelayMinutes(String iso) {
+        if (iso == null || iso.isBlank()) return null;
+        try {
+            boolean negative = iso.startsWith("-");
+            String s = iso.replace("-", "");          // rimuovi segno
+            s = s.replace("PT", "").replace("M", "").replace("S", "");
+            int minutes = s.isBlank() ? 0 : Integer.parseInt(s);
+            return negative ? -minutes : minutes;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Salva lo stato istantaneo su Redis (Porta 6380)
+    public void saveToRedis(List<BusTelemetryDTO> telemetryList) {
         log.info("saveToRedis() chiamato con {} record", telemetryList.size());
 
         try {

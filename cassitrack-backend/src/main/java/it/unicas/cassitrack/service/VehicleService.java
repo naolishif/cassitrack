@@ -78,7 +78,7 @@ public class VehicleService {
                 .vehicleId(pos.getVehicleId())
                 .busId(pos.getBusId())
                 .numeroPosti(pos.getNumeroPosti())
-                .postoDisabili(pos.getPostoDisabili())
+                .wheelchairAccessible(pos.getWheelchairAccessible())
                 .lat(pos.getLat())
                 .lon(pos.getLon())
                 .speedKmh(pos.getSpeedKmh())
