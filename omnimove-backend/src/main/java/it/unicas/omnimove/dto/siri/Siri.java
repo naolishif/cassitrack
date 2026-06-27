@@ -224,11 +224,18 @@ public class Siri {
         @JacksonXmlProperty(localName = "NumberOfSeats")
         private Integer numberOfSeats;
 
+        @JacksonXmlProperty(localName = "Passengers")
+        private Integer passengers;
+
+
+
         public Extensions() {}
 
         public Double getVelocity() { return velocity; }
         public void setVelocity(Double v) { this.velocity = v; }
         public Integer getNumberOfSeats() { return numberOfSeats; }
         public void setNumberOfSeats(Integer v) { this.numberOfSeats = v; }
+        public Integer getPassengers() { return passengers; }
+        public void setPassengers(Integer v) { this.passengers = v; }
     }
 }

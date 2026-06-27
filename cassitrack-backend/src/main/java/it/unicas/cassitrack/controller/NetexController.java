@@ -61,20 +61,39 @@ public class NetexController {
             return null;
         }
 
-        // ── 1. SITE FRAME (Fermate) ──────────────────────────────────────────
+        // ── 1. SITE FRAME (StopPlace — luogo fisico con coordinate) ────────────
         List<Stop> dbStops = stopRepository.findAll();
-        List<ScheduledStopPointDTO> netexStops = dbStops.stream().map(stop -> {
-            ScheduledStopPointDTO dto = new ScheduledStopPointDTO();
-            dto.setId("CASSITRACK:ScheduledStopPoint:" + stop.getId());
+        List<StopPlaceDTO> netexStopPlaces = dbStops.stream().map(stop -> {
+            StopPlaceDTO dto = new StopPlaceDTO();
+            dto.setId("CASSITRACK:StopPlace:" + stop.getId());
             dto.setName(stop.getName());
-            dto.setLocation(new LocationDTO(stop.getLon(), stop.getLat()));
+            dto.setCentroid(new CentroidDTO(new LocationDTO(stop.getLon(), stop.getLat())));
             return dto;
         }).collect(Collectors.toList());
 
         SiteFrameDTO siteFrame = new SiteFrameDTO();
-        siteFrame.setStopPoints(netexStops);
+        siteFrame.setStopPlaces(netexStopPlaces);
 
         // ── 2. SERVICE FRAME (Linee e Corse) ────────────────────────────────
+        // 2a. ScheduledStopPoint — punto logico, senza coordinate
+        List<ScheduledStopPointDTO> netexSSPs = dbStops.stream().map(stop -> {
+            ScheduledStopPointDTO dto = new ScheduledStopPointDTO();
+            dto.setId("CASSITRACK:ScheduledStopPoint:" + stop.getId());
+            dto.setName(stop.getName());
+            return dto;
+        }).collect(Collectors.toList());
+
+        // 2b. PassengerStopAssignment — collega ogni SSP al suo StopPlace fisico
+        final int[] psa_order = {1};
+        List<PassengerStopAssignmentDTO> netexAssignments = dbStops.stream().map(stop -> {
+            PassengerStopAssignmentDTO psa = new PassengerStopAssignmentDTO();
+            psa.setId("CASSITRACK:PassengerStopAssignment:" + stop.getId());
+            psa.setOrder(psa_order[0]++);
+            psa.setScheduledStopPointRef(new RefDTO("CASSITRACK:ScheduledStopPoint:" + stop.getId()));
+            psa.setStopPlaceRef(new RefDTO("CASSITRACK:StopPlace:" + stop.getId()));
+            return psa;
+        }).collect(Collectors.toList());
+
         List<Route> dbRoutes = routeRepository.findAll();
         List<LineDTO> netexLines = dbRoutes.stream().map(route -> {
             LineDTO dto = new LineDTO();
@@ -124,6 +143,8 @@ public class NetexController {
         }).collect(Collectors.toList());
 
         ServiceFrameDTO serviceFrame = new ServiceFrameDTO();
+        serviceFrame.setScheduledStopPoints(netexSSPs);
+        serviceFrame.setStopAssignments(netexAssignments);
         serviceFrame.setLines(netexLines);
         serviceFrame.setServiceJourneys(netexJourneys);
 

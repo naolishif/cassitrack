@@ -61,7 +61,7 @@ public class MqttPositionPayload {
     @JsonProperty("delay")
     private Integer delay;
 
-    @JsonProperty("last_stop_registered")
+    @JsonProperty("nearest_stop")
     private String lastStopRegistered;
 
     @JsonProperty("targa")
@@ -76,11 +76,9 @@ public class MqttPositionPayload {
     @JsonProperty("delay_minutes")
     private Integer delayMinutes;
 
-    @JsonProperty("nearest_stop")
-    private String nearestStop;
 
     @JsonProperty("nearest_stop_id")
-    private String nearestStopId;
+    private String lastStopRegisteredId;
 
     @JsonProperty("route_id")
     private String routeId;

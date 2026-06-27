@@ -39,8 +39,8 @@ public class VehiclePosition {
     private Integer passengers;
     private Integer capacity;
     private Integer delayMinutes;
-    private String  nearestStop;
-    private String  nearestStopId;
+    private String  lastStopRegistered;
+    private String  lastStopRegisteredId;
     private String  tripId;
     private String  routeId;
     private String  routeName;        // from simulator

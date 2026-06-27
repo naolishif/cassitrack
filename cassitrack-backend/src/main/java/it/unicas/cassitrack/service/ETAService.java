@@ -165,8 +165,8 @@ public class ETAService {
         }
         if (seq.isEmpty()) return null;
 
-        String anchorStop = (bus.getNearestStopId() != null)
-                ? bus.getNearestStopId()
+        String anchorStop = (bus.getLastStopRegisteredId() != null)
+                ? bus.getLastStopRegisteredId()
                 : (bus.getTripId() != null && bus.getLat() != null && bus.getLon() != null
                 ? routeMatchingService.findNearestStopOnTrip(bus.getTripId(), bus.getLat(), bus.getLon())
                 : null);

@@ -14,7 +14,7 @@ public class SiteFrameDTO {
     @JacksonXmlProperty(isAttribute = true, localName = "version")
     private String version;
 
-    @JacksonXmlElementWrapper(localName = "scheduledStopPoints")
-    @JacksonXmlProperty(localName = "ScheduledStopPoint")
-    private List<ScheduledStopPointDTO> stopPoints;
+    @JacksonXmlElementWrapper(localName = "stopPlaces")
+    @JacksonXmlProperty(localName = "StopPlace")
+    private List<StopPlaceDTO> stopPlaces;
 }

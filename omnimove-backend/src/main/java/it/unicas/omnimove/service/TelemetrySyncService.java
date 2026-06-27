@@ -145,8 +145,9 @@ public class TelemetrySyncService {
                                 List<BusTelemetryDTO> data = siriToDto(siri);
                                 if (!data.isEmpty()) {
                                     System.out.println("[OMNIMOVE] Ricevuto pacchetto SIRI XML via SSE: " + data.size() + " attività.");
-                                    saveToInfluxDB(data);
                                     saveToRedis(data);
+                                    saveToInfluxDB(data);
+
                                 }
                             } catch (Exception e) {
                                 System.err.println("[OMNIMOVE] Errore deserializzazione SIRI XML: " + e.getMessage());
@@ -238,10 +239,12 @@ public class TelemetrySyncService {
                     .timestamp(activity.getRecordedAtTime() != null ? Instant.parse(activity.getRecordedAtTime()) : Instant.now())
                     .wheelchairAccessible(wheelchair)
                     .numeroPosti(numeroPosti)
+                    .capacity(numeroPosti)
                     .delay(delayMinutes)
                     .lastStopRegistered(lastStop)
                     .tripId(tripId)
                     .nextStop(nextStop)
+                    .passengers(journey.getExtensions() != null ? journey.getExtensions().getPassengers() : null)
                     .build());
         }
         return result;

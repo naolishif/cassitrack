@@ -11,8 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import javax.xml.stream.XMLInputFactory;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class NetexImportService {
@@ -28,6 +33,9 @@ public class NetexImportService {
     private final TripRepository tripRepository;
     private final ScheduledStopRepository scheduledStopRepository;
     private final BusRepository busRepository; // ← AGGIUNTO
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final RestClient restClient;
 
@@ -93,6 +101,11 @@ public class NetexImportService {
         routeRepository.deleteAll();
         stopRepository.deleteAll();
         busRepository.deleteAll();
+        // Forza il flush delle DELETE prima di qualsiasi INSERT successivo.
+        // Senza questo, Hibernate può riordinare INSERT prima delle DELETE
+        // causando violazioni di constraint UNIQUE (es. buses_license_plate_key).
+        entityManager.flush();
+        entityManager.clear();
 
         PublicationDeliveryDTO netexData = restClient.get()
                 .uri(cassitrackNetexUrl)
@@ -112,21 +125,14 @@ public class NetexImportService {
 
         FramesDTO frames = compositeFrame.getFrames();
 
-        // ── 1. SITE FRAME → Fermate ─────────────────────────────────────────
+        // ── 1. SITE FRAME → StopPlace (coordinate geografiche) ─────────────
         SiteFrameDTO siteFrame = frames.getSiteFrame();
-        if (siteFrame != null && siteFrame.getStopPoints() != null) {
-            List<Stop> stops = siteFrame.getStopPoints().stream().map(dto -> {
-                Stop stop = new Stop();
-                stop.setId(localId(dto.getId())); // "CASSITRACK:ScheduledStopPoint:PSB" → "PSB"
-                stop.setName(dto.getName());
-                if (dto.getLocation() != null) {
-                    stop.setLat(dto.getLocation().getLatitude());
-                    stop.setLon(dto.getLocation().getLongitude());
-                }
-                stop.setActive(true);
-                return stop;
-            }).collect(java.util.stream.Collectors.toList());
-            stopRepository.saveAll(stops);
+        // Mappa: localId StopPlace → DTO (per recuperare coords dopo)
+        Map<String, StopPlaceDTO> stopPlaceMap = new HashMap<>();
+        if (siteFrame != null && siteFrame.getStopPlaces() != null) {
+            for (StopPlaceDTO sp : siteFrame.getStopPlaces()) {
+                stopPlaceMap.put(localId(sp.getId()), sp);
+            }
         }
 
         // ── 2. RESOURCE FRAME → Veicoli (Bus) ──────────────────────────────
@@ -146,11 +152,43 @@ public class NetexImportService {
             busRepository.saveAll(buses);
         }
 
-        // ── 3. SERVICE FRAME → Linee e Corse ────────────────────────────────
+        // ── 3. SERVICE FRAME → SSP + PSA + Linee + Corse ───────────────────
         ServiceFrameDTO serviceFrame = frames.getServiceFrame();
         if (serviceFrame != null) {
 
-            // 3a. Linee
+            // 3a. PassengerStopAssignment → mappa sspLocalId → stopPlaceLocalId
+            Map<String, String> sspToSpMap = new HashMap<>();
+            if (serviceFrame.getStopAssignments() != null) {
+                for (PassengerStopAssignmentDTO psa : serviceFrame.getStopAssignments()) {
+                    String sspId = localId(psa.getScheduledStopPointRef() != null
+                            ? psa.getScheduledStopPointRef().getRef() : null);
+                    String spId  = localId(psa.getStopPlaceRef() != null
+                            ? psa.getStopPlaceRef().getRef() : null);
+                    if (sspId != null && spId != null) sspToSpMap.put(sspId, spId);
+                }
+            }
+
+            // 3b. ScheduledStopPoint → Stop (id = localId SSP; coords da StopPlace via PSA)
+            if (serviceFrame.getScheduledStopPoints() != null) {
+                List<Stop> stops = serviceFrame.getScheduledStopPoints().stream().map(sspDto -> {
+                    Stop stop = new Stop();
+                    String sspLocalId = localId(sspDto.getId());
+                    stop.setId(sspLocalId);
+                    stop.setName(sspDto.getName());
+                    // Trova il StopPlace corrispondente tramite la mappa PSA
+                    String spLocalId = sspToSpMap.getOrDefault(sspLocalId, sspLocalId);
+                    StopPlaceDTO sp = stopPlaceMap.get(spLocalId);
+                    if (sp != null && sp.getCentroid() != null && sp.getCentroid().getLocation() != null) {
+                        stop.setLat(sp.getCentroid().getLocation().getLatitude());
+                        stop.setLon(sp.getCentroid().getLocation().getLongitude());
+                    }
+                    stop.setActive(true);
+                    return stop;
+                }).collect(java.util.stream.Collectors.toList());
+                stopRepository.saveAll(stops);
+            }
+
+            // 3c. Linee
             if (serviceFrame.getLines() != null) {
                 List<Route> routes = serviceFrame.getLines().stream().map(dto -> {
                     Route route = new Route();
@@ -163,7 +201,7 @@ public class NetexImportService {
                 routeRepository.saveAll(routes);
             }
 
-            // 3b. Corse
+            // 3e. Corse
             if (serviceFrame.getServiceJourneys() != null) {
                 for (ServiceJourneyDTO journeyDto : serviceFrame.getServiceJourneys()) {
                     Trip trip = new Trip();

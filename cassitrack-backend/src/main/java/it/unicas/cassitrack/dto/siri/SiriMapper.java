@@ -54,14 +54,15 @@ public class SiriMapper {
 
             // ── PreviousCalls (ultima fermata registrata) ─────────────────────
             List<Siri.PreviousCall> previousCalls = null;
-            if (v.getNearestStop() != null) {
-                previousCalls = List.of(new Siri.PreviousCall(v.getNearestStop()));
+            if (v.getLastStopRegistered() != null) {
+                previousCalls = List.of(new Siri.PreviousCall(v.getLastStopRegistered()));
             }
 
             // ── Extensions (campi non standard) ──────────────────────────────
             Siri.Extensions extensions = new Siri.Extensions();
             extensions.setVelocity(v.getSpeedKmh());
             extensions.setNumberOfSeats(v.getNumeroPosti());
+            extensions.setPassengers(v.getPassengers());
 
             // ── MonitoredVehicleJourney ───────────────────────────────────────
             Siri.MonitoredVehicleJourney journey = new Siri.MonitoredVehicleJourney();

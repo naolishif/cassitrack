@@ -15,6 +15,5 @@ public class ScheduledStopPointDTO {
     @JacksonXmlProperty(localName = "Name")
     private String name;
 
-    @JacksonXmlProperty(localName = "Location")
-    private LocationDTO location;
+    // Le coordinate geografiche stanno in StopPlace (NeTEx standard), non qui
 }

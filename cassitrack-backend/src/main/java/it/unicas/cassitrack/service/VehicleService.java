@@ -87,10 +87,10 @@ public class VehicleService {
                 .routeName(pos.getRouteName())
                 .scheduleStatus(status)
                 .delayMinutes(pos.getDelayMinutes())
-                .nextStopId(pos.getNearestStopId())
-                .nextStopName(pos.getNearestStop())
+                .nextStopId(pos.getLastStopRegisteredId())
+                .nextStopName(pos.getLastStopRegistered())
                 .upcomingStopName(routeMatchingService.nextStopName(
-                        pos.getTripId(), pos.getRouteId(), pos.getNearestStopId()))
+                        pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId()))
                 .etaSeconds(null)
                 .estimatedPassengers(estimatedPassengers)
                 .crowdingLevel(crowdingLevel)

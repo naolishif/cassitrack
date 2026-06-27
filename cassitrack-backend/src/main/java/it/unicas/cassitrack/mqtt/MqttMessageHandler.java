@@ -66,7 +66,7 @@ public class MqttMessageHandler implements MessageHandler {
 
             // ── Step 4: Calcolo fermata successiva ────────────────
             String nextStop = routeMatchingService.nextStopName(
-                    pos.getTripId(), pos.getRouteId(), pos.getNearestStopId());
+                    pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId());
 
             // ── Step 5: Scrittura su InfluxDB ─────────────────────
             try {
@@ -82,7 +82,7 @@ public class MqttMessageHandler implements MessageHandler {
             vehicleStateCache.update(pos.getVehicleId(), entity);
 
             log.info("Processed [{}] -> Bus ID: {}, Wheelchair: {} | lat={}, lon={}, Trip ID:={} Last Stop={}, Next Stop={}",
-                    pos.getVehicleId(), busId, wheelchairAccessible, pos.getLat(), pos.getLon(), pos.getTripId(), pos.getNearestStop(), nextStop);
+                    pos.getVehicleId(), busId, wheelchairAccessible, pos.getLat(), pos.getLon(), pos.getTripId(), pos.getLastStopRegistered(), nextStop);
 
         } catch (Exception e) {
             log.error("Failed to process MQTT message from topic [{}]: {}", topic, e.getMessage(), e);
@@ -120,8 +120,8 @@ public class MqttMessageHandler implements MessageHandler {
         if (pos.getDelayMinutes() != null) {
             point.addField("delay", pos.getDelayMinutes());
         }
-        if (pos.getNearestStop() != null) {
-            point.addField("last_stop_registered", pos.getNearestStop());
+        if (pos.getLastStopRegistered() != null) {
+            point.addField("last_stop_registered", pos.getLastStopRegistered());
         }
 
         if (nextStop != null) {
@@ -148,8 +148,8 @@ public class MqttMessageHandler implements MessageHandler {
                 .passengers(pos.getPassengers())
                 .capacity(pos.getCapacity())
                 .delayMinutes(pos.getDelayMinutes())
-                .nearestStop(pos.getNearestStop())
-                .nearestStopId(pos.getNearestStopId())
+                .lastStopRegistered(pos.getLastStopRegistered())
+                .lastStopRegisteredId(pos.getLastStopRegisteredId())
                 .tripId(pos.getTripId())
                 .routeId(pos.getRouteId())
                 .routeName(pos.getRouteName())
