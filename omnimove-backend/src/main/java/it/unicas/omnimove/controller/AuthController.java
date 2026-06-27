@@ -90,7 +90,6 @@ public class AuthController {
         userRepo.save(user);
 
         emailService.sendVerificationEmail(req.getEmail(), verificationToken);
-        log.info("New user registered (unverified): {}", req.getEmail());
         securityAuditService.registration(user.getEmail(), getClientIp(request));
 
         return ResponseEntity.ok(AuthResponse.builder()
@@ -133,7 +132,6 @@ public class AuthController {
             userRepo.save(user);
 
             boolean suggestReset = user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS;
-            log.warn("Failed login attempt #{} for {}", user.getFailedLoginAttempts(), req.getEmail());
             securityAuditService.loginFailure(req.getEmail(), getClientIp(httpReq));
             if (suggestReset) securityAuditService.accountLocked(req.getEmail());
 
@@ -155,7 +153,6 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(user.getEmail());
         long expiresInMs = jwtUtil.getExpirationMs();
-        log.info("User logged in: {}", req.getEmail());
         securityAuditService.loginSuccess(req.getEmail(), getClientIp(httpReq));
 
         // V-04 FIX: Deliver token as httpOnly, Secure, SameSite=Strict cookie
@@ -198,7 +195,6 @@ public class AuthController {
         user.setVerificationTokenExpiry(null);
         userRepo.save(user);
 
-        log.info("Email verified for: {}", user.getEmail());
         securityAuditService.emailVerified(user.getEmail());
         response.sendRedirect("/omnimove-login.html?verified=true");
     }
@@ -226,7 +222,6 @@ public class AuthController {
         userRepo.save(user);
 
         emailService.sendVerificationEmail(user.getEmail(), newToken);
-        log.info("Verification email resent to: {}", user.getEmail());
 
         return ResponseEntity.ok(AuthResponse.builder()
                 .message("Verification email resent. Please check your inbox.")
@@ -251,7 +246,6 @@ public class AuthController {
             user.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(RESET_EXPIRY_HOURS));
             userRepo.save(user);
             emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
-            log.info("Password reset email sent to: {}", req.getEmail());
             securityAuditService.passwordResetRequested(user.getEmail());
         }
 
@@ -298,7 +292,6 @@ public class AuthController {
         user.setFailedLoginAttempts(0);
         userRepo.save(user);
 
-        log.info("Password reset successful for: {}", user.getEmail());
         securityAuditService.passwordReset(user.getEmail());
 
         return ResponseEntity.ok(AuthResponse.builder()
@@ -392,14 +385,31 @@ public class AuthController {
     @Operation(summary = "Permanently delete the authenticated user's account")
     public ResponseEntity<AuthResponse> deleteAccount(
             @org.springframework.security.core.annotation.AuthenticationPrincipal
-            org.springframework.security.core.userdetails.UserDetails userDetails) {
+            org.springframework.security.core.userdetails.UserDetails userDetails,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletRequest request) {
 
         if (userDetails == null) return ResponseEntity.status(401).build();
+
+        // Blacklist the current token so it cannot be used after deletion
+        String token = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        } else if (request.getCookies() != null) {
+            token = Arrays.stream(request.getCookies())
+                    .filter(c -> JWT_COOKIE_NAME.equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (token != null) {
+            long remaining = jwtUtil.getRemainingValidityMs(token);
+            if (remaining > 0) tokenBlacklistService.blacklist(token, remaining);
+        }
 
         return userRepo.findByEmail(userDetails.getUsername())
                 .map(u -> {
                     userRepo.delete(u);
-                    log.info("Account deleted: {}", u.getEmail());
                     securityAuditService.accountDeleted(u.getEmail());
                     return ResponseEntity.ok(AuthResponse.builder()
                             .message("Account deleted successfully.").build());
