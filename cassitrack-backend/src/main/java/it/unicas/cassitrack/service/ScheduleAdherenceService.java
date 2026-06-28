@@ -136,7 +136,7 @@ public class ScheduleAdherenceService {
                     .addField("delay_minutes",         delayMinutes)
                     .addField("estimated_passengers",  estimatedPassengers)
                     .time(Instant.now(), WritePrecision.S);
-            influxWriteApi.writePoint(arrivalEvent);
+            influxWriteApi.writePoint(arrivalEvent); // Maybe this should not be writting in Influx, the data should be written only from the MqttMessageHandler, otherwise we have two entries in Influx each time
 
             log.info("Bus {} ARRIVATO a {} → ritardo {} min ({})",
                     pos.getVehicleId(), arrival.stopId(), delayMinutes, pos.getScheduleStatus());
