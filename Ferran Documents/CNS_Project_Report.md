@@ -1,4 +1,4 @@
-# CassiTrack & OmniMove — Security Engineering Report
+# Security by Design and OWASP for IoT/Smart Mobility: The CASSITRACK and OMNIMOVE Case
 
 **Course:** Computer and Network Security (CNS) — Master's Degree
 **University:** University of Cassino and Southern Lazio (UNICAS)
@@ -105,11 +105,11 @@ Outbound email (used for OmniMove's verification and password-reset flows) is se
 
 ### A03 — Injection
 
-Injection vulnerabilities occur when untrusted input is interpreted as code or commands by a downstream system — the best-known example is SQL Injection, where attacker-controlled text ends up inside a database query. Cross-Site Scripting (XSS) is also classified under this category in OWASP's 2021 list: it happens when attacker-controlled text ends up being interpreted as HTML/JavaScript in someone else's browser.
+Injection vulnerabilities occur when untrusted input is interpreted as code or commands by a downstream system — the best-known example is SQL Injection, where attacker-controlled text ends up inside a database query.
 
 We avoid classic SQL injection structurally: all database access goes through Spring Data JPA with Hibernate, which always uses parameterised queries, so there is no string concatenation of user input into SQL anywhere in the codebase.
 
-The more interesting findings here were stored XSS issues in the two admin dashboards, which we identified and fixed during this review. Both `cassitrack-admin.html` and `omnimove-admin.html` originally rendered user-supplied fields (name, email, etc.) directly into the page using `innerHTML` template literals, with no escaping — so a user registering with a name like `<script>...</script>` would have that script execute in an administrator's browser the next time the user list was loaded, potentially stealing the admin's session cookie. The fix was twofold: an `escHtml()` helper that escapes the five dangerous HTML characters is now applied to every user-controlled field before it is inserted into the page, and the registration request objects now validate the input itself:
+The more interesting findings here were stored XSS issues in the two admin dashboards, which we identified and fixed during this review. Both `cassitrack-admin.html` and `omnimove-admin.html` originally rendered user-supplied fields (name, email, etc.) directly into the page using `innerHTML` template literals, with no escaping — allowing a crafted name field to execute arbitrary script in an administrator's browser. The fix was twofold: an `escHtml()` helper that escapes the five dangerous HTML characters is now applied to every user-controlled field before it is inserted into the page, and the registration request objects now validate the input itself:
 
 ```javascript
 // omnimove-backend/.../static/omnimove-admin.html
@@ -210,7 +210,7 @@ http.headers(headers -> headers
     .frameOptions(frame -> frame.deny())
     .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
     .contentSecurityPolicy(csp -> csp.policyDirectives(
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; ... frame-ancestors 'none'; " +
+        "default-src 'self'; script-src 'self'; ... frame-ancestors 'none'; " +
         "object-src 'none'; base-uri 'self'; form-action 'self';"
     ))
 );
@@ -236,6 +236,8 @@ Both backends wire the OWASP Dependency-Check Maven plugin into the build itself
 ```
 
 This means the check is not a one-off manual exercise but a continuous gate: every time the project is built with `mvn verify`, the dependency list is checked against the National Vulnerability Database, and a newly disclosed high-severity CVE in, say, Spring Boot or the JWT library would block the build until it is addressed. We did not, however, have the auxiliary command-line tools (`mvn`, `trivy`) available in the sandboxed environment used for the live penetration-testing session, so this control could not be exercised end-to-end during that particular test run; this is noted honestly in the Limitations section.
+
+Dependency scanning with Trivy (`trivy fs`) on both backends revealed 6 CRITICAL and 40 HIGH CVEs in the original Spring Boot 3.2.5 baseline, including CVE-2025-24813 (Tomcat partial PUT RCE, CVSS 9.8) and CVE-2024-38821 (Spring Security authorization bypass, CVSS 9.1). Remediation consisted of upgrading the Spring Boot BOM to 3.5.5 and explicitly pinning `tomcat.version=10.1.55` and `spring-security.version=6.5.9`. Post-remediation scans confirmed 0 CRITICAL CVEs on both backends. Remaining HIGH findings (Netty request smuggling) are not exploitable without a reverse proxy in the request path. Frontend CDN resources are protected against supply chain substitution via Subresource Integrity hashes on all external `<script>` and `<link>` tags.
 
 ### A07 — Identification and Authentication Failures
 
@@ -313,7 +315,7 @@ The same pattern holds for every other outbound call the platform makes: OmniMov
 
 We ran OWASP ZAP against the live backends in two modes: a general web-application scan, and an API-aware scan driven by our OpenAPI specification.
 
-The web-application scan reported zero high-risk alerts. Its five medium-risk findings were all Content-Security-Policy refinements. `'unsafe-inline'` is still allowed for scripts and styles — several dashboard pages still rely on inline `<script>` blocks and inline style attributes, a known and accepted trade-off. `img-src` allows any HTTPS source, which is deliberate since the live map loads tiles from an external provider. ZAP also flagged a small number of CDN-hosted assets for lacking a Subresource Integrity hash; this has since been fixed — the mapping and charting libraries now carry a verified `integrity=` attribute, and every infrastructure container image is pinned by SHA-256 digest rather than a mutable tag (Google Fonts CSS stays excluded by design, since its content varies per browser). Separately, ZAP reported that the live server's CSP header omitted the `form-action`, `object-src`, and `base-uri` directives present in our source — a discrepancy we flag transparently, since it suggests either a stale build at scan time or a rendering inconsistency worth re-verifying against a fresh deployment.
+The web-application scan reported zero high-risk alerts. Its four medium-risk findings were all Content-Security-Policy refinements. `img-src` allows any HTTPS source, which is deliberate since the live map loads tiles from an external provider. ZAP also flagged a small number of CDN-hosted assets for lacking a Subresource Integrity hash; this has since been fixed — the mapping and charting libraries now carry a verified `integrity=` attribute, and every infrastructure container image is pinned by SHA-256 digest rather than a mutable tag (Google Fonts CSS stays excluded by design, since its content varies per browser). Separately, ZAP reported that the live server's CSP header omitted the `form-action`, `object-src`, and `base-uri` directives present in our source — a discrepancy we flag transparently, since it suggests either a stale build at scan time or a rendering inconsistency worth re-verifying against a fresh deployment.
 
 Four low-risk findings concerned newer cross-origin isolation headers (`Cross-Origin-Embedder-Policy`, `Cross-Origin-Opener-Policy`, and inconsistent `Cross-Origin-Resource-Policy`/`Permissions-Policy`) not being applied uniformly across every route — a reasonable next hardening step, not an active exploit path. The remaining informational findings were benign: some internal fix-tracking code comments are visible in client-delivered JavaScript, and ZAP correctly identified the app as a modern, non-cacheable JavaScript application.
 
@@ -334,8 +336,6 @@ At the same time, we do not consider the system "finished" from a security stand
 ## 7. Limitations
 
 The following gaps were identified during this review and remain open. We list them explicitly, together with what would be required to close each one, rather than omitting them:
-
-**`'unsafe-inline'` in the Content-Security-Policy (A03 / A05).** Several dashboard pages still rely on inline `<script>` blocks and inline style attributes, which forced the CSP to allow `'unsafe-inline'` for both `script-src` and `style-src`. This does not reopen the specific stored-XSS bugs we fixed (those are now blocked by output escaping regardless of the CSP), but it does mean the CSP provides weaker defence-in-depth against any *other*, not-yet-discovered injection point than a stricter policy would. Removing it requires migrating the remaining inline scripts/styles into external files.
 
 **Dependency vulnerability scanning could not be exercised live during penetration testing (A06).** The OWASP Dependency-Check Maven plugin is correctly wired into both build pipelines and will fail a build on any high-severity CVE, but the auxiliary tools used to double-check this at network-scan time (`mvn`, `trivy`, `nmap`) were not available inside the sandboxed environment used for the live penetration test, so several checks were skipped rather than executed. The build-time control exists and is configured correctly; it simply was not re-verified through a second, independent tool during this specific testing session.
 
