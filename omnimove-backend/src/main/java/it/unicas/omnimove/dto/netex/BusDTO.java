@@ -1,30 +1,26 @@
 package it.unicas.omnimove.dto.netex;
 
-import jakarta.xml.bind.annotation.XmlAccessType;
-import jakarta.xml.bind.annotation.XmlAccessorType;
-import jakarta.xml.bind.annotation.XmlAttribute;
-import jakarta.xml.bind.annotation.XmlElement;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import lombok.Data;
 
 @Data
-@XmlAccessorType(XmlAccessType.FIELD)
 public class BusDTO {
 
-    @XmlAttribute
+    @JacksonXmlProperty(isAttribute = true)
     private Integer id;
 
-    @XmlElement(name = "Targa")
+    @JacksonXmlProperty(localName = "Targa")
     private String targa;
 
-    @XmlElement(name = "NumeroPosti")
+    @JacksonXmlProperty(localName = "NumeroPosti")
     private Integer numeroPosti;
 
-    @XmlElement(name = "PostoDisabili")
+    @JacksonXmlProperty(localName = "PostoDisabili")
     private Boolean postoDisabili;
 
-    @XmlElement(name = "Disponibile")
+    @JacksonXmlProperty(localName = "Disponibile")
     private Boolean disponibile;
 
-    @XmlElement(name = "CurrentVehicleId")
+    @JacksonXmlProperty(localName = "CurrentVehicleId")
     private String currentVehicleId;
 }

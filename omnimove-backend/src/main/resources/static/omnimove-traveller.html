@@ -2156,13 +2156,24 @@
     }
 
     let aiThinking = false;
-    async function sendAI() {
+
+    // Conversation memory for this chat session.
+    // Each entry: { role: 'user' | 'assistant', content: '...' }
+    // Sent to the backend so the AI remembers earlier turns in the conversation.
+    let aiHistory = [];
+
+    // How many past messages to send (keeps requests small + costs low).
+    // 6 = last 3 exchanges (3 user + 3 assistant).
+    const AI_HISTORY_LIMIT = 6;
+
+    async function sendAI(presetText) {
         if (aiThinking) return;
         const input = document.getElementById('aiInput');
         const msgs  = document.getElementById('aiMessages');
-        const text  = input.value.trim();
+        const text  = (presetText || input.value).trim();
         if (!text) return;
 
+        // Render the user's message
         const userMsg = document.createElement('div');
         userMsg.className = 'ai-msg user';
         userMsg.textContent = text;
@@ -2170,6 +2181,11 @@
         input.value = '';
         msgs.scrollTop = msgs.scrollHeight;
 
+        // Remove any previous suggestion chips once the user sends something
+        const oldChips = document.getElementById('aiSuggestions');
+        if (oldChips) oldChips.remove();
+
+        // Thinking indicator
         aiThinking = true;
         const waitMsg = document.createElement('div');
         waitMsg.className = 'ai-msg bot';
@@ -2180,16 +2196,58 @@
         try {
             const r = await apiFetch('/ai/chat', {
                 method: 'POST',
-                body: JSON.stringify({ message: text, language: 'it' })
+                body: JSON.stringify({
+                    message: text,
+                    language: 'it',                        // hint only — backend auto-detects
+                    history: aiHistory.slice(-AI_HISTORY_LIMIT)
+                })
             });
             const data = await r.json();
-            waitMsg.textContent = data.answer || 'Risposta non disponibile.';
+            const answer = data.answer || 'Risposta non disponibile.';
+            waitMsg.textContent = answer;
+
+            // Save this exchange to memory so the next question has context
+            aiHistory.push({ role: 'user',      content: text });
+            aiHistory.push({ role: 'assistant', content: answer });
+
+            // Show tappable follow-up suggestions if the backend sent any
+            if (Array.isArray(data.suggestions) && data.suggestions.length) {
+                renderSuggestions(data.suggestions);
+            }
         } catch (e) {
-            waitMsg.textContent = 'Errore di connessione al backend. Verifica che OMNIMOVE sia avviato.';
+            waitMsg.textContent =
+                'Errore di connessione al backend. Verifica che OMNIMOVE sia avviato.';
         } finally {
             aiThinking = false;
             msgs.scrollTop = msgs.scrollHeight;
         }
+    }
+
+    // Render follow-up suggestion chips under the conversation (light theme).
+    function renderSuggestions(suggestions) {
+        const msgs = document.getElementById('aiMessages');
+        const wrap = document.createElement('div');
+        wrap.id = 'aiSuggestions';
+        wrap.style.cssText =
+            'display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;align-self:flex-start;';
+
+        suggestions.forEach(s => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.textContent = s;
+            chip.style.cssText =
+                'background:var(--primary-light);border:1px solid #a7f3d0;' +
+                'color:var(--primary-dark);font-family:inherit;font-size:11px;' +
+                'font-weight:700;padding:6px 12px;border-radius:50px;cursor:pointer;' +
+                'transition:background .15s;';
+            chip.onmouseover = () => chip.style.background = '#a7f3d0';
+            chip.onmouseout  = () => chip.style.background = 'var(--primary-light)';
+            chip.onclick = () => sendAI(s);    // tapping a chip asks that question
+            wrap.appendChild(chip);
+        });
+
+        msgs.appendChild(wrap);
+        msgs.scrollTop = msgs.scrollHeight;
     }
 
     // ── Initial load: populate stops (dropdowns + map markers) ─────────
