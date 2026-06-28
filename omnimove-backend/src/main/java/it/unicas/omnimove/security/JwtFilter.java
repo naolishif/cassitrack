@@ -39,11 +39,16 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (token != null && jwtUtil.isValid(token) && !tokenBlacklistService.isBlacklisted(token)) {
             String email = jwtUtil.extractEmail(token);
-            UserDetails ud = userDetailsService.loadUserByUsername(email);
-            UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(ud, null, ud.getAuthorities());
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            try {
+                UserDetails ud = userDetailsService.loadUserByUsername(email);
+                UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(ud, null, ud.getAuthorities());
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (UsernameNotFoundException e) {
+                // Account deleted but token not yet expired — treat as unauthenticated
+                SecurityContextHolder.clearContext();
+            }
         }
 
         chain.doFilter(req, res);

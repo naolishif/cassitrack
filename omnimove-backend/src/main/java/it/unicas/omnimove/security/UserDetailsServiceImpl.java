@@ -13,6 +13,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .password(u.getPassword())
                 .authorities(u.getRole())
                 .build())
-            .orElseThrow(()->new UsernameNotFoundException("User not found: "+email));
+            .orElseThrow(()->new UsernameNotFoundException("User not found"));
     }
 }
