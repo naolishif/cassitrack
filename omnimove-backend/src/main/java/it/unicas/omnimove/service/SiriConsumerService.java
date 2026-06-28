@@ -20,7 +20,8 @@ public class SiriConsumerService {
         this.telemetrySyncService = telemetrySyncService;
     }
 
-    @Scheduled(fixedRate = 5000)
+    // Disabilitato: i dati arrivano ora tramite SSE stream da CassiTrack (TelemetrySyncService)
+    // @Scheduled(fixedRate = 5000)
     public void fetchAndProcessSiriData() {
         String url = "http://localhost:8080/api/v1/siri/vehicle-monitoring";
 
@@ -41,39 +42,42 @@ public class SiriConsumerService {
                 for (Siri.VehicleActivity activity : activities) {
                     Siri.MonitoredVehicleJourney journey = activity.getMonitoredVehicleJourney();
 
-                    // Estraiamo i dati dall'XML SIRI
-                    String busId = journey.getVehicleRef();
-                    double lat = journey.getVehicleLocation().getLatitude();
-                    double lon = journey.getVehicleLocation().getLongitude();
-                    double speed = journey.getVelocity();
-                    String timestampStr = activity.getRecordedAtTime();
+                    // Accessibility → Boolean
+                    Boolean wheelchairAccessible = journey.getAccessibility() != null
+                            ? journey.getAccessibility().getWheelchairAccess() : null;
 
-                    //System.out.println("[SIRI-AUTOMATIC] Ricevuto e in elaborazione Bus: " + busId);
+                    // FramedVehicleJourneyRef → tripId
+                    String tripId = journey.getFramedVehicleJourneyRef() != null
+                            ? journey.getFramedVehicleJourneyRef().getDatedVehicleJourneyRef() : null;
 
-                    // 🚌 Gestiamo la conversione del flag disabili da Stringa SIRI ("true"/"false") a Boolean
-                    Boolean postoDisabili = null;
-                    if (journey.getWheelchairAccessible() != null) {
-                        postoDisabili = "true".equalsIgnoreCase(journey.getWheelchairAccessible());
+                    // MonitoredCall → nextStop
+                    String nextStop = journey.getMonitoredCall() != null
+                            ? journey.getMonitoredCall().getStopPointName() : null;
+
+                    // PreviousCalls → lastStop
+                    String lastStop = (journey.getPreviousCalls() != null && !journey.getPreviousCalls().isEmpty())
+                            ? journey.getPreviousCalls().get(0).getStopPointName() : null;
+
+                    // Extensions → velocity, numberOfSeats
+                    float speed = 0f;
+                    Integer numeroPosti = null;
+                    if (journey.getExtensions() != null) {
+                        speed = journey.getExtensions().getVelocity() != null
+                                ? journey.getExtensions().getVelocity().floatValue() : 0f;
+                        numeroPosti = journey.getExtensions().getNumberOfSeats();
                     }
 
-                    // Ricostruiamo il BusTelemetryDTO includendo i campi mancanti
                     BusTelemetryDTO dto = BusTelemetryDTO.builder()
-                            .busId(busId)
-                            .latitude((float) lat)
-                            .longitude((float) lon)
-                            .speed((float) speed)
-                            .timestamp(timestampStr != null ? Instant.parse(timestampStr) : Instant.now())
-                            .bleDeviceCount(0)
-
-                            // 🚌 ECCO LE DUE RIGHE AGGIUNTE:
-                            .numeroPosti(journey.getNumberOfSeats())
-                            .postoDisabili(postoDisabili)
-                            .delay(journey.getDelay())
-                            .lastStopRegistered(journey.getLastStopRef())
-                            .tripId(journey.getFramedVehicleJourneyRef())
-                            .passengers(journey.getPassengers())
-                            .capacity(journey.getCapacity())
-
+                            .busId(journey.getVehicleRef())
+                            .latitude(journey.getVehicleLocation() != null ? (float) journey.getVehicleLocation().getLatitude()  : 0f)
+                            .longitude(journey.getVehicleLocation() != null ? (float) journey.getVehicleLocation().getLongitude() : 0f)
+                            .speed(speed)
+                            .timestamp(activity.getRecordedAtTime() != null ? Instant.parse(activity.getRecordedAtTime()) : Instant.now())
+                            .wheelchairAccessible(wheelchairAccessible)
+                            .numeroPosti(numeroPosti)
+                            .lastStopRegistered(lastStop)
+                            .tripId(tripId)
+                            .nextStop(nextStop)
                             .build();
 
                     dtoList.add(dto);
@@ -81,6 +85,7 @@ public class SiriConsumerService {
 
                 if (!dtoList.isEmpty()) {
                     telemetrySyncService.saveToInfluxDB(dtoList);
+                    telemetrySyncService.saveToRedis(dtoList);
                 }
             }
         } catch (Exception e) {

@@ -2,25 +2,25 @@ package it.unicas.omnimove.dto.netex;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import jakarta.xml.bind.annotation.XmlElement;
 import lombok.Data;
-
 import java.util.List;
 
 @Data
 public class ServiceJourneyDTO {
-    @JacksonXmlProperty(isAttribute = true)
-    private String id; // Mappa la colonna trips.id
 
-    // Riferimento alla Linea (route_id)
+    @JacksonXmlProperty(isAttribute = true, localName = "id")
+    private String id;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version;
+
     @JacksonXmlProperty(localName = "LineRef")
     private RefDTO lineRef;
 
-    // La lista delle fermate per questo viaggio (scheduled_stops)
+    @JacksonXmlProperty(localName = "extensions")
+    private ServiceJourneyExtensionsDTO extensions;
+
     @JacksonXmlElementWrapper(localName = "calls")
     @JacksonXmlProperty(localName = "Call")
     private List<CallDTO> calls;
-
-    @XmlElement(name = "BusRef")
-    private RefDTO busRef; // <- aggiunge il campo
 }

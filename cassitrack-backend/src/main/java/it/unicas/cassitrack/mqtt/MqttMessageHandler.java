@@ -20,8 +20,6 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Optional;
 
-import static it.unicas.cassitrack.service.ScheduleAdherenceService.statusFromDelay;
-
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -32,6 +30,7 @@ public class MqttMessageHandler implements MessageHandler {
     private final VehicleStateCache vehicleStateCache;
     private final BusRepository busRepository;
     private final it.unicas.cassitrack.service.ScheduleAdherenceService scheduleAdherenceService;
+    private final it.unicas.cassitrack.service.RouteMatchingService routeMatchingService;
 
     private static final double LAT_MIN = 41.40;
     private static final double LAT_MAX = 41.60;
@@ -62,24 +61,27 @@ public class MqttMessageHandler implements MessageHandler {
             Optional<Bus> associatedBus = busRepository.findByCurrentVehicleId(pos.getVehicleId());
 
             Integer busId = associatedBus.map(Bus::getBusId).orElse(null);
+            Boolean wheelchairAccessible = associatedBus.map(Bus::getWheelchairAccessible).orElse(null);
             Integer numeroPosti = associatedBus.map(Bus::getNumeroPosti).orElse(null);
-            Boolean postoDisabili = associatedBus.map(Bus::getPostoDisabili).orElse(null);
 
-            // ── Step 4: Scrittura su InfluxDB (Aggiungiamo informazioni utili allo storico) ──
+            // ── Step 4: Calcolo fermata successiva ────────────────
+            String nextStop = routeMatchingService.nextStopName(
+                    pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId());
+
+            // ── Step 5: Calcolo aderenza (ritardo + stato) PRIMA di Influx ──
+            VehiclePosition entity = toEntity(pos, busId, wheelchairAccessible, numeroPosti, nextStop);
+            scheduleAdherenceService.processBusAdherence(entity);
+            vehicleStateCache.update(pos.getVehicleId(), entity);
+
+            // ── Step 6: Scrittura su InfluxDB col ritardo CALCOLATO da cassitrack ──
             try {
-                writeToInflux(pos, busId, numeroPosti, postoDisabili);
+                writeToInflux(pos, busId, wheelchairAccessible, nextStop, entity.getDelayMinutes());
             } catch (Exception influxError) {
                 log.warn("InfluxDB unavailable, skipping time-series write for vehicle {}: {}",
                         pos.getVehicleId(), influxError.getMessage());
             }
-
-            // ── Step 5: Salva in REDIS (Cache arricchita con i dati statici del bus) ──
-            VehiclePosition entity = toEntity(pos, busId, numeroPosti, postoDisabili);
-            scheduleAdherenceService.processBusAdherence(entity);
-            vehicleStateCache.update(pos.getVehicleId(), entity);
-
-            log.info("Processed [{}] -> Bus ID: {}, Posti: {}, Disabili: {} | lat={}, lon={}",
-                    pos.getVehicleId(), busId, numeroPosti, postoDisabili, pos.getLat(), pos.getLon());
+            log.info("Processed [{}] -> Bus ID: {}, Wheelchair: {} | lat={}, lon={}, Trip ID:={} Last Stop={}, Next Stop={}",
+                    pos.getVehicleId(), busId, wheelchairAccessible, pos.getLat(), pos.getLon(), pos.getTripId(), pos.getLastStopRegistered(), nextStop);
 
         } catch (Exception e) {
             log.error("Failed to process MQTT message from topic [{}]: {}", topic, e.getMessage(), e);
@@ -97,41 +99,44 @@ public class MqttMessageHandler implements MessageHandler {
         return ageSeconds <= MAX_AGE_SECONDS;
     }
 
-    private void writeToInflux(MqttPositionPayload pos, Integer busId, Integer numeroPosti, Boolean postoDisabili) {
+    private void writeToInflux(MqttPositionPayload pos, Integer busId, Boolean wheelchairAccessible, String nextStop, Integer delayMinutes) {
         Point point = Point
                 .measurement("vehicle_position")
                 .addTag("vehicle_id", pos.getVehicleId())
                 .addTag("bus_id", busId != null ? busId.toString() : "UNKNOWN")
                 .addTag("trip_id", pos.getTripId() != null ? pos.getTripId() : "UNKNOWN")
+                .addTag("route_id", pos.getRouteId() != null ? pos.getRouteId() : "UNKNOWN")
                 .addField("lat", pos.getLat())
                 .addField("lon", pos.getLon())
                 .addField("speed_kmh", pos.getSpeedKmh() != null ? pos.getSpeedKmh() : 0.0)
                 .addField("heading_deg", pos.getHeadingDeg() != null ? pos.getHeadingDeg() : 0.0)
-                // Salviamo i posti e l'accessibilità anche nello storico InfluxDB per statistiche future
-                .addField("numero_posti", numeroPosti != null ? numeroPosti : 0)
-                .addField("posto_disabili", postoDisabili != null ? postoDisabili : false)
+                .addField("wheelchair_accessible", wheelchairAccessible != null ? wheelchairAccessible : false)
                 .time(pos.getTimestamp(), WritePrecision.S);
 
-        if (pos.getBleDeviceCount() != null) point.addField("ble_device_count", pos.getPassengers() /*.getBleDeviceCount*/);
+        if (pos.getBleDeviceCount() != null) point.addField("ble_device_count", pos.getBleDeviceCount());
         if (pos.getBatteryVoltage() != null) point.addField("battery_voltage", pos.getBatteryVoltage());
         if (pos.getPassengers() != null) point.addField("passengers", pos.getPassengers());
         if (pos.getCapacity()   != null) point.addField("capacity",   pos.getCapacity());
-        if (pos.getDelayMinutes() != null) {
-            point.addField("delay", pos.getDelayMinutes());
+        if (delayMinutes != null) {
+            point.addField("delay", delayMinutes);
         }
-        if (pos.getNearestStop() != null) {
-            point.addField("last_stop_registered", pos.getNearestStop());
+        if (pos.getLastStopRegistered() != null) {
+            point.addField("last_stop_registered", pos.getLastStopRegistered());
+        }
+
+        if (nextStop != null) {
+            point.addField("next_stop", nextStop);
         }
 
         influxWriteApi.writePoint(point);
     }
 
-    private VehiclePosition toEntity(MqttPositionPayload pos, Integer busId, Integer numeroPosti, Boolean postoDisabili) {
+    private VehiclePosition toEntity(MqttPositionPayload pos, Integer busId, Boolean wheelchairAccessible, Integer numeroPosti, String nextStop) {
         return VehiclePosition.builder()
                 .vehicleId(pos.getVehicleId())
                 .busId(busId)
                 .numeroPosti(numeroPosti)
-                .postoDisabili(postoDisabili)
+                .wheelchairAccessible(wheelchairAccessible)
                 .timestamp(pos.getTimestamp())
                 .lat(pos.getLat())
                 .lon(pos.getLon())
@@ -142,12 +147,12 @@ public class MqttMessageHandler implements MessageHandler {
                 .firmwareVersion(pos.getFirmwareVersion())
                 .passengers(pos.getPassengers())
                 .capacity(pos.getCapacity())
-                .delayMinutes(pos.getDelayMinutes())
-                .nearestStop(pos.getNearestStop())
-                .nearestStopId(pos.getNearestStopId())
+                .lastStopRegistered(pos.getLastStopRegistered())
+                .lastStopRegisteredId(pos.getLastStopRegisteredId())
                 .tripId(pos.getTripId())
                 .routeId(pos.getRouteId())
                 .routeName(pos.getRouteName())
+                .nextStop(nextStop)
                 .scheduleStatus(VehiclePosition.ScheduleStatus.UNKNOWN)
                 .receivedAt(Instant.now())
                 .build();

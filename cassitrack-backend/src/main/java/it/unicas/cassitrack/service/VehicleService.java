@@ -78,7 +78,7 @@ public class VehicleService {
                 .vehicleId(pos.getVehicleId())
                 .busId(pos.getBusId())
                 .numeroPosti(pos.getNumeroPosti())
-                .postoDisabili(pos.getPostoDisabili())
+                .wheelchairAccessible(pos.getWheelchairAccessible())
                 .lat(pos.getLat())
                 .lon(pos.getLon())
                 .speedKmh(pos.getSpeedKmh())
@@ -87,10 +87,10 @@ public class VehicleService {
                 .routeName(pos.getRouteName())
                 .scheduleStatus(status)
                 .delayMinutes(pos.getDelayMinutes())
-                .nextStopId(pos.getNearestStopId())
-                .nextStopName(pos.getNearestStop())
+                .nextStopId(pos.getLastStopRegisteredId())
+                .nextStopName(pos.getLastStopRegistered())
                 .upcomingStopName(routeMatchingService.nextStopName(
-                        pos.getTripId(), pos.getRouteId(), pos.getNearestStopId()))
+                        pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId()))
                 .etaSeconds(null)
                 .estimatedPassengers(estimatedPassengers)
                 .crowdingLevel(crowdingLevel)
@@ -100,17 +100,6 @@ public class VehicleService {
                 .build();
     }
 
-    /**
-     * Translates a route ID into a human-readable name.
-     * Will be replaced by a DB lookup once routes are stored.
-     */
-    private String resolveRouteName(String routeId) {
-        if (routeId == null) return null;
-        return switch (routeId) {
-            case "LINEA-16" -> "Linea 16 - Campus Folcara / Stazione";
-            default -> routeId;
-        };
-    }
 
     /**
      * Rough crowding classification.

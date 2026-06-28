@@ -68,6 +68,22 @@ public class CassitrackClient {
         }
     }
 
+    public List<StopArrivalDTO> getScheduleAtStop(String stopId) {
+        try {
+            StopArrivalDTO[] schedule = webClient.get()
+                .uri("/stops/{stopId}/schedule", stopId)
+                .retrieve()
+                .bodyToMono(StopArrivalDTO[].class)
+                .block();
+            if (schedule == null) return Collections.emptyList();
+            return Arrays.asList(schedule);
+        } catch (Exception e) {
+            log.warn("CASSITRACK /stops/{}/schedule unreachable: {}",
+                stopId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     public boolean isAvailable() {
         try {
             webClient.get().uri("/vehicles")

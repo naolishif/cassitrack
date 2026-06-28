@@ -15,19 +15,20 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
 
     // ── Linea diretta origine → dest ───────────────────────────────
     @Query("""
-        SELECT r.shortName AS shortName, r.longName AS longName,
-               so.arrivalSeconds AS originSec, sd.arrivalSeconds AS destSec, t.id AS tripId
-        FROM ScheduledStop so
-             JOIN so.trip t
-             JOIN t.route r,
-             ScheduledStop sd
-        WHERE sd.trip = t
-          AND so.stopId = :origin
-          AND sd.stopId = :dest
-          AND so.stopSequence < sd.stopSequence
-          AND r.active = true
-        ORDER BY (sd.arrivalSeconds - so.arrivalSeconds)
-        """)
+    SELECT r.shortName AS shortName, r.longName AS longName,
+           r.id AS routeId,
+           so.arrivalSeconds AS originSec, sd.arrivalSeconds AS destSec, t.id AS tripId
+    FROM ScheduledStop so
+         JOIN so.trip t
+         JOIN t.route r,
+         ScheduledStop sd
+    WHERE sd.trip = t
+      AND so.stopId = :origin
+      AND sd.stopId = :dest
+      AND so.stopSequence < sd.stopSequence
+      AND r.active = true
+    ORDER BY (sd.arrivalSeconds - so.arrivalSeconds)
+    """)
     List<ConnectingLine> findLinesConnecting(@Param("origin") String origin,
                                              @Param("dest") String dest);
 
@@ -37,6 +38,7 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
         Integer getOriginSec();
         Integer getDestSec();
         String getTripId();
+        String getRouteId();
     }
 
     // ── Soluzione con un cambio: origine → X → dest ────────────────
@@ -88,4 +90,30 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
         String  getL1TripId();
         String  getL2TripId();
     }
+
+    /**
+     * Tutte le fermate schedulate a uno stop specifico per una linea (routeShort),
+     * ordinate per ora di arrivo. Usato come fallback DB in waitMinutesFromSchedule.
+     */
+    @Query("""
+    SELECT ss FROM ScheduledStop ss
+    JOIN ss.trip t
+    JOIN t.route r
+    WHERE ss.stopId    = :stopId
+      AND r.shortName  = :routeShort
+    ORDER BY ss.arrivalSeconds
+    """)
+    List<ScheduledStop> findByStopIdAndRouteShort(@Param("stopId")     String stopId,
+                                                  @Param("routeShort") String routeShort);
+
+    /**
+     * Tutte le fermate schedulate a uno stop, ordinate per ora di arrivo.
+     * Usato come fallback DB quando routeShort non è disponibile.
+     */
+    @Query("""
+    SELECT ss FROM ScheduledStop ss
+    WHERE ss.stopId = :stopId
+    ORDER BY ss.arrivalSeconds
+    """)
+    List<ScheduledStop> findByStopId(@Param("stopId") String stopId);
 }

@@ -26,7 +26,7 @@ public class VehicleStatusDTO {
     private Integer busId;
 
     private Integer numeroPosti;    // 🚌
-    private Boolean postoDisabili;
+    private Boolean wheelchairAccessible;
 
     /** Current latitude */
     private Double lat;

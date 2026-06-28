@@ -30,11 +30,20 @@ public class StopArrivalDTO {
     @JsonProperty("vehicle_id")
     private String vehicleId;
 
+    @JsonProperty("trip_id")
+    private String tripId;
+
     @JsonProperty("route_id")
     private String routeId;
 
     @JsonProperty("route_name")
     private String routeName;
+
+    @JsonProperty("route_short_name")
+    private String routeShortName;
+
+    @JsonProperty("crowding_level")
+    private String crowdingLevel;
 
     /** The arrival time according to the static GTFS schedule */
     @JsonProperty("scheduled_arrival")

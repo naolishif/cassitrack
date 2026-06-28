@@ -20,6 +20,18 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
     List<ScheduledStop> findByTripIdOrderByStopSequenceAsc(String tripId);
 
     @Query("""
+        SELECT ss FROM ScheduledStop ss
+        JOIN FETCH ss.trip t
+        JOIN FETCH t.route r
+        WHERE ss.stopId = :stopId
+          AND ss.arrivalSeconds >= :fromSeconds
+        ORDER BY ss.arrivalSeconds ASC
+        """)
+    List<ScheduledStop> findUpcomingByStopId(
+            @Param("stopId")      String stopId,
+            @Param("fromSeconds") int    fromSeconds);
+
+    @Query("""
     SELECT ss.trip.id FROM ScheduledStop ss
     WHERE ss.trip.route.id = :routeId
     GROUP BY ss.trip.id
@@ -39,4 +51,5 @@ public interface ScheduledStopRepository extends JpaRepository<ScheduledStop, Lo
             "s.id, s.name, s.lat, s.lon " +
             "ORDER BY ss.trip.route.id, MIN(ss.stopSequence)")
     List<Object[]> findStopsGroupedByRoute();
+
 }

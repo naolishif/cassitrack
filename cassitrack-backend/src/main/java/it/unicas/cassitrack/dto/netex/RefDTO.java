@@ -5,14 +5,10 @@ import lombok.Data;
 
 @Data
 public class RefDTO {
-    @JacksonXmlProperty(isAttribute = true)
+
+    @JacksonXmlProperty(isAttribute = true, localName = "ref")
     private String ref;
 
-    // Costruttore vuoto per Jackson
     public RefDTO() {}
-
-    // Costruttore per comodità nostra
-    public RefDTO(String ref) {
-        this.ref = ref;
-    }
+    public RefDTO(String ref) { this.ref = ref; }
 }
