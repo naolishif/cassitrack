@@ -23,7 +23,6 @@ import random
 import time
 import argparse
 from datetime import datetime, timezone
-
 import paho.mqtt.client as mqtt
 import psycopg2
 import psycopg2.extras

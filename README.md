@@ -199,6 +199,7 @@ pip install paho-mqtt
 # Simulate 2 buses, publish every 15 seconds
 cd Desktop\cassitrack-fresh
 python gps_simulator.py --buses 2 --interval 15
+python gps_simulator2.py
 ```
 
 Expected output:

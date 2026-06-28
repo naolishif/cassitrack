@@ -79,7 +79,7 @@ jwt:
 # ── SSE API token    ──────────────────────────────────────────────
 sse:
   api-token: ${SSE_API_TOKEN}
-
+  
 # ── OpenAPI / Swagger UI ──────────────────────────────────────────
 springdoc:
   api-docs:

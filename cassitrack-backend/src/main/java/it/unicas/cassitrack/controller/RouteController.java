@@ -30,7 +30,7 @@ public class RouteController {
 
         List<RouteGeometry> out = new ArrayList<>();
         for (Route r : routeRepository.findAll()) {
-            if (!r.isActive()) continue;;
+            if (!r.isActive()) continue;
             List<StopPoint> pts = new ArrayList<>();
             for (var ss : scheduledStopRepository.findRepresentativeSequence(r.getId())) {
                 Stop s = stops.get(ss.getStopId());
