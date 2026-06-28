@@ -60,7 +60,7 @@ def load_buses(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT bus_id, targa, current_vehicle_id,
-                   numero_posti, posto_disabili
+                   numero_posti, wheelchair_accessible
             FROM buses
             WHERE disponibile = TRUE
             ORDER BY bus_id
@@ -214,7 +214,7 @@ class BusSimulator:
         self.vehicle_id  = bus_row["current_vehicle_id"]   # e.g. MAGNI-001
         self.targa       = bus_row["targa"]
         self.capacity    = bus_row["numero_posti"]
-        self.wheelchair  = bus_row["posto_disabili"]
+        self.wheelchair  = bus_row["wheelchair_accessible"]
         self.conn        = conn
 
         # Simulated passenger state

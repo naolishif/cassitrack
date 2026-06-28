@@ -5,15 +5,19 @@ import lombok.Data;
 
 @Data
 public class LineDTO {
-    @JacksonXmlProperty(isAttribute = true)
-    private String id; // Mappa la colonna routes.id
+
+    @JacksonXmlProperty(isAttribute = true, localName = "id")
+    private String id;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version;
 
     @JacksonXmlProperty(localName = "Name")
-    private String name; // Mappa la colonna routes.long_name
+    private String name;
 
     @JacksonXmlProperty(localName = "ShortName")
-    private String shortName; // Mappa la colonna routes.short_name
+    private String shortName;
 
-    @JacksonXmlProperty(localName = "Color")
-    private String color; // Mappa la colonna routes.color
+    @JacksonXmlProperty(localName = "TransportMode")
+    private String transportMode;
 }

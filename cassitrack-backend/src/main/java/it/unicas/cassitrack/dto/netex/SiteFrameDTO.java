@@ -7,8 +7,14 @@ import java.util.List;
 
 @Data
 public class SiteFrameDTO {
-    @JacksonXmlElementWrapper(localName = "stopPoints")
-    @JacksonXmlProperty(localName = "ScheduledStopPoint")
-    private List<ScheduledStopPointDTO> stopPoints;
-}
 
+    @JacksonXmlProperty(isAttribute = true, localName = "id")
+    private String id = "CASSITRACK:SiteFrame:1";
+
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version = "1";
+
+    @JacksonXmlElementWrapper(localName = "stopPlaces")
+    @JacksonXmlProperty(localName = "StopPlace")
+    private List<StopPlaceDTO> stopPlaces;
+}

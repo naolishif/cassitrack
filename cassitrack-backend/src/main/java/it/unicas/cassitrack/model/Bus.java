@@ -19,8 +19,8 @@ public class Bus {
     @Column(name = "numero_posti", nullable = false)
     private Integer numeroPosti;
 
-    @Column(name = "posto_disabili", nullable = false)
-    private Boolean postoDisabili;
+    @Column(name = "wheelchair_accessible", nullable = false)
+    private Boolean wheelchairAccessible;
 
     @Column(nullable = false)
     private Boolean disponibile;

@@ -30,19 +30,28 @@ public class InfluxService {
     @Value("${influx.bucket}")
     private String bucket;
 
-    public List<BusTelemetryDTO> getLatestTelemetry() {
+    /**
+     * Recupera l'ultima telemetria. Se routeId è non-null e non vuoto, applica anche il filtro per route_id.
+     */
+    public List<BusTelemetryDTO> getLatestTelemetry(String routeId) {
         List<BusTelemetryDTO> telemetryList = new ArrayList<>();
         InfluxDBClient client = InfluxDBClientFactory.create(influxUrl, token.toCharArray(), influxOrg, bucket);
 
         try {
-            // QUERY AGGIORNATA: Estrae vehicle_position con la funzione pivot per l'analisi dei dati
-            String fluxQuery = String.format(
-                    "from(bucket: \"%s\") " +
-                            "|> range(start: -1h) " +
-                            "|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") " +
-                            "|> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")",
-                    bucket
-            );
+            // Costruisco dinamicamente la query Flux aggiungendo il filtro su route_id quando richiesto
+            StringBuilder flux = new StringBuilder();
+            flux.append(String.format("from(bucket: \"%s\") ", bucket));
+            flux.append("|> range(start: -1h) ");
+            flux.append("|> filter(fn: (r) => r[\"_measurement\"] == \"vehicle_position\") ");
+
+            if (routeId != null && !routeId.trim().isEmpty()) {
+                // aggiunge il filtro route_id (stringa)
+                flux.append(String.format("|> filter(fn: (r) => r[\"route_id\"] == \"%s\") ", routeId));
+            }
+
+            flux.append("|> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")");
+
+            String fluxQuery = flux.toString();
 
             List<FluxTable> tables = client.getQueryApi().query(fluxQuery);
 
@@ -64,9 +73,10 @@ public class InfluxService {
 
                             .timestamp(record.getTime())
                             .numeroPosti(record.getValueByKey("numero_posti") != null ? ((Number) record.getValueByKey("numero_posti")).intValue() : 0)
-                            .postoDisabili(record.getValueByKey("posto_disabili") != null ? (Boolean) record.getValueByKey("posto_disabili") : false)
+                            .wheelchairAccessible(record.getValueByKey("wheelchair_accessible") != null ? (Boolean) record.getValueByKey("wheelchair_accessible") : false)
                             .capacity(record.getValueByKey("capacity") != null ? ((Number) record.getValueByKey("capacity")).intValue() : 0)
                             .passengers(record.getValueByKey("passengers") != null ? ((Number) record.getValueByKey("passengers")).intValue() : 0)
+                            .nextStop(record.getValueByKey("next_stop") != null ? record.getValueByKey("next_stop").toString() : null)
                             .build();
 
                     telemetryList.add(dto);
@@ -82,6 +92,11 @@ public class InfluxService {
         }
 
         return telemetryList;
+    }
+
+    // Compatibilità: overload senza parametri
+    public List<BusTelemetryDTO> getLatestTelemetry() {
+        return getLatestTelemetry(null);
     }
 
     public List<Map<String, Object>> getBusiestHours() {
