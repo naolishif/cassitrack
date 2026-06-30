@@ -103,25 +103,4 @@ public class RateLimiterService {
     public boolean allowJourneySearch(String email) {
         return isAllowed("rl:journey-search:" + email, 30, Duration.ofHours(1));
     }
-}────────────
-
-    /** 5 registrations per IP per hour */
-    public boolean allowRegister(String ip) {
-        return isAllowed("rl:register:" + ip, 5, Duration.ofHours(1));
-    }
-
-    /** 3 resend-verification requests per email per hour */
-    public boolean allowResendVerification(String email) {
-        return isAllowed("rl:resend:" + email, 3, Duration.ofHours(1));
-    }
-
-    /** 3 forgot-password requests per email per hour */
-    public boolean allowForgotPassword(String email) {
-        return isAllowed("rl:forgot:" + email, 3, Duration.ofHours(1));
-    }
-
-    /** 30 journey searches per user per hour */
-    public boolean allowJourneySearch(String email) {
-        return isAllowed("rl:journey-search:" + email, 30, Duration.ofHours(1));
-    }
 }
