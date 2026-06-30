@@ -76,4 +76,22 @@ public class SecurityAuditService {
     public void weakPasswordRejected(String email, String ip) {
         log.warn("WEAK_PASSWORD_REJECTED email={} ip={}", maskEmail(email), maskIp(ip));
     }
+
+    public void adminUserCreated(String adminEmail, String targetEmail, String role) {
+        log.info("ADMIN_USER_CREATED admin={} target={} role={}",
+                maskEmail(adminEmail), maskEmail(targetEmail), role);
+    }
+
+    public void adminUserDeleted(String adminEmail, long targetId, String targetEmail) {
+        log.warn("ADMIN_USER_DELETED admin={} targetId={} target={}",
+                maskEmail(adminEmail), targetId, maskEmail(targetEmail));
+    }
+
+    public void adminListedUsers(String adminEmail, int count) {
+        log.info("ADMIN_USER_LIST_FETCHED admin={} count={}", maskEmail(adminEmail), count);
+    }
+
+    public void rateLimitExceeded(String maskedKey, int maxRequests, Object window) {
+        log.warn("RATE_LIMIT_EXCEEDED key='{}' limit={} window={}", maskedKey, maxRequests, window);
+    }
 }

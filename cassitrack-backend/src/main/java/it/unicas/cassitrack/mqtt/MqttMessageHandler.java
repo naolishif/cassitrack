@@ -8,6 +8,7 @@ import it.unicas.cassitrack.dto.MqttPositionPayload;
 import it.unicas.cassitrack.model.Bus;
 import it.unicas.cassitrack.model.VehiclePosition;
 import it.unicas.cassitrack.repository.BusRepository;
+import it.unicas.cassitrack.service.SecurityAuditService;
 import it.unicas.cassitrack.service.VehicleStateCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class MqttMessageHandler implements MessageHandler {
     private final VehicleStateCache vehicleStateCache;
     private final BusRepository busRepository;
     private final it.unicas.cassitrack.service.ScheduleAdherenceService scheduleAdherenceService;
+    private final SecurityAuditService securityAuditService;
 
     private static final double LAT_MIN = 41.40;
     private static final double LAT_MAX = 41.60;
@@ -53,7 +55,7 @@ public class MqttMessageHandler implements MessageHandler {
 
             // ── Step 2: Validate ──────────────────────────────────
             if (!isValid(pos)) {
-                log.warn("Invalid MQTT payload from topic [{}], discarding: {}", topic, payload);
+                securityAuditService.mqttInvalidPayload(topic);
                 return;
             }
 

@@ -31,6 +31,7 @@ import java.time.Duration;
 public class RateLimiterService {
 
     private final StringRedisTemplate redis;
+    private final SecurityAuditService securityAuditService;
 
     /**
      * @param key         Unique string identifying the bucket (e.g. "rl:register:192.168.1.1")
@@ -49,8 +50,7 @@ public class RateLimiterService {
             }
 
             if (count > maxRequests) {
-                log.warn("[RATE-LIMIT] Key '{}' exceeded {} req/{} (count={})",
-                        key, maxRequests, window, count);
+                securityAuditService.rateLimitExceeded(maskKey(key), maxRequests, window);
                 return false;
             }
             return true;
@@ -62,7 +62,48 @@ public class RateLimiterService {
         }
     }
 
+    /** Masks the PII segment of a rate-limit key: "rl:login:mar@x.com" → "rl:login:m***@x.com" */
+    private String maskKey(String key) {
+        int last = key.lastIndexOf(':');
+        if (last < 0) return "***";
+        String prefix = key.substring(0, last + 1);
+        String value  = key.substring(last + 1);
+        // email
+        int at = value.indexOf('@');
+        if (at > 0) return prefix + value.charAt(0) + "***" + value.substring(at);
+        // IPv4
+        int dot = value.lastIndexOf('.');
+        if (dot > 0) return prefix + value.substring(0, dot) + ".xxx";
+        // IPv6
+        if (value.contains(":")) {
+            String[] parts = value.split(":");
+            return prefix + parts[0] + ":xxx";
+        }
+        return prefix + "***";
+    }
+
     // ── Convenience methods ─────────────────────────────────────────
+
+    /** 5 registrations per IP per hour */
+    public boolean allowRegister(String ip) {
+        return isAllowed("rl:register:" + ip, 5, Duration.ofHours(1));
+    }
+
+    /** 3 resend-verification requests per email per hour */
+    public boolean allowResendVerification(String email) {
+        return isAllowed("rl:resend:" + email, 3, Duration.ofHours(1));
+    }
+
+    /** 3 forgot-password requests per email per hour */
+    public boolean allowForgotPassword(String email) {
+        return isAllowed("rl:forgot:" + email, 3, Duration.ofHours(1));
+    }
+
+    /** 30 journey searches per user per hour */
+    public boolean allowJourneySearch(String email) {
+        return isAllowed("rl:journey-search:" + email, 30, Duration.ofHours(1));
+    }
+}────────────
 
     /** 5 registrations per IP per hour */
     public boolean allowRegister(String ip) {

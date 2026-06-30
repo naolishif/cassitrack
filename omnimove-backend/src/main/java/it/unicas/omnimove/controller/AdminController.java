@@ -7,6 +7,7 @@ import it.unicas.omnimove.dto.UserDTO;
 import it.unicas.omnimove.model.User;
 import it.unicas.omnimove.repository.UserRepository;
 import it.unicas.omnimove.service.AnalyticsService;
+import it.unicas.omnimove.service.SecurityAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,7 @@ public class AdminController {
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final AnalyticsService analyticsService;
+    private final SecurityAuditService securityAuditService;
 
     private UserDTO toDTO(User u) {
         return UserDTO.builder()
@@ -52,7 +54,7 @@ public class AdminController {
                 .stream().map(this::toDTO)
                 .collect(Collectors.toList());
 
-        log.info("Admin {} fetched user list ({} users)", principal.getUsername(), users.size());
+        securityAuditService.adminListedUsers(principal.getUsername(), users.size());
         return ResponseEntity.ok(users);
     }
 
@@ -82,7 +84,7 @@ public class AdminController {
                 .build();
         userRepo.save(user);
 
-        log.info("Admin {} created user: {} ({})", principal.getUsername(), req.getEmail(), role);
+        securityAuditService.adminUserCreated(principal.getUsername(), req.getEmail(), role);
         return ResponseEntity.ok(toDTO(user));
     }
 
@@ -104,7 +106,7 @@ public class AdminController {
                         .<Object>body(Map.of("message", "Cannot delete another admin"));
 
             userRepo.delete(target);
-            log.warn("Admin {} deleted user {} ({})", principal.getUsername(), id, target.getEmail());
+            securityAuditService.adminUserDeleted(principal.getUsername(), id, target.getEmail());
             return ResponseEntity.ok().<Object>body(Map.of("message", "User deleted", "id", id));
         }).orElse(ResponseEntity.notFound().<Object>build());
     }

@@ -55,4 +55,12 @@ public class SecurityAuditService {
     public void logout(String email) {
         log.info("LOGOUT email={}", maskEmail(email));
     }
+
+    public void rateLimitExceeded(String maskedKey, int maxRequests, Object window) {
+        log.warn("RATE_LIMIT_EXCEEDED key='{}' limit={} window={}", maskedKey, maxRequests, window);
+    }
+
+    public void mqttInvalidPayload(String topic) {
+        log.warn("MQTT_INVALID_PAYLOAD topic={}", topic);
+    }
 }
