@@ -84,7 +84,6 @@ services:
       # Cassitrack connection
       CASSITRACK_URL: ${CASSITRACK_URL:http://cassitrack-api:8080/api/v1}
       CASSITRACK_API_TOKEN: ${CASSITRACK_API_TOKEN}
-      CASSITRACK_NETEX_URL: ${CASSITRACK_NETEX_URL:http://cassitrack-api:8080/api/static/netex}
       # External APIs
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       WEATHER_API_KEY: ${WEATHER_API_KEY}
@@ -93,7 +92,7 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:http://localhost:8081}
       APP_BASE_URL: ${APP_BASE_URL:http://localhost:8081}
     ports:
-      - "8081:8081"
+      - "8180:8081"
 
 volumes:
   omnimove_postgres_data:
