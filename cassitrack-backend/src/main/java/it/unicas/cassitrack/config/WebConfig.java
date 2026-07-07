@@ -9,7 +9,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        // Automatically forwards http://localhost:8080/ straight to your login screen
+        // Automatically forwards http://localhost:8280/ straight to your login screen
         registry.addViewController("/").setViewName("forward:/cassitrack-login.html");
     }
 }

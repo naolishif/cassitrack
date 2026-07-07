@@ -31,7 +31,7 @@ USER cassitrack
 COPY --from=builder /build/target/*.jar app.jar
 
 # Expose the Spring Boot port
-EXPOSE 8080
+EXPOSE 8280
 
 # JVM flags optimised for containers
 ENTRYPOINT ["java", \

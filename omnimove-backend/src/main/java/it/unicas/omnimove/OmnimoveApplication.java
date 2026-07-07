@@ -10,12 +10,12 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 /**
  * OMNIMOVE — Multimodal Journey Planner
  *
- * Runs on port 8081. Talks to CASSITRACK (port 8080)
+ * Runs on port 8180. Talks to CASSITRACK (port 8280)
  * via REST API only. No shared database or code imports.
  *
  * Two-server architectures
- * CASSITRACK :8080 (MAGNI fleet monitoring)
- * OMNIMOVE   :8081 (passenger journey planning)
+ * CASSITRACK :8280 (MAGNI fleet monitoring)
+ * OMNIMOVE   :8180 (passenger journey planning)
  */
 
 @SpringBootApplication

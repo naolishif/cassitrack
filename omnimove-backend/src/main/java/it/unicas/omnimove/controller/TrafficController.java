@@ -21,7 +21,7 @@ import java.util.List;
  * No user coordinates required — Google Maps uses the route start
  * as origin and the requested stop as destination.
  *
- * Swagger UI: http://localhost:8081/api/swagger-ui
+ * Swagger UI: http://localhost:8180/api/swagger-ui
  */
 @RestController
 @RequestMapping("/api/v1/traffic")

@@ -23,7 +23,7 @@ public class SiriConsumerService {
     // Disabilitato: i dati arrivano ora tramite SSE stream da CassiTrack (TelemetrySyncService)
     // @Scheduled(fixedRate = 5000)
     public void fetchAndProcessSiriData() {
-        String url = "http://localhost:8080/api/v1/siri/vehicle-monitoring";
+        String url = "http://localhost:8280/api/v1/siri/vehicle-monitoring";
 
         try {
             Siri siriResponse = restTemplate.getForObject(url, Siri.class);

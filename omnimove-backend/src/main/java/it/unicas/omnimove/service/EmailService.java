@@ -27,7 +27,7 @@ public class EmailService {
     @Value("${omnimove.mail.from:OMNIMOVE <noreply@omnimove.it>}")
     private String from;
 
-    @Value("${omnimove.mail.base-url:http://localhost:8081}")
+    @Value("${omnimove.mail.base-url:http://localhost:8180}")
     private String baseUrl;
 
     // ── Public API ──────────────────────────────────────────────────

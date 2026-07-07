@@ -25,7 +25,7 @@ import java.util.Map;
  * These endpoints are PUBLIC (no authentication required).
  * They are the primary integration point consumed by OMNIMOVE.
  *
- * Swagger UI: http://localhost:8080/api/swagger-ui
+ * Swagger UI: http://localhost:8280/api/swagger-ui
  */
 @RestController
 @RequestMapping("/api/v1/vehicles")

@@ -23,10 +23,10 @@ It receives GPS positions from buses (via MQTT), stores them, and
 exposes a REST API so OMNIMOVE and the fleet dashboard can show live bus locations and estimated arrival times.
 ---
 
-| System | What it does | Port |
-|---|---|---|
-| **CASSITRACK** | Real-time fleet monitoring — live bus positions, ETA, schedule adherence | `8080` |
-| **OMNIMOVE** | Multimodal journey planner — bus, walk, bike, scooter with Green Index CO₂ scoring | `8081` |
+| System | What it does | Port   |
+|---|---|--------|
+| **CASSITRACK** | Real-time fleet monitoring — live bus positions, ETA, schedule adherence | `8280` |
+| **OMNIMOVE** | Multimodal journey planner — bus, walk, bike, scooter with Green Index CO₂ scoring | `8180` |
 
 
 
@@ -37,7 +37,7 @@ Bus (ESP32 GPS tracker)  ←→  GPS Simulator (Python)
          ↓  LoRa / MQTT
 Eclipse Mosquitto Broker
          ↓
-Spring Boot Backend (port 8080)
+Spring Boot Backend (port 8280)
   ├── PostgreSQL + PostGIS   (routes, stops, schedules)
   ├── InfluxDB               (GPS time-series history)
   ├── Redis                  (live position cache)
@@ -260,7 +260,7 @@ ipconfig
 
 Update the API URL in `cassitrack-pwa/app.js` line 1:
 ```javascript
-const API = 'http://YOUR-IP-HERE:8080/api/v1';
+const API = 'http://YOUR-IP-HERE:8280/api/v1';
 ```
 
 Also add your IP to the CORS allowed origins in `SecurityConfig.java`:

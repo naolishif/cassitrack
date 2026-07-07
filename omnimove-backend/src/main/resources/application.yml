@@ -1,6 +1,6 @@
 # ── OMNIMOVE Server ───────────────────────────────────────────
-# Multimodal Journey Planner — port 8081
-# Communicates with CASSITRACK (port 8080) via REST API ONLY
+# Multimodal Journey Planner — port 8180
+# Communicates with CASSITRACK (port 8280) via REST API ONLY
 
 spring:
   application:
@@ -58,16 +58,16 @@ spring:
         debug: false
 
 server:
-  port: 8081
+  port: 8180
 
 # ── CASSITRACK API Connection ─────────────────────────────────
 # OMNIMOVE calls CASSITRACK for live bus data
 cassitrack:
   api:
-    base-url: ${CASSITRACK_URL:http://localhost:8080/api/v1}
+    base-url: ${CASSITRACK_URL:http://localhost:8280/api/v1}
     token: ${CASSITRACK_API_TOKEN}
   netex:
-    url: ${CASSITRACK_NETEX_URL:http://localhost:8080/api/static/netex}
+    url: ${CASSITRACK_NETEX_URL:http://localhost:8280/api/static/netex}
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:
@@ -143,7 +143,7 @@ google:
 # ── OMNIMOVE App Config ───────────────────────────────────────
 omnimove:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8180,http://localhost:3000}
   mail:
     from: "OMNIMOVE <${MAIL_USERNAME:omnimove.noreply@gmail.com}>"
-    base-url: ${APP_BASE_URL:http://localhost:8081}
+    base-url: ${APP_BASE_URL:http://localhost:8180}

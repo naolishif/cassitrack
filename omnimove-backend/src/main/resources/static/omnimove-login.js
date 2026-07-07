@@ -140,7 +140,7 @@ async function showForgotPanel() {
             const data = await r.json();
             showMsg(data.message || 'If that email is registered you will receive a reset link shortly.', 'ok');
         } catch (_) {
-            showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
+            showMsg('Cannot reach OMNIMOVE server. Check it is running on :8180', 'err');
         }
 
         // V-04 FIX: no localStorage write here — this is a forgot-password flow, not login.
@@ -235,7 +235,7 @@ async function handleLogin(e) {
             }
         }
     } catch (err) {
-        showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
+        showMsg('Cannot reach OMNIMOVE server. Check it is running on :8180', 'err');
     } finally {
         btn.disabled = false; btn.textContent = 'Sign In';
     }
@@ -292,7 +292,7 @@ async function handleRegister(e) {
             showMsg(data.message || data.error || 'Registration failed', 'err');
         }
     } catch (err) {
-        showMsg('Cannot reach OMNIMOVE server. Check it is running on :8081', 'err');
+        showMsg('Cannot reach OMNIMOVE server. Check it is running on :8180', 'err');
     } finally {
         btn.disabled = false; btn.textContent = 'Create Account';
     }

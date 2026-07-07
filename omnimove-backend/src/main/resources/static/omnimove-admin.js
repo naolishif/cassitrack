@@ -28,7 +28,7 @@ function escHtml(s) {
 })();
 
 // ── API helper con JWT ─────────────────────────────────────────────────
-const API_BASE = '/api/v1';  // relativo — OMNIMOVE porta 8081
+const API_BASE = '/api/v1';  // relativo — OMNIMOVE porta 8180
 
 async function apiFetch(path, options = {}) {
     // V-04 FIX: Token is in httpOnly cookie (sent automatically by browser).

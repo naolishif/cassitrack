@@ -31,7 +31,7 @@ USER omnimove
 COPY --from=builder /build/target/*.jar app.jar
 
 # Expose the Spring Boot port
-EXPOSE 8081
+EXPOSE 8180
 
 # JVM flags optimised for containers
 ENTRYPOINT ["java", \

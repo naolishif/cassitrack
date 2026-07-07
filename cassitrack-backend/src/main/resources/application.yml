@@ -49,7 +49,7 @@ spring:
 
 # ── Server ───────────────────────────────────────────────────────
 server:
-  port: 8080
+  port: 8280
   #servlet:
   #  context-path: /
 
@@ -119,7 +119,7 @@ logging:
 # (e.g. GTFS-RT, SIRI, vehicle positions) directly from the browser.
 cassitrack:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:8081}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8280,http://localhost:8180}
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:

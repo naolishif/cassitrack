@@ -10,7 +10,7 @@
     // script ever runs), matching how cassitrack-admin.js has no client-side
     // gate either. Removed.
 
-    const API          = '/api/v1';                        // CASSITRACK — fleet, ETA  (relativo, porta 8080)
+    const API          = '/api/v1';                        // CASSITRACK — fleet, ETA  (relativo, porta 8280)
 
     // XSS defense: escape any API-supplied string before inserting into innerHTML
     function escHtml(s) {
@@ -37,7 +37,7 @@
         root.querySelectorAll('[data-width-pct]').forEach(el => { el.style.width = el.dataset.widthPct + '%'; });
     }
 
-    const OMNIMOVE_API = 'http://localhost:8081/api/v1';   // OMNIMOVE — journey planner, AI (porta 8081)
+    const OMNIMOVE_API = 'http://localhost:8180/api/v1';   // OMNIMOVE — journey planner, AI (porta 8180)
     const REFRESH = 15000;
     const SC = {
         ON_TIME:'#22C55E',SLIGHTLY_LATE:'#F59E0B',

@@ -146,7 +146,7 @@ services:
       # Weather
       WEATHER_API_KEY: ${WEATHER_API_KEY}
     ports:
-      - "8080:8080"
+      - "8280:8080"
     # NOTE: comment out the 'build' block and use 'image' below
     # if you want to run infra only and start Spring Boot from IntelliJ.
     profiles:
