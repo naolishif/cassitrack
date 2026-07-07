@@ -13,11 +13,12 @@ public class BusTelemetryDTO {
     private float speed;
     private int bleDeviceCount;
     private Instant timestamp;
-    private Boolean postoDisabili;
+    private Boolean wheelchairAccessible;
     private Integer numeroPosti;
     private Integer delay;
     private String lastStopRegistered;
     private String tripId;
     private Integer passengers;
     private Integer capacity;
+    private String nextStop;
 }

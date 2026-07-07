@@ -146,7 +146,7 @@ VALUES
 INSERT INTO buses (
     targa,
     numero_posti,
-    posto_disabili,
+    wheelchair_accessible,
     disponibile,
     current_vehicle_id
 )

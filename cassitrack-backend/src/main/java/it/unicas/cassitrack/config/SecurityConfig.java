@@ -80,19 +80,17 @@ public class SecurityConfig {
                         .requestMatchers("/error", "/", "/cassitrack-login.html", "/cassitrack-login.css",
                                 "/cassitrack-login.js", "/api/v1/auth/login").permitAll()
 
-                        // ── 2. Public APIs (GTFS, Live Tracking, Swagger) ───────────────
+                        // ── 2. Public APIs (Live Tracking, Swagger) ───────────────
                         .requestMatchers(org.springframework.http.HttpMethod.GET, // Public for OMNIMOVE
                                 "/api/v1/vehicles/**",
                                 "/api/v1/stops/**",
                                 "/api/v1/routes/**",
                                 "/api/v1/siri/**",
-                                "/api/v1/feed/**",
                                 "/api/v1/journeys/**",
                                 "/api/v1/telemetry/latest",
                                 "/api/v1/telemetry/stream"
-                         ).permitAll()
-
-                        .requestMatchers( // Dev tools
+                        ).permitAll()
+                        .requestMatchers( // Dev tools — H2 console removed (disabled in application.yml)
                                 "/ws/**",
                                 "/api/static/**"
                         ).permitAll()
@@ -105,10 +103,6 @@ public class SecurityConfig {
                         ).authenticated()
 
                         // ── 3. Role-Specific Protected HTML ───────────────
-                        // cassitrack-analytics.html was an earlier standalone analytics page;
-                        // its functionality now lives inside the Analytics tab of cassitrack-fleetmanager.html,
-                        // so the dedicated route was removed along with the unused file.
-                        // V-13 FIX (OWASP A05): gate the page's external CSS/JS the same as the page itself
                         .requestMatchers(
                                 "/cassitrack-fleetmanager.html",
                                 "/cassitrack-fleetmanager.css",

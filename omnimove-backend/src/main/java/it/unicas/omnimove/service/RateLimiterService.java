@@ -103,4 +103,9 @@ public class RateLimiterService {
     public boolean allowJourneySearch(String email) {
         return isAllowed("rl:journey-search:" + email, 30, Duration.ofHours(1));
     }
+
+    /** 60 stop-arrivals lookups per user per hour */
+    public boolean allowStopArrivalsLookup(String email) {
+        return isAllowed("rl:stop-arrivals:" + email, 60, Duration.ofHours(1));
+    }
 }

@@ -31,4 +31,7 @@ public class UserPreferences {
 
     @Column(name = "notify_eco_tip")
     private Boolean notifyEcoTip;
+
+    @Column(name = "only_bus_when_raining", nullable = false)
+    private Boolean onlyBusWhenRaining = true;
 }

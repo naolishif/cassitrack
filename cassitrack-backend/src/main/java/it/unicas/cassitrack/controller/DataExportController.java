@@ -1,12 +1,16 @@
 package it.unicas.cassitrack.controller;
 
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import it.unicas.cassitrack.dto.BusTelemetryDTO;
-import it.unicas.cassitrack.service.InfluxService; // Assicurati che il nome della classe sia corretto (InfluxService o InfluxTelemetryService)
-import org.springframework.beans.factory.annotation.Autowired;
+import it.unicas.cassitrack.dto.siri.Siri;
+import it.unicas.cassitrack.dto.siri.SiriMapper;
+import it.unicas.cassitrack.service.InfluxService;
+import it.unicas.cassitrack.service.VehicleStateCache;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -25,8 +29,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 @RequestMapping("/api/v1/telemetry")
 public class DataExportController {
 
-    //@Autowired
-    private InfluxService influxService;
+    private final InfluxService influxService;
+    private final VehicleStateCache vehicleStateCache;
+    private final XmlMapper xmlMapper = new XmlMapper();
 
     @Value("${sse.api-token}")
     private String expectedToken;
@@ -34,16 +39,17 @@ public class DataExportController {
     // Lista speciale thread-safe per memorizzare i client connessi (es. Omnimove)
     private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
-    public DataExportController(InfluxService influxService) {
+    public DataExportController(InfluxService influxService, VehicleStateCache vehicleStateCache) {
         this.influxService = influxService;
+        this.vehicleStateCache = vehicleStateCache;
     }
 
 
     /*---------- USE RESTAPI: DEPRECATED ----------*/
     @GetMapping("/latest")
-    public ResponseEntity<List<BusTelemetryDTO>> getLatestTelemetry() {
+    public ResponseEntity<List<BusTelemetryDTO>> getLatestTelemetry(@RequestParam(value = "route_id", required = false) String routeId) {
 
-        List<BusTelemetryDTO> data = influxService.getLatestTelemetry();
+        List<BusTelemetryDTO> data = influxService.getLatestTelemetry(routeId);
 
         return ResponseEntity.ok(data);
     }
@@ -76,29 +82,41 @@ public class DataExportController {
         return emitter;
     }
 
-    // 2. Il timer interno: ogni 60 secondi estrae i dati e li "spinge" nei tubi aperti
-    @Scheduled(fixedRate = 60000)
+    // Push ogni 5 secondi: costruisce un pacchetto SIRI XML dalla cache Redis e lo invia via SSE
+    @Scheduled(fixedRate = 5000)
     public void pushTelemetryData() {
-        // Se Omnimove è spento, la lista è vuota: non facciamo query inutili al DB
-        if (emitters.isEmpty()) {
+        if (emitters.isEmpty()) return;
+
+        Siri siri = SiriMapper.toSiriFromCache(vehicleStateCache.getActive());
+        String siriXml;
+        try {
+            siriXml = xmlMapper.writeValueAsString(siri);
+        } catch (Exception e) {
+            System.err.println("[CASSITRACK] Errore serializzazione SIRI XML: " + e.getMessage());
             return;
         }
 
-        // Recuperiamo i dati reali dal database (usando il metodo che abbiamo allineato ieri)
-        List<BusTelemetryDTO> latestData = influxService.getLatestTelemetry();
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("telemetry-update")
+                        .data(siriXml, MediaType.APPLICATION_XML));
+            } catch (IOException e) {
+                emitters.remove(emitter);
+                emitter.completeWithError(e);
+            }
+        }
+    }
 
-        if (latestData != null && !latestData.isEmpty()) {
-            // Spingiamo il pacchetto dati a tutti i client in ascolto
-            for (SseEmitter emitter : emitters) {
-                try {
-                    emitter.send(SseEmitter.event()
-                            .name("telemetry-update") // Nome dell'evento
-                            .data(latestData));       // I dati veri e propri
-                } catch (IOException e) {
-                    // Se l'invio fallisce (es. Omnimove si è spento bruscamente), chiudiamo il tubo
-                    emitter.complete();
-                    emitters.remove(emitter);
-                }
+    // Heartbeat ogni 3 secondi: mantiene viva la connessione TCP tra un push e l'altro
+    @Scheduled(fixedRate = 3000)
+    public void sendHeartbeat() {
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event().comment("keepalive"));
+            } catch (IOException e) {
+                emitters.remove(emitter);
+                emitter.completeWithError(e);
             }
         }
     }

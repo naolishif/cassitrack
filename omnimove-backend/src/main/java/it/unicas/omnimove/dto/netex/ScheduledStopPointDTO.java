@@ -5,15 +5,15 @@ import lombok.Data;
 
 @Data
 public class ScheduledStopPointDTO {
-    @JacksonXmlProperty(isAttribute = true)
-    private String id; // Es: STOP_43
+
+    @JacksonXmlProperty(isAttribute = true, localName = "id")
+    private String id;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "version")
+    private String version;
 
     @JacksonXmlProperty(localName = "Name")
     private String name;
 
-    @JacksonXmlProperty(localName = "Longitude")
-    private Double longitude;
-
-    @JacksonXmlProperty(localName = "Latitude")
-    private Double latitude;
+    // Le coordinate stanno in StopPlace (NeTEx standard)
 }

@@ -62,65 +62,43 @@ public class RouteMatchingService {
         return nearestId;
     }
 
-    /** Fermata più vicina cercata su TUTTA la rete (ancora per l'ETA). */
-    public String findNearestStopId(double lat, double lon) {
+    private static final double ARRIVAL_RADIUS_METRES = 20.0;
+
+    /**
+     * Restituisce la fermata del trip se il bus è fisicamente arrivato
+     * (entro ARRIVAL_RADIUS_METRES), altrimenti null se è in transito tra fermate.
+     */
+    public StopArrival detectStopArrival(String tripId, double lat, double lon) {
+        if (tripId == null) return null;
+
+        var seq = scheduledStopRepo.findByTripIdOrderByStopSequenceAsc(tripId);
         String nearestId = null;
+        Integer scheduledSec = null;
         double nearestDist = Double.MAX_VALUE;
 
-        for (Stop stop : stopRepository.findAll()) {
+        for (var ss : seq) {
+            var stopOpt = stopRepository.findById(ss.getStopId());
+            if (stopOpt.isEmpty()) continue;
+            var stop = stopOpt.get();
             if (stop.getLat() == null || stop.getLon() == null) continue;
+
             double dist = haversineMetres(lat, lon, stop.getLat(), stop.getLon());
             if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestId = stop.getId();
+                nearestDist  = dist;
+                nearestId    = stop.getId();
+                scheduledSec = ss.getArrivalSeconds();
             }
         }
-        return nearestId;
-    }
-    /**
-     * Get the scheduled arrival time (seconds after midnight)
-     * for a specific stop on a specific route,
-     * near the current time.
-     *
-     * Returns -1 if no matching trip is found.
-     */
-    public int getScheduledArrival(
-            String routeId,
-            String stopId,
-            int currentSeconds) {
 
-
-
-        // Look for trips within a 30-minute window
-        // around the current time
-        int windowStart = currentSeconds - 1800; // 30 min ago
-        int windowEnd   = currentSeconds + 1800; // 30 min ahead
-
-        var allTrips = scheduledStopRepo
-                .findByTripRouteIdOrderByStopSequenceAsc(routeId);
-        // Find the trip whose stop time is closest
-        // to the current time
-        return allTrips.stream()
-                .filter(s -> s.getStopId().equals(stopId))
-                .filter(s -> s.getArrivalSeconds() >= windowStart
-                        && s.getArrivalSeconds() <= windowEnd)
-                .mapToInt(s -> s.getArrivalSeconds())
-                .findFirst()
-                .orElse(-1);
+        // Il bus è "arrivato" solo se è dentro il raggio della fermata più vicina
+        if (nearestId != null && nearestDist <= ARRIVAL_RADIUS_METRES) {
+            return new StopArrival(nearestId, scheduledSec);
+        }
+        return null;   // in transito tra due fermate — nessun arrivo da registrare
     }
 
-    /**
-     * Determine what kind of service runs today.
-     * Weekdays have a different timetable from weekends.
-     */
-    private String getTodayServiceType() {
-        DayOfWeek day = LocalDate.now(ITALY_TZ).getDayOfWeek();
-        return switch (day) {
-            case SATURDAY -> "SATURDAY";
-            case SUNDAY   -> "SUNDAY";
-            default       -> "WEEKDAY";
-        };
-    }
+    public record StopArrival(String stopId, Integer scheduledSeconds) {}
+
 
     /**
      * Calculate the distance in metres between
@@ -159,7 +137,7 @@ public class RouteMatchingService {
 
         for (int i = 0; i < seq.size(); i++) {
             if (seq.get(i).getStopId().equals(currentStopId)) {
-                if (i + 1 >= seq.size()) return null;            // e' gia' all'ultima fermata
+                if (i + 1 >= seq.size()) return null;
                 String nextId = seq.get(i + 1).getStopId();
                 return stopRepository.findById(nextId).map(Stop::getName).orElse(nextId);
             }

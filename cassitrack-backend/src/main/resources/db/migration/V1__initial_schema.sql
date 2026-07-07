@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS buses (
     bus_id              INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     targa               VARCHAR(20) NOT NULL UNIQUE,
     numero_posti        INTEGER NOT NULL,
-    posto_disabili      BOOLEAN NOT NULL DEFAULT FALSE,
+    wheelchair_accessible      BOOLEAN NOT NULL DEFAULT FALSE,
     disponibile         BOOLEAN NOT NULL DEFAULT TRUE,
     current_vehicle_id  VARCHAR(50) UNIQUE
 );

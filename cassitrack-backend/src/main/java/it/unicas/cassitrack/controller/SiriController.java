@@ -1,34 +1,40 @@
 package it.unicas.cassitrack.controller;
 
-import it.unicas.cassitrack.dto.BusTelemetryDTO;
 import it.unicas.cassitrack.dto.siri.Siri;
 import it.unicas.cassitrack.dto.siri.SiriMapper;
-import it.unicas.cassitrack.service.InfluxService;
+import it.unicas.cassitrack.model.VehiclePosition;
+import it.unicas.cassitrack.service.VehicleStateCache;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/siri")
 public class SiriController {
 
-    private final InfluxService influxService;
+    private final VehicleStateCache vehicleStateCache;
 
-    // Spring Boot inietterà automaticamente il tuo InfluxService qui
-    public SiriController(InfluxService influxService) {
-        this.influxService = influxService;
+    public SiriController(VehicleStateCache vehicleStateCache) {
+        this.vehicleStateCache = vehicleStateCache;
     }
 
     @GetMapping(value = "/vehicle-monitoring", produces = MediaType.APPLICATION_XML_VALUE)
-    public Siri getRealTimeBusData() {
+    public Siri getRealTimeBusData(@RequestParam(value = "route_id", required = false) String routeId) {
 
-        // 1. Legge la lista di TUTTI gli autobus aggiornati dall'ultimo InfluxService
-        List<BusTelemetryDTO> liveData = influxService.getLatestTelemetry();
+        Collection<VehiclePosition> vehicles = vehicleStateCache.getActive();
 
-        // 2. Mappa l'intera lista in un unico pacchetto XML Siri e lo spedisce
-        return SiriMapper.toSiri(liveData);
+        // Filtro opzionale per route_id
+        if (routeId != null && !routeId.isBlank()) {
+            vehicles = vehicles.stream()
+                    .filter(v -> routeId.equals(v.getRouteId()))
+                    .collect(Collectors.toList());
+        }
+
+        return SiriMapper.toSiriFromCache(vehicles);
     }
 }

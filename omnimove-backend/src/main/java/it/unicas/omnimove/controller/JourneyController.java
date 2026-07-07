@@ -22,9 +22,18 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import it.unicas.omnimove.client.CassitrackClient;
+import it.unicas.omnimove.dto.VehicleDTO;
+
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/v1/journeys")
@@ -32,14 +41,17 @@ import java.util.Map;
 @Tag(name="Journey Planner", description="Multimodal journey planning")
 public class JourneyController {
 
+    private static final Pattern STOP_ID_RE      = Pattern.compile("^[A-Za-z0-9\\-_]{1,50}$");
+    private static final int     MAX_ARRIVALS     = 10;
+
     private final JourneyPlannerService plannerService;
-    private final JourneyEventService journeyEventService;
-    private final StopRepository stopRepository;
-    private final JourneyLogRepository journeyLogRepository;
-    private final UserRepository userRepo;
-    private final GreenIndexService greenIndexService;
-    private final RateLimiterService rateLimiter;
-    private final it.unicas.omnimove.client.CassitrackClient cassitrackClient;
+    private final JourneyEventService   journeyEventService;
+    private final StopRepository        stopRepository;
+    private final JourneyLogRepository  journeyLogRepository;
+    private final UserRepository        userRepo;
+    private final GreenIndexService     greenIndexService;
+    private final RateLimiterService    rateLimiter;
+    private final CassitrackClient      cassitrackClient;
 
     @GetMapping("/stops")
     @Operation(summary = "List active stops for origin/destination pickers")
@@ -76,13 +88,65 @@ public class JourneyController {
     }
 
     @GetMapping("/stops/{stopId}/arrivals")
-    @Operation(summary = "Prossimi arrivi in tempo reale a una fermata")
-    public ResponseEntity<List<StopArrivalDTO>> arrivals(@PathVariable String stopId) {
-        try {
-            return ResponseEntity.ok(cassitrackClient.getArrivalsAtStop(stopId));
-        } catch (Exception e) {
-            return ResponseEntity.ok(List.of());   // fermata senza arrivi → lista vuota
-        }
+    @Operation(summary = "Next buses at a stop: real-time + scheduled, up to 10")
+    public ResponseEntity<?> arrivals(
+            @PathVariable String stopId,
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal UserDetails principal) {
+
+        if (!STOP_ID_RE.matcher(stopId).matches())
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid stop ID."));
+
+        int effectiveLimit = Math.min(Math.max(limit, 1), MAX_ARRIVALS);
+
+        if (principal != null && !rateLimiter.allowStopArrivalsLookup(principal.getUsername()))
+            return ResponseEntity.status(429).body(Map.of("message", "Too many requests."));
+
+        // 1. Real-time buses from CASSITRACK (GPS-based ETA)
+        List<StopArrivalDTO> realTime = cassitrackClient.getArrivalsAtStop(stopId);
+
+        // Track which trips and vehicles are already covered by live data
+        Set<String> coveredTripIds = realTime.stream()
+                .map(StopArrivalDTO::getTripId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<String> coveredVehicleIds = realTime.stream()
+                .map(StopArrivalDTO::getVehicleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 1b. Enrich real-time entries with crowding from /vehicles
+        Map<String, String> vehicleCrowding = cassitrackClient.getActiveVehicles().stream()
+                .filter(v -> v.getVehicleId() != null && v.getCrowdingLevel() != null)
+                .collect(Collectors.toMap(VehicleDTO::getVehicleId, VehicleDTO::getCrowdingLevel,
+                        (a, b) -> a));
+        realTime.forEach(a -> {
+            if (a.getVehicleId() != null && a.getCrowdingLevel() == null)
+                a.setCrowdingLevel(vehicleCrowding.get(a.getVehicleId()));
+        });
+
+        // 2. Scheduled buses — skip any trip already covered by a live bus
+        List<StopArrivalDTO> scheduled = cassitrackClient.getScheduleAtStop(stopId).stream()
+                .filter(a -> {
+                    if (a.getTripId() != null && coveredTripIds.contains(a.getTripId())) return false;
+                    if (a.getVehicleId() != null && coveredVehicleIds.contains(a.getVehicleId())) return false;
+                    return true;
+                })
+                .collect(Collectors.toList());
+
+        // 3. Merge, sort by scheduled time (fall back to ETA for live buses with no schedule), cap at limit
+        List<StopArrivalDTO> result = Stream.concat(realTime.stream(), scheduled.stream())
+                .filter(a -> a.getEstimatedArrival() != null)
+                .sorted(Comparator.comparing(a -> {
+                    Instant key = a.getScheduledArrival() != null
+                            ? a.getScheduledArrival()
+                            : a.getEstimatedArrival();
+                    return key != null ? key : java.time.Instant.MAX;
+                }))
+                .limit(effectiveLimit)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/select")

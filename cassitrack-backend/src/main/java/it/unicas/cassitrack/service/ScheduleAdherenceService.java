@@ -65,72 +65,84 @@ public class ScheduleAdherenceService {
 
     public void processBusAdherence(VehiclePosition pos) {
         try {
-            /*
-             * GOOGLE MAPS API INTEGRATION POINT:
-             * Currently, `findNearestStop` likely uses the Haversine formula (straight-line distance) inside RouteMatchingService.
-             * * DUMMY / FUTURE UPDATE:
-             * When you implement Google Maps, RouteMatchingService.findNearestStop() should be updated
-             * to use the Google Maps Roads API (Snap to Roads) or Distance Matrix to determine exactly
-             * which stop the bus is closest to along the actual road network, rather than a straight line.
-             * * This service doesn't need to call GMaps directly; it just trusts RouteMatchingService.
-             */
-
-            // SAFE BY DESIGN GUARD CLAUSE: Validate inputs before processing
             if (pos.getLat() == null || pos.getLon() == null) {
-                log.warn("Vehicle {} has no GPS coordinates. Cannot compute adherence.", pos.getVehicleId());
+                log.warn("Vehicle {} senza coordinate GPS.", pos.getVehicleId());
+                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
+                return;
+            }
+            if (pos.getTripId() == null) {
+                log.warn("Bus {} trasmette senza tripId assegnato.", pos.getVehicleId());
                 pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
                 return;
             }
 
-            if (pos.getTripId() == null) {
-                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
-                return;
-            }
-            String nearestStopId = routeMatchingService.findNearestStopOnTrip(
+            // Rileva se il bus è FISICAMENTE arrivato a una fermata (entro il raggio)
+            var arrival = routeMatchingService.detectStopArrival(
                     pos.getTripId(), pos.getLat(), pos.getLon());
 
-            if (nearestStopId == null) {
-                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
+            if (arrival == null) {
+                // Bus in transito tra due fermate: non c'è un arrivo da registrare.
+                // Mantieni l'ultimo stato/ritardo calcolato, non ricalcolare nulla.
+                vehicleStateCache.get(pos.getVehicleId()).ifPresent(prev -> {
+                    pos.setDelayMinutes(prev.getDelayMinutes());
+                    pos.setScheduleStatus(prev.getScheduleStatus() != null
+                            ? prev.getScheduleStatus() : ScheduleStatus.UNKNOWN);
+                    pos.setLastStopRegisteredId(prev.getLastStopRegisteredId());
+                });
+                if (pos.getScheduleStatus() == null) pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
                 return;
             }
 
-            int nowSeconds = LocalTime.now(ITALY_TZ).toSecondOfDay();
+            // Il bus è a una fermata. L'abbiamo già registrata in questo arrivo?
+            String lastRegistered = vehicleStateCache.get(pos.getVehicleId())
+                    .map(VehiclePosition::getLastStopRegisteredId)
+                    .orElse(null);
 
-            String routeId = pos.getRouteId() != null ? pos.getRouteId()
-                    : (pos.getMatchedRouteId() != null ? pos.getMatchedRouteId() : "UNKNOWN_ROUTE");
-
-            int scheduledSeconds = routeMatchingService.getScheduledArrival(routeId, nearestStopId, nowSeconds);
-
-            if (scheduledSeconds < 0) {
-                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
+            if (arrival.stopId().equals(lastRegistered)) {
+                // Stesso arrivo già contabilizzato: mantieni il ritardo, non riscrivere.
+                vehicleStateCache.get(pos.getVehicleId()).ifPresent(prev -> {
+                    pos.setDelayMinutes(prev.getDelayMinutes());
+                    pos.setScheduleStatus(prev.getScheduleStatus());
+                });
+                pos.setLastStopRegisteredId(arrival.stopId());
                 return;
             }
 
-            int delaySeconds = nowSeconds - scheduledSeconds;
-            int delayMinutes = delaySeconds / 60;
+            // NUOVO ARRIVO → calcola il ritardo: ora di arrivo − orario previsto
+            if (arrival.scheduledSeconds() == null) {
+                pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
+                pos.setLastStopRegisteredId(arrival.stopId());
+                return;
+            }
+
+            int nowSeconds   = LocalTime.now(ITALY_TZ).toSecondOfDay();
+            int delayMinutes = (nowSeconds - arrival.scheduledSeconds()) / 60;
 
             pos.setDelayMinutes(delayMinutes);
             pos.setScheduleStatus(statusFromDelay(delayMinutes));
+            pos.setLastStopRegisteredId(arrival.stopId());
 
-            // Write historical "Stop Arrival" event to InfluxDB for the Analytics Dashboard
-            int estimatedPassengers = pos.getBleDeviceCount() != null ? (int)(pos.getBleDeviceCount() * 0.6) : 0;
+            // Registra l'evento di arrivo (una volta sola per fermata) su InfluxDB
+            String routeId = pos.getRouteId() != null ? pos.getRouteId()
+                    : (pos.getMatchedRouteId() != null ? pos.getMatchedRouteId() : "UNKNOWN_ROUTE");
+            int estimatedPassengers = pos.getBleDeviceCount() != null
+                    ? (int)(pos.getBleDeviceCount() * 0.6) : 0;
 
             Point arrivalEvent = Point.measurement("stop_arrival")
                     .addTag("vehicle_id", pos.getVehicleId())
-                    .addTag("stop_id", nearestStopId)
-                    .addTag("route_id", routeId)
-                    .addField("bus_id", pos.getBusId() != null ? pos.getBusId() : 0)
-                    .addField("delay_minutes", delayMinutes)
-                    .addField("estimated_passengers", estimatedPassengers)
+                    .addTag("stop_id",    arrival.stopId())
+                    .addTag("route_id",   routeId)
+                    .addField("bus_id",               pos.getBusId() != null ? pos.getBusId() : 0)
+                    .addField("delay_minutes",         delayMinutes)
+                    .addField("estimated_passengers",  estimatedPassengers)
                     .time(Instant.now(), WritePrecision.S);
+            influxWriteApi.writePoint(arrivalEvent); // Maybe this should not be writting in Influx, the data should be written only from the MqttMessageHandler, otherwise we have two entries in Influx each time
 
-            influxWriteApi.writePoint(arrivalEvent);
-
-            log.debug("Vehicle {} at stop {}: {} minutes delay → {}",
-                    pos.getVehicleId(), nearestStopId, delayMinutes, pos.getScheduleStatus());
+            log.info("Bus {} ARRIVATO a {} → ritardo {} min ({})",
+                    pos.getVehicleId(), arrival.stopId(), delayMinutes, pos.getScheduleStatus());
 
         } catch (Exception e) {
-            log.warn("Could not compute adherence for {}: {}", pos.getVehicleId(), e.getMessage());
+            log.warn("Adherence non calcolabile per {}: {}", pos.getVehicleId(), e.getMessage());
             pos.setScheduleStatus(ScheduleStatus.UNKNOWN);
         }
     }

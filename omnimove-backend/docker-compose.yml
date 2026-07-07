@@ -1,11 +1,4 @@
 services:
-  # ─────────────────────────────────────────────────────────────
-  # OMNIMOVE — Local Development Infrastructure
-  # ⚠️  SECURITY (V-08/V-09 fixes — OWASP A05):
-  #   - Redis now requires a password (from .env SPRING_REDIS_PASSWORD).
-  #   - All ports bound to 127.0.0.1 (localhost only, not 0.0.0.0).
-  # ─────────────────────────────────────────────────────────────
-
   # 1. Database Relazionale (Postgres)
   omnimove-postgres:
     # A08 FIX: pinned by digest (not mutable tag) — tag kept in comment for readability
