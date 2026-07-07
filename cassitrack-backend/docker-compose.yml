@@ -94,9 +94,9 @@ services:
     ports:
       - "127.0.0.1:1883:1883"   # V-09: bound to localhost only (auth required — see V-02 fix)
     volumes:
-      - ../mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ../mosquitto/config/passwd:/mosquitto/config/passwd
-      - ../mosquitto/config/acl:/mosquitto/config/acl
+      - ../cassitrack-backend/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ../cassitrack-backend/mosquitto/config/passwd:/mosquitto/config/passwd
+      - ../cassitrack-backend/mosquitto/config/acl:/mosquitto/config/acl
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     healthcheck:
