@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>CASSITRACK — Fleet Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="cassitrack-analytics.css">
+</head>
+<body>
+
+<header>
+    <div class="logo">CASSI<span>TRACK</span></div>
+    <div class="chip chip-blue">ANALYTICS</div>
+    <div class="chip chip-green">FLEET MANAGER</div>
+    <div class="header-right">
+        <div class="dot dot-green" id="statusDot"></div>
+        <span class="htext" id="statusText">Loading...</span>
+        <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+        <button class="logout-btn-sm" id="logoutBtn">Log Out</button>
+    </div>
+</header>
+
+<div class="main">
+    <div class="page-title">Fleet Analytics Dashboard</div>
+    <div class="page-sub" id="lastUpdate">Linea 16 — MAGNI Autoservizi · Cassino · Loading...</div>
+
+    <!-- Summary Stats -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="loading">Loading...</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-title">Schedule Adherence</div>
+            <div class="chart-sub">Current status of all active buses</div>
+            <div class="status-list" id="adherenceChart">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Activity by Hour</div>
+            <div class="chart-sub">GPS reports received per hour (last 24h)</div>
+            <div class="bar-chart" id="hoursChart">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <div>
+                <div class="table-title">Active Vehicles</div>
+                <div class="table-sub">Live status of all buses on Linea 16</div>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Bus ID</th>
+                    <th>Status</th>
+                    <th>Speed</th>
+                    <th>Delay</th>
+                    <th>Crowding</th>
+                </tr>
+            </thead>
+            <tbody id="vehicleTable">
+                <tr><td colspan="5" class="loading">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="cassitrack-analytics.js"></script>
+</body>
+</html>
