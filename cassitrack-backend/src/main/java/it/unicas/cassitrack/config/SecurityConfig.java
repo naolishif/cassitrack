@@ -53,6 +53,12 @@ public class SecurityConfig {
     @Value("${cassitrack.cors.allowed-origins}")
     private List<String> corsAllowedOrigins;
 
+    // Extra origins for CSP connect-src — needed because the fleet manager JS calls OmniMove
+    // (different port = different origin, so 'self' alone doesn't cover it).
+    // Space-separated list, e.g. "http://localhost:8180 http://193.205.60.151:8180"
+    @Value("${cassitrack.csp.connect-extra:http://localhost:8180}")
+    private String cspConnectExtra;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
@@ -150,7 +156,7 @@ public class SecurityConfig {
                 "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
                 "font-src 'self' https://fonts.gstatic.com; " +
                 "img-src 'self' data: https:; " +
-                "connect-src 'self' wss:; " +
+                "connect-src 'self' " + cspConnectExtra + " wss:; " +
                 "frame-ancestors 'none'; " +
                 // ZAP [10055]: directives that do NOT fall back to default-src must be explicit
                 "object-src 'none'; " +

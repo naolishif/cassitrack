@@ -37,7 +37,11 @@
         root.querySelectorAll('[data-width-pct]').forEach(el => { el.style.width = el.dataset.widthPct + '%'; });
     }
 
-    const OMNIMOVE_API = 'http://localhost:8180/api/v1';   // OMNIMOVE — journey planner, AI (porta 8180)
+    // Derived dynamically so this works on both localhost and the public server.
+    // The fleet manager is always served by CassiTrack; OmniMove always runs on
+    // the same host, port 8180. Using window.location.hostname means the browser
+    // calls the right machine regardless of whether it's 127.0.0.1 or 193.205.60.151.
+    const OMNIMOVE_API = window.location.protocol + '//' + window.location.hostname + ':8180/api/v1';
     const REFRESH = 15000;
     const SC = {
         ON_TIME:'#22C55E',SLIGHTLY_LATE:'#F59E0B',
