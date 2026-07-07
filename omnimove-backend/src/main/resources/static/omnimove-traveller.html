@@ -441,6 +441,21 @@
     </div>
 </div>
 
+<!-- ── Stop arrivals bottom sheet ──────────────────────────────────── -->
+<div class="stop-sheet-overlay" id="stopSheetOverlay" onclick="handleSheetBackdrop(event)">
+    <div class="stop-sheet" id="stopSheet">
+        <div class="stop-sheet-handle"></div>
+        <div class="stop-sheet-header">
+            <div>
+                <div class="stop-sheet-title" id="stopSheetTitle">Next buses</div>
+                <div class="stop-sheet-subtitle" id="stopSheetSubtitle">Loading…</div>
+            </div>
+            <button class="stop-sheet-close" onclick="closeStopSheet()" aria-label="Close">✕</button>
+        </div>
+        <div class="stop-sheet-list" id="stopSheetList"></div>
+    </div>
+</div>
+
 <script src="omnimove-traveller.js"></script>
 </body>
 </html>

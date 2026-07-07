@@ -41,9 +41,10 @@
     const REFRESH = 15000;
     const SC = {
         ON_TIME:'#22C55E',SLIGHTLY_LATE:'#F59E0B',
-        SIGNIFICANTLY_LATE:'#EF4444',EARLY:'#06B6D4',UNKNOWN:'#4B5563'
+        SIGNIFICANTLY_LATE:'#EF4444',EARLY:'#06B6D4',UNKNOWN:'#4B5563',
+        NO_TRIP:'#F59E0B'
     };
-    const SL = {ON_TIME:'ON TIME',SLIGHTLY_LATE:'SLIGHTLY LATE',SIGNIFICANTLY_LATE:'LATE',EARLY:'EARLY',UNKNOWN:'LIVE'};
+    const SL = {ON_TIME:'ON TIME',SLIGHTLY_LATE:'SLIGHTLY LATE',SIGNIFICANTLY_LATE:'LATE',EARLY:'EARLY',UNKNOWN:'LIVE',NO_TRIP:'⚠️ NO TRIP'};
     const MODE_ICON = {BUS:'🚌',WALK:'🚶',BIKE:'🚲',SCOOTER:'🛴',CAR:'🚗',WAIT:'⏳'};
     const MODE_COL  = {BUS:'#3B82F6',WALK:'#22C55E',BIKE:'#22C55E',SCOOTER:'#F59E0B',CAR:'#EF4444',WAIT:'#4B5563'};
 
@@ -160,7 +161,7 @@
     function updateMap(vehicles){
         vehicles.forEach(v=>{
             vehicleData[v.vehicle_id]=v;
-            const st=v.schedule_status||'UNKNOWN',pos=[v.lat,v.lon];
+            const st=!v.trip_id?'NO_TRIP':(v.schedule_status||'UNKNOWN'),pos=[v.lat,v.lon];
             if(markers[v.vehicle_id]){markers[v.vehicle_id].setLatLng(pos);markers[v.vehicle_id].setIcon(busIcon(v.vehicle_id,st));}
             else{
                 const m=L.marker(pos,{icon:busIcon(v.vehicle_id,st)}).addTo(map);
@@ -182,7 +183,7 @@
     function popupV(v){
         // CSP FIX (A05): schedule_status -> fixed-domain data-status (static CSS).
         // routeColor()/crowding-bar values stay genuinely dynamic -> data-fg/data-bg.
-        const st = SC[v.schedule_status] ? v.schedule_status : 'UNKNOWN';
+        const st = !v.trip_id ? 'NO_TRIP' : (SC[v.schedule_status] ? v.schedule_status : 'UNKNOWN');
         const l=SL[v.schedule_status]||'LIVE';
         const routeCol = routeColor(v.route_id);
         const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
@@ -244,7 +245,7 @@
             // CSP FIX (A05): st kept exactly as before (no ||SC.UNKNOWN coercion here
             // — an unrecognized status falls through to "no matching CSS rule", the
             // same no-op visual result as the original "background:undefined").
-            const st=v.schedule_status||'UNKNOWN',l=SL[st];
+            const st=!v.trip_id?'NO_TRIP':(v.schedule_status||'UNKNOWN'),l=SL[st]||SL.UNKNOWN;
             const spd=v.speed_kmh?v.speed_kmh.toFixed(1):'0.0';
             const pax=v.estimated_passengers?'~'+v.estimated_passengers:'—';
             const cp=crowdPct(v.crowding_level),cc=cp>70?'#EF4444':cp>40?'#F59E0B':'#22C55E';
@@ -764,10 +765,12 @@
         const onTime   = vehicles.filter(v => v.schedule_status === 'ON_TIME' || v.schedule_status === 'EARLY').length;
         const slight   = vehicles.filter(v => v.schedule_status === 'SLIGHTLY_LATE').length;
         const late     = vehicles.filter(v => v.schedule_status === 'SIGNIFICANTLY_LATE').length;
+        const noTrip   = vehicles.filter(v => !v.trip_id).length;
 
         const onTimePct  = (onTime  / total) * 100;
         const slightPct  = (slight  / total) * 100;
         const latePct    = (late    / total) * 100;
+        const noTripPct  = (noTrip  / total) * 100;
 
         // NOTE: assigning to element.style.background via the CSSOM is a property
         // mutation, not inline-HTML/CSS-string parsing — already unaffected by
@@ -775,7 +778,9 @@
         donut.style.background = `conic-gradient(
             #22C55E 0% ${onTimePct}%,
             #F59E0B ${onTimePct}% ${onTimePct + slightPct}%,
-            #EF4444 ${onTimePct + slightPct}% 100%
+            #EF4444 ${onTimePct + slightPct}% ${onTimePct + slightPct + latePct}%,
+            #F59E0B ${onTimePct + slightPct + latePct}% ${onTimePct + slightPct + latePct + noTripPct}%,
+            #1A2744 ${onTimePct + slightPct + latePct + noTripPct}% 100%
         )`;
     }
 

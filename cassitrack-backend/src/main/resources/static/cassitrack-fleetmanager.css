@@ -838,7 +838,7 @@ header{display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--
 .vpop-bar{height:100%;border-radius:2px}
 .vpop-crowd{font-family:var(--mono);font-size:9px;color:#4B5563;margin-top:3px}
 
-/* Status colour table — ON_TIME / SLIGHTLY_LATE / SIGNIFICANTLY_LATE / EARLY / UNKNOWN */
+/* Status colour table — ON_TIME / SLIGHTLY_LATE / SIGNIFICANTLY_LATE / EARLY / UNKNOWN / NO_TRIP */
 .bus-icon-body[data-status="ON_TIME"],.bus-icon-label[data-status="ON_TIME"],
 .vcard-stripe[data-status="ON_TIME"]{background:#22C55E}
 .bus-icon-body[data-status="SLIGHTLY_LATE"],.bus-icon-label[data-status="SLIGHTLY_LATE"],
@@ -849,21 +849,26 @@ header{display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--
 .vcard-stripe[data-status="EARLY"]{background:#06B6D4}
 .bus-icon-body[data-status="UNKNOWN"],.bus-icon-label[data-status="UNKNOWN"],
 .vcard-stripe[data-status="UNKNOWN"]{background:#4B5563}
+.bus-icon-body[data-status="NO_TRIP"],.bus-icon-label[data-status="NO_TRIP"],
+.vcard-stripe[data-status="NO_TRIP"]{background:#F59E0B}
 
 .vpop-id[data-status="ON_TIME"],.vpop-delay[data-status="ON_TIME"]{color:#22C55E}
 .vpop-id[data-status="SLIGHTLY_LATE"],.vpop-delay[data-status="SLIGHTLY_LATE"]{color:#F59E0B}
 .vpop-id[data-status="SIGNIFICANTLY_LATE"],.vpop-delay[data-status="SIGNIFICANTLY_LATE"]{color:#EF4444}
 .vpop-id[data-status="EARLY"],.vpop-delay[data-status="EARLY"]{color:#06B6D4}
 .vpop-id[data-status="UNKNOWN"],.vpop-delay[data-status="UNKNOWN"]{color:#4B5563}
+.vpop-id[data-status="NO_TRIP"],.vpop-delay[data-status="NO_TRIP"]{color:#F59E0B}
 
 .vpop-badge[data-status="ON_TIME"]{background:#22C55E22;color:#22C55E;border-color:#22C55E44}
 .vpop-badge[data-status="SLIGHTLY_LATE"]{background:#F59E0B22;color:#F59E0B;border-color:#F59E0B44}
 .vpop-badge[data-status="SIGNIFICANTLY_LATE"]{background:#EF444422;color:#EF4444;border-color:#EF444444}
 .vpop-badge[data-status="EARLY"]{background:#06B6D422;color:#06B6D4;border-color:#06B6D444}
 .vpop-badge[data-status="UNKNOWN"]{background:#4B556322;color:#4B5563;border-color:#4B556344}
+.vpop-badge[data-status="NO_TRIP"]{background:#F59E0B22;color:#F59E0B;border-color:#F59E0B44}
 
 .chip[data-status="ON_TIME"]{color:#22C55E;border-color:#22C55E44;background:#22C55E18;font-size:9px}
 .chip[data-status="SLIGHTLY_LATE"]{color:#F59E0B;border-color:#F59E0B44;background:#F59E0B18;font-size:9px}
 .chip[data-status="SIGNIFICANTLY_LATE"]{color:#EF4444;border-color:#EF444444;background:#EF444418;font-size:9px}
 .chip[data-status="EARLY"]{color:#06B6D4;border-color:#06B6D444;background:#06B6D418;font-size:9px}
 .chip[data-status="UNKNOWN"]{color:#4B5563;border-color:#4B556344;background:#4B556318;font-size:9px}
+.chip[data-status="NO_TRIP"]{color:#F59E0B;border-color:#F59E0B44;background:#F59E0B18;font-size:9px}

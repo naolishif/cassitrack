@@ -1,3 +1,11 @@
+// XSS defense: escape any API-supplied string before inserting into innerHTML
+function escHtml(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 //  FRONTEND ROUTE GUARD
 // V-04 FIX: Token is in httpOnly cookie (sent automatically). User data is in sessionStorage.
 const _user = JSON.parse(sessionStorage.getItem('omnimove_user') || '{}');
@@ -58,6 +66,7 @@ async function loadPreferences() {
         set('prefAvoidOccupancy', p.avoidHighOccupancy);
         set('prefShowWalking',    p.showWalking);
         set('prefBikeOverBus',    p.preferBikeOverBus);
+        set('prefOnlyBusRain',    p.onlyBusWhenRaining);
         set('prefNotifyDelays',   p.notifyDelays);
         set('prefNotifyTicket',   p.notifyTicketExpiry);
         set('prefNotifyEcoTip',   p.notifyEcoTip);
@@ -83,6 +92,7 @@ async function savePreferences() {
         avoidHighOccupancy: isOn('prefAvoidOccupancy'),
         showWalking:        isOn('prefShowWalking'),
         preferBikeOverBus:  isOn('prefBikeOverBus'),
+        onlyBusWhenRaining: isOn('prefOnlyBusRain'),
         notifyDelays:       isOn('prefNotifyDelays'),
         notifyTicketExpiry: isOn('prefNotifyTicket'),
         notifyEcoTip:       isOn('prefNotifyEcoTip')
@@ -275,45 +285,128 @@ function renderStopMarkers() {
     window._stopMarkers.forEach(m => map.removeLayer(m));
     window._stopMarkers = [];
     Object.values(STOPS).forEach(stop => {
+        const safeName = escHtml(stop.name);
+        // Use data-attributes on the button so the delegated listener can read them
+        // without needing inline onclick (CSP-safe, no JSON injection risk).
+        const popup =
+            `<b>${safeName}</b><br>` +
+            `<button class="stop-check-btn" ` +
+            `data-stop-id="${escAttr(stop.id)}" data-stop-name="${escAttr(stop.name)}">` +
+            `Check next buses</button>`;
         const marker = L.marker([stop.lat, stop.lon], { icon: STOP_ICON })
             .addTo(map)
-            .bindPopup('<b>' + stop.name + '</b><br><span style="color:#94a3b8">Caricamento arrivi…</span>');
-
-        marker.on('click', () => loadStopArrivals(stop, marker));
+            .bindPopup(popup);
         window._stopMarkers.push(marker);
     });
 }
 
-async function loadStopArrivals(stop, marker) {
-    try {
-        const r = await apiFetch('/journeys/stops/' + encodeURIComponent(stop.id) + '/arrivals');
-        if (!r.ok) throw new Error('arrivals ' + r.status);
-        const arrivals = await r.json();
+// Delegated listener for "Check next buses" buttons inside Leaflet popups.
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.stop-check-btn');
+    if (btn) showStopArrivals(btn.dataset.stopId, btn.dataset.stopName);
+});
 
-        let html = '<b>' + stop.name + '</b>';
-        if (!Array.isArray(arrivals) || arrivals.length === 0) {
-            html += '<br><span style="color:#94a3b8">Nessun bus in arrivo</span>';
-        } else {
-            const now = Date.now();
-            html += '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">'
-                + arrivals.slice(0, 5).map(a => {
-                    const line = a.route_name || a.route_id || 'Bus';
-                    const etaMin = a.estimated_arrival
-                        ? Math.max(0, Math.round((new Date(a.estimated_arrival).getTime() - now) / 60000))
-                        : null;
-                    const when = etaMin === null ? '—' : (etaMin === 0 ? 'in arrivo' : etaMin + ' min');
-                    const late = (a.delay_minutes && a.delay_minutes > 0)
-                        ? ' <span style="color:#ef4444">+' + a.delay_minutes + '</span>' : '';
-                    return '<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px">'
-                        + '<span style="font-weight:700">🚌 ' + line + '</span>'
-                        + '<span>' + when + late + '</span></div>';
-                }).join('')
-                + '</div>';
-        }
-        marker.setPopupContent(html);
-    } catch (e) {
-        marker.setPopupContent('<b>' + stop.name + '</b><br><span style="color:#ef4444">Arrivi non disponibili</span>');
+// ── Stop arrivals bottom sheet ─────────────────────────────────────
+
+const STATUS_BG = {
+    ON_TIME:'background:#d1fae5;color:#065f46',
+    EARLY:'background:#dbeafe;color:#1e40af',
+    SLIGHTLY_LATE:'background:#fef9c3;color:#92400e',
+    SIGNIFICANTLY_LATE:'background:#fee2e2;color:#991b1b',
+    SCHEDULED:'background:#f1f5f9;color:#475569',
+};
+const STATUS_LABEL = {
+    ON_TIME:'On Time', EARLY:'Early', SLIGHTLY_LATE:'Slightly Late',
+    SIGNIFICANTLY_LATE:'Late', SCHEDULED:'Scheduled',
+};
+const CARD_CLASS = {
+    SLIGHTLY_LATE:'late', SIGNIFICANTLY_LATE:'very-late',
+    EARLY:'early', SCHEDULED:'scheduled',
+};
+const CROWDING_BG = {
+    LOW:'background:#d1fae5;color:#065f46',
+    MEDIUM:'background:#fef9c3;color:#92400e',
+    HIGH:'background:#fed7aa;color:#9a3412',
+    VERY_HIGH:'background:#fee2e2;color:#991b1b',
+};
+const CROWDING_LABEL = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', VERY_HIGH:'Very High' };
+
+async function showStopArrivals(stopId, stopName) {
+    const overlay  = document.getElementById('stopSheetOverlay');
+    const title    = document.getElementById('stopSheetTitle');
+    const subtitle = document.getElementById('stopSheetSubtitle');
+    const list     = document.getElementById('stopSheetList');
+
+    title.textContent    = stopName;
+    subtitle.textContent = 'Loading next buses…';
+    list.innerHTML       = '';
+    overlay.classList.add('open');
+
+    try {
+        const r = await apiFetch(
+            '/journeys/stops/' + encodeURIComponent(stopId) + '/arrivals?limit=10');
+        if (!r.ok) throw new Error(r.status);
+        const arrivals = await r.json();
+        subtitle.textContent = arrivals.length
+            ? `Next ${arrivals.length} bus${arrivals.length > 1 ? 'es' : ''}`
+            : 'No upcoming buses found';
+        renderArrivals(list, arrivals);
+    } catch(e) {
+        subtitle.textContent = 'Could not load arrivals';
+        list.innerHTML = '<p style="color:var(--text-soft);text-align:center;padding:24px 0">Service unavailable</p>';
     }
+}
+
+function closeStopSheet() {
+    document.getElementById('stopSheetOverlay').classList.remove('open');
+}
+
+function handleSheetBackdrop(e) {
+    if (e.target === document.getElementById('stopSheetOverlay')) closeStopSheet();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStopSheet(); });
+
+function renderArrivals(list, arrivals) {
+    if (!arrivals.length) { list.innerHTML = ''; return; }
+    const now = Date.now();
+    list.innerHTML = arrivals.map(a => {
+        const eta     = a.estimated_arrival ? new Date(a.estimated_arrival).getTime() : now;
+        const diffMin = Math.max(0, Math.round((eta - now) / 60000));
+        const diffSec = Math.max(0, Math.round((eta - now) / 1000));
+        const etaText  = diffMin > 0 ? `${diffMin} min` : diffSec > 0 ? `${diffSec} sec` : 'Now';
+        const etaClass = diffMin <= 2 ? 'red' : diffMin <= 5 ? 'amber' : '';
+        const status    = a.schedule_status || '';
+        const cardClass = CARD_CLASS[status] || '';
+        const statusBadge = (status && status !== 'UNKNOWN' && STATUS_BG[status])
+            ? `<span class="arrival-badge" style="${STATUS_BG[status]}">${STATUS_LABEL[status] || escHtml(status)}</span>`
+            : '';
+        const crowding = a.crowding_level;
+        const crowdBadge = (crowding && CROWDING_BG[crowding])
+            ? `<span class="arrival-badge" style="${CROWDING_BG[crowding]}">Crowding: ${CROWDING_LABEL[crowding]}</span>`
+            : '';
+        const routeShort = escHtml(a.route_short_name || a.route_name || '?');
+        const routeLong  = (a.route_short_name && a.route_name) ? escHtml(a.route_name) : '';
+        const schTime = a.scheduled_arrival
+            ? new Date(a.scheduled_arrival).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})
+            : '—';
+        const estTime = a.estimated_arrival
+            ? new Date(a.estimated_arrival).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})
+            : '—';
+        return `<div class="arrival-card ${cardClass}">
+            <div class="arrival-top">
+                <div class="arrival-route-info">
+                    <span class="arrival-route-short">${routeShort}</span>
+                    ${routeLong ? `<span class="arrival-route-long">${routeLong}</span>` : ''}
+                </div>
+                <span class="arrival-eta ${etaClass}">${etaText}</span>
+            </div>
+            <div class="arrival-meta">
+                ${statusBadge}${crowdBadge}
+                <span class="arrival-times">Sched: ${schTime} · ETA: ${estTime}</span>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 // ── Load stops from the backend → fill dropdowns + map markers ─────
@@ -487,7 +580,7 @@ async function doSearch() {
         const payload = {
             origin_lat: origin.lat, origin_lon: origin.lon, origin_name: origin.name, origin_is_gps: origin.isGPS === true,
             dest_lat:   dest.lat,   dest_lon:   dest.lon,   dest_name:   dest.name,
-            user_id: _user.id
+            user_id: _user.id, dest_stop_id: dest.id, origin_stop_id: origin.isGPS ? null : origin.id
         };
         // Only constrain modes when the traveler picked specific ones via the chips.
         if (activeModes.length > 0) {
@@ -581,7 +674,12 @@ function renderRoutes(data) {
 // selectMode — only highlights the card and shows the Start Journey banner.
 // The actual map drawing happens in startJourney so GPS is resolved first.
 function selectMode(mode, label, greenIndex, distanceMetres, costEuros) {
-    selectedJourney = { mode, label, greenIndex, distanceKm: distanceMetres / 1000, costEuros };
+    selectedJourney = {
+        mode, label, greenIndex,
+        distanceKm: distanceMetres / 1000,
+        costEuros,
+        durationMinutes: window._routeOptions[mode]?.duration_minutes
+    };
 
     if (window._routeOptions && window._routeOptions[mode]) {
         selectedJourney.legs = window._routeOptions[mode].legs || [];
@@ -756,26 +854,60 @@ async function startJourney() {
         map.fitBounds(allPoints, { padding: [50, 50] });
 
         // 10) Pannello "in progress"
-        const durationMin = Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
-        const modeEmoji   = MODE_ICONS[mode];
+        const durationMin = selectedJourney.durationMinutes
+            || Math.ceil(distanceKm / (mode==='WALK'?5:mode==='BIKE'?15:mode==='SCOOTER'?20:25) * 60);
+        const modeEmoji = MODE_ICONS[mode];
+        const fmtD = m => m < 1000 ? Math.round(m) + ' m' : (m/1000).toFixed(1) + ' km';
+
+        // BUS: show walk/wait/bus breakdown from leg data
+        let gridHtml = '';
+        if (mode === 'BUS' && selectedJourney.legs && selectedJourney.legs.length > 0) {
+            const legs = selectedJourney.legs;
+            const walkLegs = legs.filter(l => l.mode === 'WALK');
+            const waitLegs = legs.filter(l => l.mode === 'WAIT');
+            const busLegs  = legs.filter(l => l.mode === 'BUS');
+            const walkMin = walkLegs.reduce((s, l) => s + (l.duration_minutes || 0), 0);
+            const waitMin = waitLegs.reduce((s, l) => s + (l.duration_minutes || 0), 0);
+            const busMin  = busLegs.reduce((s,  l) => s + (l.duration_minutes || 0), 0);
+            const walkM   = walkLegs.reduce((s, l) => s + (l.distance_metres  || 0), 0);
+            const busM    = busLegs.reduce((s,  l) => s + (l.distance_metres  || 0), 0);
+            const cell = (lbl, top, sub) =>
+                `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                    <div style="font-size:9px;opacity:0.75;font-weight:700;text-transform:uppercase;margin-bottom:3px">${lbl}</div>
+                    <div style="font-size:15px;font-weight:800">${top}</div>
+                    ${sub ? `<div style="font-size:10px;opacity:0.75;margin-top:2px">${sub}</div>` : ''}
+                 </div>`;
+            gridHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px">'
+                + cell('Walk', walkMin > 0 ? `🚶 ${walkMin} min` : '🚶 —', walkMin > 0 ? fmtD(walkM) : 'already at stop')
+                + cell('Bus wait', `🕐 ${waitMin} min`, '')
+                + cell('On bus', `🚌 ${busMin} min`, fmtD(busM))
+                + '</div>'
+                + `<div style="margin-top:10px;font-size:11px;opacity:0.8;text-align:center">
+                    Total: <span id="etaCounter" style="font-weight:800">${durationMin} min</span>
+                    &nbsp;·&nbsp; 🌱 ${greenIndex}
+                </div>`;
+        } else {
+            gridHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">'
+                + `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                    <div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Distance</div>
+                    <div style="font-size:16px;font-weight:800">${distanceKm.toFixed(1)} km</div></div>`
+                + `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                    <div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">ETA</div>
+                    <div style="font-size:16px;font-weight:800" id="etaCounter">${durationMin} min</div></div>`
+                + `<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">
+                    <div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Green</div>
+                    <div style="font-size:16px;font-weight:800">🌱 ${greenIndex}</div></div>`
+                + '</div>';
+        }
 
         document.querySelector('.routes-list').innerHTML =
             '<div style="padding:16px 0">'
             + '<div style="background:linear-gradient(135deg,#10b981,#3b82f6);border-radius:20px;padding:20px;color:white;margin-bottom:16px;text-align:center">'
             + `<div style="font-size:36px;margin-bottom:8px">${modeEmoji}</div>`
-            + '<div style="font-size:18px;font-weight:800;margin-bottom:4px">Journey in Progress</div>'
+            + '<div style="font-size:18px;font-weight:800;margin-bottom:4px">Journey In Progress</div>'
             + `<div style="font-size:13px;opacity:0.85">${label}</div>`
-            + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">'
-            + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
-            + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Distance</div>'
-            + `<div style="font-size:16px;font-weight:800">${distanceKm.toFixed(1)} km</div></div>`
-            + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
-            + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">ETA</div>'
-            + `<div style="font-size:16px;font-weight:800" id="etaCounter">${durationMin} min</div></div>`
-            + '<div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:10px">'
-            + '<div style="font-size:10px;opacity:0.8;font-weight:700;text-transform:uppercase">Green</div>'
-            + `<div style="font-size:16px;font-weight:800">🌱 ${greenIndex}</div></div>`
-            + '</div></div>'
+            + gridHtml
+            + '</div>'
             + '<button class="action-btn" onclick="endJourney()" style="width:100%;background:#fef2f2;color:#ef4444;border:1px solid #fee2e2;font-size:14px;padding:13px;margin-bottom:12px">🏁 End Journey</button>'
             + '<div style="text-align:center;font-size:11px;color:var(--text-soft);font-weight:600">📡 Live tracking active</div>'
             + '</div>';
@@ -977,11 +1109,16 @@ async function deleteAccount() {
 }
 
 let aiThinking = false;
-async function sendAI() {
+// Conversation memory for this chat session.
+// Each entry: { role: 'user' | 'assistant', content: '...' }
+let aiHistory = [];
+const AI_HISTORY_LIMIT = 6; // last 3 exchanges sent to keep requests small
+
+async function sendAI(presetText) {
     if (aiThinking) return;
     const input = document.getElementById('aiInput');
     const msgs  = document.getElementById('aiMessages');
-    const text  = input.value.trim();
+    const text  = (presetText || input.value).trim();
     if (!text) return;
 
     const userMsg = document.createElement('div');
@@ -990,6 +1127,10 @@ async function sendAI() {
     msgs.appendChild(userMsg);
     input.value = '';
     msgs.scrollTop = msgs.scrollHeight;
+
+    // Remove any previous suggestion chips
+    const oldChips = document.getElementById('aiSuggestions');
+    if (oldChips) oldChips.remove();
 
     aiThinking = true;
     const waitMsg = document.createElement('div');
@@ -1001,16 +1142,53 @@ async function sendAI() {
     try {
         const r = await apiFetch('/ai/chat', {
             method: 'POST',
-            body: JSON.stringify({ message: text, language: 'it' })
+            body: JSON.stringify({
+                message: text,
+                language: 'it',
+                history: aiHistory.slice(-AI_HISTORY_LIMIT)
+            })
         });
         const data = await r.json();
-        waitMsg.textContent = data.answer || 'Risposta non disponibile.';
+        const answer = data.answer || 'Risposta non disponibile.';
+        waitMsg.textContent = answer;
+
+        // Save exchange to memory
+        aiHistory.push({ role: 'user',      content: text });
+        aiHistory.push({ role: 'assistant', content: answer });
+
+        // Show tappable follow-up suggestions if backend sent any
+        if (Array.isArray(data.suggestions) && data.suggestions.length) {
+            renderSuggestions(data.suggestions);
+        }
     } catch (e) {
         waitMsg.textContent = 'Errore di connessione al backend. Verifica che OMNIMOVE sia avviato.';
     } finally {
         aiThinking = false;
         msgs.scrollTop = msgs.scrollHeight;
     }
+}
+
+function renderSuggestions(suggestions) {
+    const msgs = document.getElementById('aiMessages');
+    const wrap = document.createElement('div');
+    wrap.id = 'aiSuggestions';
+    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;align-self:flex-start;';
+    suggestions.forEach(s => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.textContent = s;
+        chip.style.cssText =
+            'background:var(--primary-light);border:1px solid #a7f3d0;' +
+            'color:var(--primary-dark);font-family:inherit;font-size:11px;' +
+            'font-weight:700;padding:6px 12px;border-radius:50px;cursor:pointer;' +
+            'transition:background .15s;';
+        chip.onmouseover = () => chip.style.background = '#a7f3d0';
+        chip.onmouseout  = () => chip.style.background = 'var(--primary-light)';
+        chip.addEventListener('click', () => sendAI(s));
+        wrap.appendChild(chip);
+    });
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ── Initial load: populate stops (dropdowns + map markers) ─────────

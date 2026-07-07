@@ -735,3 +735,152 @@ body {
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+/* ── Stop arrivals bottom sheet ──────────────────────────────────── */
+.stop-sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.45);
+    z-index: 3000;
+    display: none;
+    align-items: flex-end;
+}
+.stop-sheet-overlay.open { display: flex; }
+.stop-sheet {
+    background: var(--bg-white);
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 40px rgba(15,23,42,0.18);
+    width: 100%;
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.stop-sheet-handle {
+    width: 40px; height: 4px;
+    background: var(--border-mid);
+    border-radius: 2px;
+    margin: 12px auto 0;
+    flex-shrink: 0;
+}
+.stop-sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.stop-sheet-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+.stop-sheet-subtitle {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-top: 1px;
+}
+.stop-sheet-close {
+    background: var(--bg-app);
+    border: none;
+    border-radius: 50%;
+    width: 30px; height: 30px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text-soft);
+    display: flex; align-items: center; justify-content: center;
+}
+.stop-sheet-list {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 12px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.stop-sheet-list::-webkit-scrollbar { width: 3px; }
+.stop-sheet-list::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+/* ── Arrival cards ───────────────────────────────────────────────── */
+.arrival-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border-mid);
+    border-left: 3px solid var(--primary);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: box-shadow 0.15s;
+}
+.arrival-card:hover { box-shadow: var(--shadow-sm); }
+.arrival-card.late      { border-left-color: #f59e0b; }
+.arrival-card.very-late { border-left-color: #ef4444; }
+.arrival-card.early     { border-left-color: #3b82f6; }
+.arrival-card.scheduled { border-left-color: var(--border-mid); }
+.arrival-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.arrival-route-info { flex: 1; min-width: 0; padding-right: 10px; }
+.arrival-route-short {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1.1;
+}
+.arrival-route-long {
+    display: block;
+    font-size: 11px;
+    color: var(--text-soft);
+    font-weight: 500;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.arrival-eta {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.arrival-eta.amber { color: #f59e0b; }
+.arrival-eta.red   { color: #ef4444; }
+.arrival-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.arrival-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.3px;
+}
+.arrival-times {
+    font-size: 10px;
+    color: var(--text-soft);
+    margin-left: auto;
+}
+.stop-check-btn {
+    margin-top: 8px;
+    padding: 7px 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s;
+}
+.stop-check-btn:hover { background: var(--primary-dark); }
