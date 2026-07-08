@@ -17,6 +17,7 @@ import it.unicas.cassitrack.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -46,6 +47,11 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    // false = HTTP (dev + public server without TLS); true = HTTPS only
+    // Controlled via COOKIE_SECURE env var — set to true once Nginx+TLS is in place
+    @Value("${cassitrack.cookie.secure:false}")
+    private boolean cookieSecure;
 
     @Autowired
     private LoginAttemptService loginAttemptService;
@@ -110,16 +116,12 @@ public class AuthController {
             securityAuditService.loginSuccess(email, getClientIp(request));
 
             // V-04 FIX: Set token in httpOnly cookie — JS cannot read it
-            Cookie jwtCookie = new Cookie(JWT_COOKIE_NAME, token);
-            jwtCookie.setHttpOnly(true);
-            jwtCookie.setSecure(true);          // HTTPS only; set to false for local HTTP dev
-            jwtCookie.setPath("/");
-            jwtCookie.setMaxAge((int) (jwtUtil.getExpirationMs() / 1000));
-            // SameSite=Strict via header (Cookie API doesn't expose it directly)
-            response.addCookie(jwtCookie);
+            // cookieSecure=false allows the cookie to be sent over plain HTTP (dev + server without TLS).
+            // Set COOKIE_SECURE=true in .env once Nginx+TLS is in place.
+            String secureFlag = cookieSecure ? "; Secure" : "";
             response.setHeader("Set-Cookie",
-                String.format("%s=%s; Path=/; Max-Age=%d; HttpOnly; Secure; SameSite=Strict",
-                    JWT_COOKIE_NAME, token, (int) (jwtUtil.getExpirationMs() / 1000)));
+                String.format("%s=%s; Path=/; Max-Age=%d; HttpOnly%s; SameSite=Strict",
+                    JWT_COOKIE_NAME, token, (int) (jwtUtil.getExpirationMs() / 1000), secureFlag));
 
             LoginResponse resp = new LoginResponse();
             resp.setToken(token);   // kept for API clients using Authorization header
@@ -166,8 +168,9 @@ public class AuthController {
         }
 
         // V-04 FIX: Clear the httpOnly JWT cookie on logout
+        String secureFlag = cookieSecure ? "; Secure" : "";
         response.setHeader("Set-Cookie",
-            JWT_COOKIE_NAME + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict");
+            JWT_COOKIE_NAME + "=; Path=/; Max-Age=0; HttpOnly" + secureFlag + "; SameSite=Strict");
 
         return ResponseEntity.noContent().build();
     }

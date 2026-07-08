@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +46,11 @@ public class AuthController {
     private final RateLimiterService rateLimiter;
     private final TokenBlacklistService tokenBlacklistService;
     private final SecurityAuditService securityAuditService;
+
+    // false = HTTP (dev + public server without TLS); true = HTTPS only
+    // Controlled via COOKIE_SECURE env var — set to true once Nginx+TLS is in place
+    @Value("${omnimove.cookie.secure:false}")
+    private boolean cookieSecure;
 
     // ── REGISTER ────────────────────────────────────────────────────
 
@@ -155,10 +161,13 @@ public class AuthController {
         long expiresInMs = jwtUtil.getExpirationMs();
         securityAuditService.loginSuccess(req.getEmail(), getClientIp(httpReq));
 
-        // V-04 FIX: Deliver token as httpOnly, Secure, SameSite=Strict cookie
+        // V-04 FIX: Deliver token as httpOnly cookie.
+        // cookieSecure=false allows the cookie over plain HTTP (dev + server without TLS).
+        // Set COOKIE_SECURE=true in .env once Nginx+TLS is in place.
+        String secureFlag = cookieSecure ? "; Secure" : "";
         httpResp.setHeader("Set-Cookie",
-            String.format("%s=%s; Path=/; Max-Age=%d; HttpOnly; Secure; SameSite=Strict",
-                JWT_COOKIE_NAME, token, (int) (expiresInMs / 1000)));
+            String.format("%s=%s; Path=/; Max-Age=%d; HttpOnly%s; SameSite=Strict",
+                JWT_COOKIE_NAME, token, (int) (expiresInMs / 1000), secureFlag));
 
         return ResponseEntity.ok(AuthResponse.builder()
                 .token(token)       // kept for API clients using Authorization header
@@ -356,8 +365,9 @@ public class AuthController {
         }
 
         // V-04 FIX: Clear the httpOnly JWT cookie
+        String secureFlag = cookieSecure ? "; Secure" : "";
         response.setHeader("Set-Cookie",
-            JWT_COOKIE_NAME + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict");
+            JWT_COOKIE_NAME + "=; Path=/; Max-Age=0; HttpOnly" + secureFlag + "; SameSite=Strict");
 
         return ResponseEntity.noContent().build();
     }
