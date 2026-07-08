@@ -73,9 +73,9 @@ services:
       INFLUX_URL: http://omnimove-influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN}
       # Redis
-      SPRING_REDIS_HOST: omnimove-redis
-      SPRING_REDIS_PORT: 6379
-      SPRING_REDIS_PASSWORD: ${SPRING_REDIS_PASSWORD}
+      SPRING_DATA_REDIS_HOST: omnimove-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${SPRING_REDIS_PASSWORD}
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       # Mail
