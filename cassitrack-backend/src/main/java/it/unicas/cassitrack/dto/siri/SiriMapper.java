@@ -40,29 +40,30 @@ public class SiriMapper {
                 delay = d == 0 ? "PT0S" : (d > 0 ? "PT" + d + "M" : "-PT" + Math.abs(d) + "M");
             }
 
-            // ── Accessibility ─────────────────────────────────────────────────
-            Siri.Accessibility accessibility = null;
-            if (v.getWheelchairAccessible() != null) {
-                accessibility = new Siri.Accessibility(v.getWheelchairAccessible());
-            }
-
             // ── MonitoredCall (prossima fermata) ──────────────────────────────
+            // StopPointRef = ID reale della fermata (codice pulito, es. "SFF").
+            // Fallback: codice derivato dal nome se l'ID non è disponibile.
             Siri.MonitoredCall monitoredCall = null;
             if (v.getNextStop() != null) {
-                monitoredCall = new Siri.MonitoredCall(v.getNextStop());
+                String nextRef = v.getNextStopId() != null
+                        ? v.getNextStopId() : toStopCode(v.getNextStop());
+                monitoredCall = new Siri.MonitoredCall(nextRef, v.getNextStop());
             }
 
             // ── PreviousCalls (ultima fermata registrata) ─────────────────────
             List<Siri.PreviousCall> previousCalls = null;
             if (v.getLastStopRegistered() != null) {
-                previousCalls = List.of(new Siri.PreviousCall(v.getLastStopRegistered()));
+                String prevRef = v.getLastStopRegisteredId() != null
+                        ? v.getLastStopRegisteredId() : toStopCode(v.getLastStopRegistered());
+                previousCalls = List.of(new Siri.PreviousCall(prevRef, v.getLastStopRegistered()));
             }
 
-            // ── Extensions (campi non standard) ──────────────────────────────
+            // ── Extensions (campi non standard, incl. accessibilità) ──────────
             Siri.Extensions extensions = new Siri.Extensions();
             extensions.setVelocity(v.getSpeedKmh());
             extensions.setNumberOfSeats(v.getNumeroPosti());
             extensions.setPassengers(v.getPassengers());
+            extensions.setWheelchairAccess(v.getWheelchairAccessible());
 
             // ── MonitoredVehicleJourney ───────────────────────────────────────
             Siri.MonitoredVehicleJourney journey = new Siri.MonitoredVehicleJourney();
@@ -72,15 +73,19 @@ public class SiriMapper {
             journey.setBearing(v.getHeadingDeg());
             journey.setOccupancy(occupancy);
             journey.setDelay(delay);
-            journey.setAccessibility(accessibility);
             journey.setMonitoredCall(monitoredCall);
             journey.setPreviousCalls(previousCalls);
-            journey.setExtensions(extensions);
 
             // ── VehicleActivity ───────────────────────────────────────────────
             Siri.VehicleActivity activity = new Siri.VehicleActivity();
-            if (v.getTimestamp() != null) activity.setRecordedAtTime(v.getTimestamp().toString());
+            if (v.getTimestamp() != null) {
+                java.time.Instant rec = v.getTimestamp().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+                activity.setRecordedAtTime(rec.toString());
+                // ValidUntilTime obbligatorio: orizzonte di validità di 60s dal recorded.
+                activity.setValidUntilTime(rec.plusSeconds(60).toString());
+            }
             activity.setMonitoredVehicleJourney(journey);
+            activity.setExtensions(extensions);   // Extensions vive a livello VehicleActivity (non MVJ)
             activities.add(activity);
         }
 
@@ -91,6 +96,17 @@ public class SiriMapper {
         sd.setVehicleMonitoringDelivery(vmd);
 
         return new Siri(sd);
+    }
+
+    /**
+     * Converte un nome/etichetta di fermata in un codice valido per StopPointCodeType.
+     * StopPointCodeType non ammette spazi: teniamo solo caratteri alfanumerici.
+     * Es. "Staz. FF.SS." → "StazFFSS", "Via Garigliano" → "ViaGarigliano".
+     */
+    private static String toStopCode(String s) {
+        if (s == null) return null;
+        String code = s.replaceAll("[^A-Za-z0-9]", "");
+        return code.isEmpty() ? "UNKNOWN" : code;
     }
 
     /**

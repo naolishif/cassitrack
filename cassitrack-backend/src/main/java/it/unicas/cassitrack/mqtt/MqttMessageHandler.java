@@ -65,12 +65,15 @@ public class MqttMessageHandler implements MessageHandler {
             Boolean wheelchairAccessible = associatedBus.map(Bus::getWheelchairAccessible).orElse(null);
             Integer numeroPosti = associatedBus.map(Bus::getNumeroPosti).orElse(null);
 
-            // ── Step 4: Calcolo fermata successiva ────────────────
+            // ── Step 4: Calcolo fermata successiva (nome + ID) ────
             String nextStop = routeMatchingService.nextStopName(
+                    pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId());
+            String nextStopId = routeMatchingService.nextStopId(
                     pos.getTripId(), pos.getRouteId(), pos.getLastStopRegisteredId());
 
             // ── Step 5: Calcolo aderenza (ritardo + stato) PRIMA di Influx ──
             VehiclePosition entity = toEntity(pos, busId, wheelchairAccessible, numeroPosti, nextStop);
+            entity.setNextStopId(nextStopId);
             scheduleAdherenceService.processBusAdherence(entity);
             vehicleStateCache.update(pos.getVehicleId(), entity);
 

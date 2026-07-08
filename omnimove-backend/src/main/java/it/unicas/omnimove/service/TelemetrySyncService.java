@@ -203,9 +203,14 @@ public class TelemetrySyncService {
             Siri.MonitoredVehicleJourney journey = activity.getMonitoredVehicleJourney();
             if (journey == null) continue;
 
-            // Wheelchair: da Accessibility.wheelchairAccess (Boolean)
-            Boolean wheelchair = journey.getAccessibility() != null
-                    ? journey.getAccessibility().getWheelchairAccess() : null;
+            // Wheelchair: ora da Extensions/WheelchairAccess; fallback all'elemento
+            // legacy <Accessibility> per retro-compatibilità con pacchetti vecchi.
+            Boolean wheelchair = null;
+            if (activity.getExtensions() != null && activity.getExtensions().getWheelchairAccess() != null) {
+                wheelchair = activity.getExtensions().getWheelchairAccess();
+            } else if (journey.getAccessibility() != null) {
+                wheelchair = journey.getAccessibility().getWheelchairAccess();
+            }
 
             // TripId: da FramedVehicleJourneyRef.datedVehicleJourneyRef
             String tripId = journey.getFramedVehicleJourneyRef() != null
@@ -225,10 +230,10 @@ public class TelemetrySyncService {
             // Velocity e NumberOfSeats: da Extensions
             float speed = 0f;
             Integer numeroPosti = null;
-            if (journey.getExtensions() != null) {
-                speed = journey.getExtensions().getVelocity() != null
-                        ? journey.getExtensions().getVelocity().floatValue() : 0f;
-                numeroPosti = journey.getExtensions().getNumberOfSeats();
+            if (activity.getExtensions() != null) {
+                speed = activity.getExtensions().getVelocity() != null
+                        ? activity.getExtensions().getVelocity().floatValue() : 0f;
+                numeroPosti = activity.getExtensions().getNumberOfSeats();
             }
 
             result.add(BusTelemetryDTO.builder()
@@ -244,7 +249,7 @@ public class TelemetrySyncService {
                     .lastStopRegistered(lastStop)
                     .tripId(tripId)
                     .nextStop(nextStop)
-                    .passengers(journey.getExtensions() != null ? journey.getExtensions().getPassengers() : null)
+                    .passengers(activity.getExtensions() != null ? activity.getExtensions().getPassengers() : null)
                     .build());
         }
         return result;

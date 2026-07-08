@@ -44,7 +44,8 @@ public class VehiclePosition {
     private String  tripId;
     private String  routeId;
     private String  routeName;        // from simulator
-    private String  nextStop;         // computed server-side
+    private String  nextStop;         // computed server-side (nome fermata successiva)
+    private String  nextStopId;       // computed server-side (ID fermata successiva)
 
     // Server-side processing fields
     private String matchedRouteId;
