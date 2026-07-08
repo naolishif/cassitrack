@@ -66,7 +66,7 @@ services:
         condition: service_healthy
     environment:
       # Database
-      SPRING_DATASOURCE_URL: jdbc:postgresql://omnimove-postgres:5432/omnimovedb
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       # InfluxDB
@@ -82,17 +82,17 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       # Cassitrack connection
-      CASSITRACK_URL: ${CASSITRACK_URL:-http://cassitrack-api:8280/api/v1}
+      CASSITRACK_URL: ${CASSITRACK_URL}
       CASSITRACK_API_TOKEN: ${CASSITRACK_API_TOKEN}
-      CASSITRACK_NETEX_URL: ${CASSITRACK_NETEX_URL:-http://localhost:8280/api/static/netex}
+      CASSITRACK_NETEX_URL: ${CASSITRACK_NETEX_URL}
 
       # External APIs
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       WEATHER_API_KEY: ${WEATHER_API_KEY}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
       # CORS
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8180}
-      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8180}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      APP_BASE_URL: ${APP_BASE_URL}
     ports:
       - "8180:8180"
 
