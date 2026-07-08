@@ -84,6 +84,8 @@ services:
       # Cassitrack connection
       CASSITRACK_URL: ${CASSITRACK_URL:-http://cassitrack-api:8280/api/v1}
       CASSITRACK_API_TOKEN: ${CASSITRACK_API_TOKEN}
+      CASSITRACK_NETEX_URL: ${CASSITRACK_NETEX_URL:-http://localhost:8280/api/static/netex}
+
       # External APIs
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       WEATHER_API_KEY: ${WEATHER_API_KEY}
