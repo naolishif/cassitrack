@@ -95,6 +95,8 @@ services:
       APP_BASE_URL: ${APP_BASE_URL}
     ports:
       - "8180:8180"
+    profiles:
+      - full  # only starts with: docker compose --profile full up
 
 volumes:
   omnimove_postgres_data:
