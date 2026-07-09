@@ -23,7 +23,7 @@ const _name = _user.name || _user.username || 'there';
 document.getElementById('aiGreeting').textContent =
     `👋 Hi ${_name}! I'm OmniAI. I can help you find the best route, check real-time delays, or suggest eco-friendly alternatives. What do you need?`;
 
-const API_BASE = '/api/v1';
+const API_BASE = '/omnimove/api/v1';
 
 async function loadEcoStats() {
     try {
@@ -1064,7 +1064,7 @@ function closeAI(e) {
 async function logout() {
     const token = localStorage.getItem('omnimove_token');
     if (token) {
-        await fetch('/api/v1/auth/logout', {
+        await fetch('/omnimove/api/v1/auth/logout', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + token }
         }).catch(() => {});
@@ -1086,7 +1086,7 @@ async function deleteAccount() {
 
     try {
         const token = localStorage.getItem('omnimove_token');
-        const r = await fetch('/api/v1/auth/account', {
+        const r = await fetch('/omnimove/api/v1/auth/account', {
             method: 'DELETE',
             headers: { 'Authorization': 'Bearer ' + token }
         });

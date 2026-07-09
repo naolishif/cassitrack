@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════════════════════════
-const OMNIMOVE = '/api/v1';
+const OMNIMOVE = '/omnimove/api/v1';
 const REDIRECT = {
     ADMIN:     'omnimove-admin.html',
     TRAVELLER: 'omnimove-traveller.html',

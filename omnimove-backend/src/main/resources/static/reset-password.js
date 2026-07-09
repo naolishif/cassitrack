@@ -40,7 +40,7 @@ async function doReset(e) {
   btn.textContent = 'Saving…';
 
   try {
-    const r = await fetch('/api/v1/auth/reset-password', {
+    const r = await fetch('/omnimove/api/v1/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: TOKEN, newPassword: p1, confirmPassword: p2 })

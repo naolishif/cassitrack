@@ -28,7 +28,7 @@ function escHtml(s) {
 })();
 
 // ── API helper con JWT ─────────────────────────────────────────────────
-const API_BASE = '/api/v1';  // relativo — OMNIMOVE porta 8180
+const API_BASE = '/omnimove/api/v1';  // context-path prefix required
 
 async function apiFetch(path, options = {}) {
     // V-04 FIX: Token is in httpOnly cookie (sent automatically by browser).
@@ -169,7 +169,7 @@ async function confirmDeleteUser() {
 
 // log out
 async function logout() {
-    await fetch('/api/v1/auth/logout', {
+    await fetch('/omnimove/api/v1/auth/logout', {
         method: 'POST'
     }).catch(() => {});
     sessionStorage.removeItem('omnimove_user');
