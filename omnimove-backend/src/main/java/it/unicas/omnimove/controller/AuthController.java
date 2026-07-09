@@ -184,18 +184,21 @@ public class AuthController {
 
     @GetMapping("/verify")
     @Operation(summary = "Verify email address via link sent by email")
-    public void verifyEmail(@RequestParam String token, HttpServletResponse response) throws IOException {
+    public void verifyEmail(@RequestParam String token,
+                            HttpServletRequest request,
+                            HttpServletResponse response) throws IOException {
 
+        String ctx = request.getContextPath(); // e.g. "/omnimove" or ""
         var userOpt = userRepo.findByVerificationToken(token);
         if (userOpt.isEmpty()) {
-            response.sendRedirect("/omnimove-login.html?verified=invalid");
+            response.sendRedirect(ctx + "/omnimove-login.html?verified=invalid");
             return;
         }
 
         User user = userOpt.get();
         if (user.getVerificationTokenExpiry() != null
                 && LocalDateTime.now().isAfter(user.getVerificationTokenExpiry())) {
-            response.sendRedirect("/omnimove-login.html?verified=expired");
+            response.sendRedirect(ctx + "/omnimove-login.html?verified=expired");
             return;
         }
 
@@ -205,7 +208,7 @@ public class AuthController {
         userRepo.save(user);
 
         securityAuditService.emailVerified(user.getEmail());
-        response.sendRedirect("/omnimove-login.html?verified=true");
+        response.sendRedirect(ctx + "/omnimove-login.html?verified=true");
     }
 
     // ── RESEND VERIFICATION ──────────────────────────────────────────
@@ -311,13 +314,15 @@ public class AuthController {
     // ── RESET PAGE (email link lands here) ──────────────────────────
     @GetMapping("/reset-page")
     public void resetPage(@RequestParam(required = false) String token,
+                          HttpServletRequest request,
                           HttpServletResponse response) throws IOException {
 
+        String ctx = request.getContextPath(); // e.g. "/omnimove" or ""
         // Allow only characters present in JWT tokens (base64url + dots)
         String safeToken = (token != null) ? token.replaceAll("[^a-zA-Z0-9._\\-]", "") : "";
 
         if (safeToken.isBlank()) {
-            response.sendRedirect("/omnimove-login.html");
+            response.sendRedirect(ctx + "/omnimove-login.html");
             return;
         }
 
@@ -328,11 +333,11 @@ public class AuthController {
         );
 
         if (!valid) {
-            response.sendRedirect("/reset-password.html?expired=true");
+            response.sendRedirect(ctx + "/reset-password.html?expired=true");
             return;
         }
 
-        response.sendRedirect("/reset-password.html#" + safeToken);
+        response.sendRedirect(ctx + "/reset-password.html#" + safeToken);
     }
 
     @PostMapping("/logout")
