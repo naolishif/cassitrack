@@ -29,8 +29,8 @@ spring:
 
   data:
     redis:
-        host: localhost
-        port: 6380
+        host: ${SPRING_DATA_REDIS_HOST:localhost}
+        port: ${SPRING_DATA_REDIS_PORT:6380}
         password: ${SPRING_REDIS_PASSWORD}
   h2:
     console:
@@ -64,17 +64,17 @@ server:
 # OMNIMOVE calls CASSITRACK for live bus data
 cassitrack:
   api:
-    base-url: ${CASSITRACK_URL:http://localhost:8280/api/v1}
+    base-url: ${CASSITRACK_URL:http://localhost:8280/cassitrack/api/v1}
     token: ${CASSITRACK_API_TOKEN}
   netex:
-    url: ${CASSITRACK_NETEX_URL:http://localhost:8280/api/static/netex}
+    url: ${CASSITRACK_NETEX_URL:http://localhost:8280/cassitrack/api/static/netex}
 
 # ── Anthropic Claude API ──────────────────────────────────────
 anthropic:
   api:
     key: ${ANTHROPIC_API_KEY:}
     url: https://api.anthropic.com/v1/messages
-    model: claude-haiku-4-5-20251001
+    model: ${ANTHROPIC_API_MODEL:claude-haiku-4-5-20251001}
 
 # ── Weather Service ───────────────────────────────────────────
 weather:
@@ -128,8 +128,8 @@ influx:
   url: ${INFLUX_URL:http://localhost:8087}
   # Paste here your InfluxDB generated token:
   token: ${INFLUX_TOKEN}
-  org: omnimove_org
-  bucket: omnimove_bucket
+  org: ${INFLUX_ORG:omnimove_org}
+  bucket: ${INFLUX_BUCKET:omnimove_bucket}
 
 # ── Google Maps API ───────────────────────────────────────────
 # Richiede: Distance Matrix API abilitata su Google Cloud Console
