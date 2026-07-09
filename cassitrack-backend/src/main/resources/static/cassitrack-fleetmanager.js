@@ -10,7 +10,7 @@
     // script ever runs), matching how cassitrack-admin.js has no client-side
     // gate either. Removed.
 
-    const API          = '/api/v1';                        // CASSITRACK — fleet, ETA  (relativo, porta 8280)
+    const API          = '/cassitrack/api/v1';              // CASSITRACK — fleet, ETA  (context-path prefix required)
 
     // XSS defense: escape any API-supplied string before inserting into innerHTML
     function escHtml(s) {
@@ -314,7 +314,7 @@
         // and the session cookie was never cleared, so "logging out" didn't
         // really log you out. The cookie is sent automatically with this
         // same-origin request, so no Authorization header is needed.
-        await fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
+        await fetch('/cassitrack/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
         window.location.href='cassitrack-login.html';
     }
     setInterval(()=>{

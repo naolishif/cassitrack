@@ -1,7 +1,7 @@
 // Auth is enforced server-side (SecurityConfig gates this page to FLEET_MANAGER/ADMIN).
 // No client-side localStorage guard needed — the httpOnly cookie is sent automatically.
 
-const API = '/api/v1';
+const API = '/cassitrack/api/v1';
 
 const STATUS_COL = {
     ON_TIME: '#22C55E',
@@ -32,7 +32,7 @@ function escHtml(s) {
 // ── LOGOUT ─────────────────────────────────────────────────────────────────
 
 async function logoutUser() {
-    await fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
+    await fetch('/cassitrack/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
     window.location.href = 'cassitrack-login.html';
 }
 

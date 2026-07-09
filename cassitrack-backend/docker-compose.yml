@@ -150,6 +150,8 @@ services:
       WEATHER_API_KEY: ${WEATHER_API_KEY}
       # Anthropic Claude (optional — AI features degrade gracefully if not set)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Context path — must match the Nginx location prefix
+      SERVER_SERVLET_CONTEXT_PATH: ${SERVER_SERVLET_CONTEXT_PATH:-/cassitrack}
     ports:
       - "127.0.0.1:8280:8280"
     # NOTE: comment out the 'build' block and use 'image' below

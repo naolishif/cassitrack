@@ -66,7 +66,7 @@ async function logoutUser(){
     // "logging out" didn't really log you out. The cookie is sent
     // automatically with this same-origin request, so no Authorization
     // header is needed.
-    await fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
+    await fetch('/cassitrack/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
     window.location.href = 'cassitrack-login.html';
 }
 
@@ -242,7 +242,7 @@ async function saveUser(){
 
         if(selectedUser){
 
-            const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
+            const response = await fetch(`/cassitrack/api/v1/users/${selectedUser.id}`, {
                 method:'PUT',
                 headers:{
                     'Content-Type':'application/json'
@@ -262,7 +262,7 @@ async function saveUser(){
             // CREATE NEW USER
             // ─────────────────────────────────────────────────────────────────
 
-            const response = await fetch('/api/v1/users', {
+            const response = await fetch('/cassitrack/api/v1/users', {
                 method:'POST',
                 headers:{
                     'Content-Type':'application/json'
@@ -324,7 +324,7 @@ async function confirmDeleteUser(){
 
         // BUGFIX (auth): dead localStorage-token header removed — auth is
         // via the httpOnly cookie, sent automatically on same-origin fetches.
-        const response = await fetch(`/api/v1/users/${selectedUser.id}`, {
+        const response = await fetch(`/cassitrack/api/v1/users/${selectedUser.id}`, {
 
             method:'DELETE'
         });
@@ -364,7 +364,7 @@ async function loadUsers(){
 
         // BUGFIX (auth): dead localStorage-token header removed — auth is
         // via the httpOnly cookie, sent automatically on same-origin fetches.
-        const response = await fetch('/api/v1/users');
+        const response = await fetch('/cassitrack/api/v1/users');
 
         const users = await response.json();
 

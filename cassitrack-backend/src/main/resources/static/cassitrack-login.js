@@ -1,10 +1,11 @@
-const CASSITRACK = '/api/v1';
+const CASSITRACK = '/cassitrack/api/v1';
 
-// Role redirection dictionary (Easy to scale later!)
+// Role redirection dictionary — relative paths (no leading slash) so they
+// resolve correctly under the /cassitrack/ context-path prefix.
 const roleRoutes = {
-    'FLEET_MANAGER': '/cassitrack-fleetmanager.html',
-    'ADMIN': '/cassitrack-admin.html',
-    'DRIVER': '/cassitrack-driver.html'
+    'FLEET_MANAGER': 'cassitrack-fleetmanager.html',
+    'ADMIN': 'cassitrack-admin.html',
+    'DRIVER': 'cassitrack-driver.html'
 };
 
 function showMsg(text, type) {
