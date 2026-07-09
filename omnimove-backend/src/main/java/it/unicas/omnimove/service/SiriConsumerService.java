@@ -42,9 +42,14 @@ public class SiriConsumerService {
                 for (Siri.VehicleActivity activity : activities) {
                     Siri.MonitoredVehicleJourney journey = activity.getMonitoredVehicleJourney();
 
-                    // Accessibility → Boolean
-                    Boolean wheelchairAccessible = journey.getAccessibility() != null
-                            ? journey.getAccessibility().getWheelchairAccess() : null;
+                    // Accessibilità: ora arriva da Extensions/WheelchairAccess;
+                    // fallback all'elemento legacy <Accessibility> per retro-compatibilità.
+                    Boolean wheelchairAccessible = null;
+                    if (activity.getExtensions() != null && activity.getExtensions().getWheelchairAccess() != null) {
+                        wheelchairAccessible = activity.getExtensions().getWheelchairAccess();
+                    } else if (journey.getAccessibility() != null) {
+                        wheelchairAccessible = journey.getAccessibility().getWheelchairAccess();
+                    }
 
                     // FramedVehicleJourneyRef → tripId
                     String tripId = journey.getFramedVehicleJourneyRef() != null
@@ -61,10 +66,10 @@ public class SiriConsumerService {
                     // Extensions → velocity, numberOfSeats
                     float speed = 0f;
                     Integer numeroPosti = null;
-                    if (journey.getExtensions() != null) {
-                        speed = journey.getExtensions().getVelocity() != null
-                                ? journey.getExtensions().getVelocity().floatValue() : 0f;
-                        numeroPosti = journey.getExtensions().getNumberOfSeats();
+                    if (activity.getExtensions() != null) {
+                        speed = activity.getExtensions().getVelocity() != null
+                                ? activity.getExtensions().getVelocity().floatValue() : 0f;
+                        numeroPosti = activity.getExtensions().getNumberOfSeats();
                     }
 
                     BusTelemetryDTO dto = BusTelemetryDTO.builder()

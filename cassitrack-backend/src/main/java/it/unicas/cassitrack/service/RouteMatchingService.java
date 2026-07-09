@@ -130,6 +130,13 @@ public class RouteMatchingService {
 
     /** Nome della fermata successiva a quella attuale, lungo la sequenza della corsa. */
     public String nextStopName(String tripId, String routeId, String currentStopId) {
+        String nextId = nextStopId(tripId, routeId, currentStopId);
+        if (nextId == null) return null;
+        return stopRepository.findById(nextId).map(Stop::getName).orElse(nextId);
+    }
+
+    /** ID della fermata successiva a quella attuale, lungo la sequenza della corsa. */
+    public String nextStopId(String tripId, String routeId, String currentStopId) {
         if (currentStopId == null) return null;
         List<ScheduledStop> seq = (tripId != null)
                 ? scheduledStopRepo.findByTripIdOrderByStopSequenceAsc(tripId)
@@ -138,8 +145,7 @@ public class RouteMatchingService {
         for (int i = 0; i < seq.size(); i++) {
             if (seq.get(i).getStopId().equals(currentStopId)) {
                 if (i + 1 >= seq.size()) return null;
-                String nextId = seq.get(i + 1).getStopId();
-                return stopRepository.findById(nextId).map(Stop::getName).orElse(nextId);
+                return seq.get(i + 1).getStopId();
             }
         }
         return null;
