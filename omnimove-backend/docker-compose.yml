@@ -94,7 +94,7 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       APP_BASE_URL: ${APP_BASE_URL}
     ports:
-      - "8180:8180"
+      - "127.0.0.1:8180:8180"
     profiles:
       - full  # only starts with: docker compose --profile full up
 

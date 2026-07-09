@@ -151,7 +151,7 @@ services:
       # Anthropic Claude (optional — AI features degrade gracefully if not set)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
-      - "8280:8280"
+      - "127.0.0.1:8280:8280"
     # NOTE: comment out the 'build' block and use 'image' below
     # if you want to run infra only and start Spring Boot from IntelliJ.
     profiles:
