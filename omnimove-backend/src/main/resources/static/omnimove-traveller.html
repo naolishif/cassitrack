@@ -29,6 +29,7 @@
             <div class="name" id="sidebarName">—</div>
             <div class="email" id="sidebarEmail">—</div>
         </div>
+        <button onclick="logout()" title="Log out" style="margin-left:auto;flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--text-soft);font-size:18px;padding:4px;border-radius:8px;transition:color .2s" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text-soft)'">→</button>
     </div>
 
     <nav class="sidebar-nav">
@@ -53,6 +54,9 @@
         </div>
         <div class="nav-item" data-pane="profile" data-tab="settings">
             <span class="nav-icon">⚙</span> Preferences
+        </div>
+        <div class="nav-item" data-pane="profile" data-tab="account">
+            <span class="nav-icon">👤</span> Account
         </div>
     </nav>
 
@@ -280,6 +284,7 @@
                     <div class="profile-tab" data-ptab="favorites" onclick="switchProfileTab('favorites')">Favourites</div>
                     <div class="profile-tab" data-ptab="payment" onclick="switchProfileTab('payment')">Payment</div>
                     <div class="profile-tab" data-ptab="settings" onclick="switchProfileTab('settings')">Preferences</div>
+                <div class="profile-tab" data-ptab="account" onclick="switchProfileTab('account')">Account</div>
                 </div>
 
                 <div class="ptab-pane active" id="ptab-history">
@@ -385,6 +390,19 @@
                         <button class="action-btn btn-green" onclick="savePreferences()" style="width:100%;padding:12px 20px;font-size:14px;font-weight:700">💾 Save Preferences</button>
                     </div>
 
+                </div>
+
+                <div class="ptab-pane" id="ptab-account">
+                    <div class="settings-section">
+                        <span class="section-label">Profile</span>
+                        <div class="pref-row">
+                            <div>
+                                <div class="pref-label" id="accountName">—</div>
+                                <div class="pref-desc" id="accountEmail">—</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="settings-section">
                         <span class="section-label">Session</span>
                         <div class="pref-row">
@@ -396,35 +414,14 @@
                         </div>
                     </div>
 
-                    <div class="settings-section" style="border:1px solid #fee2e2;border-radius:var(--radius-sm);padding:16px;background:#fff5f5">
-                        <span class="section-label" style="color:var(--red)">Danger Zone</span>
+                    <div class="settings-section">
+                        <span class="section-label">Account Actions</span>
                         <div class="pref-row">
                             <div>
-                                <div class="pref-label" style="color:var(--red)">Delete my account</div>
-                                <div class="pref-desc">Permanently removes your account and all data. This cannot be undone.</div>
+                                <div class="pref-label" style="color:var(--red)">Delete account</div>
+                                <div class="pref-desc">Permanently removes your account and all data.</div>
                             </div>
-                            <button class="action-btn" onclick="confirmDeleteAccount()" style="width:auto;padding:8px 20px;flex-shrink:0;background:#1a0a0a;color:#f87171;border:1px solid #7f1d1d">🗑 Delete Account</button>
-                        </div>
-                    </div>
-
-                    <!-- Delete Account confirmation modal -->
-                    <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
-                         z-index:9999;align-items:center;justify-content:center">
-                        <div style="background:#0f1623;border:1px solid #7f1d1d;border-radius:12px;
-                             padding:32px;max-width:380px;width:90%;text-align:center">
-                            <div style="font-size:36px;margin-bottom:12px">⚠️</div>
-                            <div style="font-size:18px;font-weight:800;margin-bottom:8px;color:#f87171">Delete Account</div>
-                            <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:24px">
-                                Are you sure? This will permanently delete your account and all associated data. This action cannot be undone.
-                            </p>
-                            <div style="display:flex;gap:12px;justify-content:center">
-                                <button onclick="document.getElementById('deleteModal').style.display='none'"
-                                    style="padding:10px 24px;background:#1e293b;color:#94a3b8;border:1px solid #334155;
-                                    border-radius:8px;cursor:pointer;font-weight:700">Cancel</button>
-                                <button id="confirmDeleteBtn" onclick="deleteAccount()"
-                                    style="padding:10px 24px;background:#7f1d1d;color:#fca5a5;border:none;
-                                    border-radius:8px;cursor:pointer;font-weight:700">Yes, delete my account</button>
-                            </div>
+                            <button class="action-btn" onclick="confirmDeleteAccount()" style="width:auto;padding:8px 20px;flex-shrink:0;background:none;color:var(--red);border:1px solid #fecaca">Delete</button>
                         </div>
                     </div>
                 </div>
@@ -432,6 +429,27 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- Delete Account confirmation modal -->
+<div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+     z-index:9999;align-items:center;justify-content:center">
+    <div style="background:#0f1623;border:1px solid #7f1d1d;border-radius:12px;
+         padding:32px;max-width:380px;width:90%;text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px;color:#f87171">Delete Account</div>
+        <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:24px">
+            Are you sure? This will permanently delete your account and all associated data. This action cannot be undone.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center">
+            <button onclick="document.getElementById('deleteModal').style.display='none'"
+                style="padding:10px 24px;background:#1e293b;color:#94a3b8;border:1px solid #334155;
+                border-radius:8px;cursor:pointer;font-weight:700">Cancel</button>
+            <button id="confirmDeleteBtn" onclick="deleteAccount()"
+                style="padding:10px 24px;background:#7f1d1d;color:#fca5a5;border:none;
+                border-radius:8px;cursor:pointer;font-weight:700">Yes, delete my account</button>
+        </div>
     </div>
 </div>
 

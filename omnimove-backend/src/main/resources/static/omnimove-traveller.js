@@ -1010,9 +1010,14 @@ function switchProfileTab(tab) {
     document.querySelectorAll('.ptab-pane').forEach(p => p.classList.remove('active'));
     const el = document.getElementById('ptab-' + tab);
     if (el) el.classList.add('active');
-    if (tab === 'history') loadHistory();
+    if (tab === 'history')   loadHistory();
     if (tab === 'favorites') loadFavorites();
-    if (tab === 'settings') loadPreferences();
+    if (tab === 'settings')  loadPreferences();
+    if (tab === 'account') {
+        const user = JSON.parse(sessionStorage.getItem('omnimove_user') || '{}');
+        document.getElementById('accountName').textContent  = user.name  || '—';
+        document.getElementById('accountEmail').textContent = user.email || '—';
+    }
 }
 
 // Escape a string so it is safe inside a double-quoted HTML attribute.
