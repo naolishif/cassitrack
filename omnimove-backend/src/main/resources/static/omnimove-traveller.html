@@ -381,15 +381,30 @@
                         </div>
                     </div>
                     <div class="settings-section">
-                        <span class="section-label">Account</span>
-                        <div class="pref-row" style="gap:12px;flex-wrap:wrap">
-                            <button class="action-btn" onclick="logout()" style="width:auto;padding:8px 20px;background:#fef2f2;color:var(--red);border:1px solid #fee2e2">Log Out</button>
-                            <button class="action-btn" onclick="confirmDeleteAccount()" style="width:auto;padding:8px 20px;background:#1a0a0a;color:#f87171;border:1px solid #7f1d1d">🗑 Delete Account</button>
-                            <button class="action-btn btn-green" onclick="savePreferences()" style="width:auto;padding:8px 20px">💾 Save Preferences</button>
+                        <span class="section-label">Save Changes</span>
+                        <button class="action-btn btn-green" onclick="savePreferences()" style="width:100%;padding:12px 20px;font-size:14px;font-weight:700">💾 Save Preferences</button>
+                    </div>
+
+                    <div class="settings-section">
+                        <span class="section-label">Session</span>
+                        <div class="pref-row">
+                            <div>
+                                <div class="pref-label">Log out of OmniMove</div>
+                                <div class="pref-desc">You will need to sign in again to access your account</div>
+                            </div>
+                            <button class="action-btn" onclick="logout()" style="width:auto;padding:8px 20px;flex-shrink:0;background:#fef2f2;color:var(--red);border:1px solid #fee2e2">Log Out</button>
                         </div>
-                        <p style="font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.5">
-                            Deleting your account is permanent and cannot be undone. All your data will be removed.
-                        </p>
+                    </div>
+
+                    <div class="settings-section" style="border:1px solid #fee2e2;border-radius:var(--radius-sm);padding:16px;background:#fff5f5">
+                        <span class="section-label" style="color:var(--red)">Danger Zone</span>
+                        <div class="pref-row">
+                            <div>
+                                <div class="pref-label" style="color:var(--red)">Delete my account</div>
+                                <div class="pref-desc">Permanently removes your account and all data. This cannot be undone.</div>
+                            </div>
+                            <button class="action-btn" onclick="confirmDeleteAccount()" style="width:auto;padding:8px 20px;flex-shrink:0;background:#1a0a0a;color:#f87171;border:1px solid #7f1d1d">🗑 Delete Account</button>
+                        </div>
                     </div>
 
                     <!-- Delete Account confirmation modal -->
