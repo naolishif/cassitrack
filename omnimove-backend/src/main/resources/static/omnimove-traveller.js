@@ -710,7 +710,7 @@ function selectMode(mode, label, greenIndex, distanceMetres, costEuros) {
     const startBtn = document.createElement('button');
     startBtn.className = 'action-btn btn-green';
     startBtn.style.cssText = 'width:100%;font-size:14px;padding:13px';
-    startBtn.textContent = '🚀 Start Journey';
+    startBtn.textContent = 'Start Journey';
     startBtn.onclick = startJourney;
 
     banner.appendChild(infoDiv);
@@ -924,13 +924,13 @@ async function startJourney() {
             }
         }, 60000);
 
-        showToast(`🚀 Journey started! ${durationMin} min to destination`);
+        showToast(`Journey started! ${durationMin} min to destination`);
 
     } catch (err) {
         console.error('startJourney failed:', err);
         showToast('⚠️ Impossibile avviare il percorso', true);
         window._journeyStarting = false;
-        if (_startBtn) { _startBtn.disabled = false; _startBtn.textContent = '🚀 Start Journey'; }
+        if (_startBtn) { _startBtn.disabled = false; _startBtn.textContent = 'Start Journey'; }
     }
 }
 
@@ -1198,3 +1198,130 @@ function renderSuggestions(suggestions) {
 
 // ── Initial load: populate stops (dropdowns + map markers) ─────────
 loadStops();
+
+// ══════════════════════════════════════════════════════════════
+
+// ── Step 3: mobile ☰ menu drawer ──────────────────────────────
+function openMenu() {
+    document.getElementById('menuDrawer').classList.add('open');
+    document.getElementById('menuScrim').classList.add('open');
+}
+function closeMenu() {
+    document.getElementById('menuDrawer').classList.remove('open');
+    document.getElementById('menuScrim').classList.remove('open');
+}
+// Tapping a menu item on mobile switches the pane (existing handler) then closes the drawer
+document.querySelectorAll('.sidebar-nav .nav-item').forEach(function (it) {
+    it.addEventListener('click', function () {
+        if (window.matchMedia('(max-width: 768px)').matches) closeMenu();
+    });
+});
+
+// ── Step 4: mobile full-screen subpages (back arrow + title) ──
+function setMobilePane(pane, title) {
+    document.body.dataset.pane = pane || 'map';
+    var t = document.getElementById('mobileTitle');
+    if (t) t.textContent = title || '';
+}
+function backToMap() {
+    var mapNav = document.querySelector('.sidebar-nav .nav-item[data-pane="map"]');
+    if (mapNav) mapNav.click();          // reuse the existing pane-switch handler
+    else setMobilePane('map', '');
+}
+// Track the active pane so CSS can swap the search UI for the back bar
+document.querySelectorAll('.sidebar-nav .nav-item').forEach(function (it) {
+    it.addEventListener('click', function () {
+        var pane = it.dataset.pane || 'map';
+        var clone = it.cloneNode(true);
+        var badge = clone.querySelector('.nav-badge');
+        if (badge) badge.remove();
+        var label = clone.textContent.replace(/\s+/g, ' ').trim();
+        setMobilePane(pane, pane === 'map' ? '' : label);
+    });
+});
+// Start on the map pane
+setMobilePane('map', '');
+
+// ── Step 5: back arrow reopens the ☰ menu; track profile section ──
+function backToMap() { openMenu(); }   // overrides the earlier definition
+document.querySelectorAll('.sidebar-nav .nav-item').forEach(function (it) {
+    it.addEventListener('click', function () {
+        document.body.dataset.tab = it.dataset.tab || '';
+    });
+});
+
+// ── Step 6: ← returns to the map (☰ still opens the menu for other sections) ──
+function backToMap() {
+    var n = document.querySelector('.sidebar-nav .nav-item[data-pane="map"]');
+    if (n) n.click();
+}
+
+// ── Step 7: ensure the Leaflet map renders on mobile / after reflow ──
+window.addEventListener('resize', function () { try { map.invalidateSize(); } catch (e) {} });
+setTimeout(function () { try { map.invalidateSize(); } catch (e) {} }, 500);
+
+// ── Step 9: the ← on option pages reopens the menu ──
+function backToMap() { openMenu(); }
+
+// ── Step 10: draggable routes sheet (Google-Maps style, mobile only) ──
+(function () {
+    var sheet = document.querySelector('.map-sidebar');
+    var handle = document.getElementById('sheetHandle');
+    if (!sheet || !handle) return;
+
+    function isMobile() { return window.matchMedia('(max-width: 768px)').matches; }
+    function vh(p) { return Math.round(window.innerHeight * p / 100); }
+    function states() { return [110, vh(42), vh(85)]; }   // peek · half · full
+    function clamp(h) { var s = states(); return Math.max(s[0], Math.min(s[s.length - 1], h)); }
+    function pointY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+    var dragging = false, startY = 0, startH = 0, lastY = 0;
+
+    function down(e) {
+        if (!isMobile()) return;
+        dragging = true;
+        sheet.style.transition = 'none';
+        startY = lastY = pointY(e);
+        startH = sheet.offsetHeight;
+        e.preventDefault();
+    }
+    function move(e) {
+        if (!dragging) return;
+        lastY = pointY(e);
+        sheet.style.height = clamp(startH + (startY - lastY)) + 'px';
+        if (e.cancelable) e.preventDefault();
+    }
+    function up() {
+        if (!dragging) return;
+        dragging = false;
+        sheet.style.transition = 'height 0.25s ease';
+        var s = states();
+        var dy = startY - lastY;                 // >0 up, <0 down
+        var cur = 0, best = Infinity;
+        s.forEach(function (t, i) { var d = Math.abs(t - startH); if (d < best) { best = d; cur = i; } });
+        var target = cur;
+        if (dy > 30 && cur < s.length - 1) target = cur + 1;      // dragged up → bigger
+        else if (dy < -30 && cur > 0) target = cur - 1;          // dragged down → smaller
+        else {
+            best = Infinity;
+            var h = sheet.offsetHeight;
+            s.forEach(function (t, i) { var d = Math.abs(t - h); if (d < best) { best = d; target = i; } });
+        }
+        sheet.style.height = s[target] + 'px';
+        try { map.invalidateSize(); } catch (e) {}
+    }
+
+    handle.addEventListener('mousedown', down);
+    handle.addEventListener('touchstart', down, { passive: false });
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('mouseup', up);
+    window.addEventListener('touchend', up);
+    window.addEventListener('resize', function () { if (!isMobile()) sheet.style.height = ''; });
+})();
+
+// ── Step 12: closing the menu (✕ / tap-outside) returns to the map ──
+function closeMenuMap() {
+    var n = document.querySelector('.sidebar-nav .nav-item[data-pane="map"]');
+    if (n) n.click(); else closeMenu();
+}

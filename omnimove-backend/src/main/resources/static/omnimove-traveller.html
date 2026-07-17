@@ -17,7 +17,8 @@
 <body>
 
 <!-- ─── SIDEBAR ─── -->
-<div class="sidebar">
+<div class="sidebar" id="menuDrawer">
+    <button class="menu-close" onclick="closeMenuMap()" aria-label="Close menu">✕</button>
     <div class="sidebar-brand">
         <div class="brand-logo">OMNI<span>MOVE</span></div>
         <div class="brand-tagline">Smarter urban mobility</div>
@@ -69,11 +70,17 @@
     </div>
 </div>
 
+<!-- Mobile menu scrim (tap to close drawer) -->
+<div class="menu-scrim" id="menuScrim" onclick="closeMenuMap()"></div>
+
 <!-- ─── MAIN ─── -->
 <div class="main">
 
     <!-- TOPBAR -->
     <div class="topbar">
+        <button class="hamburger" id="menuBtn" aria-label="Open menu" onclick="openMenu()">☰</button>
+        <button class="mobile-back" onclick="backToMap()" aria-label="Back">←</button>
+        <span class="mobile-title" id="mobileTitle"></span>
         <div class="topbar-search">
             <div class="search-seg">
                 <span>📍</span>
@@ -110,6 +117,7 @@
             <div class="ai-fab" onclick="openAI()" title="Ask OmniAI">✦</div>
 
             <div class="map-sidebar">
+                <div class="sheet-handle" id="sheetHandle"><span></span></div>
                 <div class="map-sidebar-header">
                     <h2>Smart Routes</h2>
                     <div class="weather-pill">☁️ 18°C · Light rain</div>

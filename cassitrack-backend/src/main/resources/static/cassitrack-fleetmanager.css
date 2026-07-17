@@ -872,3 +872,5 @@ header{display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--
 .chip[data-status="EARLY"]{color:#06B6D4;border-color:#06B6D444;background:#06B6D418;font-size:9px}
 .chip[data-status="UNKNOWN"]{color:#4B5563;border-color:#4B556344;background:#4B556318;font-size:9px}
 .chip[data-status="NO_TRIP"]{color:#F59E0B;border-color:#F59E0B44;background:#F59E0B18;font-size:9px}
+
+/* ══════════════════════════════════════════════════════════
