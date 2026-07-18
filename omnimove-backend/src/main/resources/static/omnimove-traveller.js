@@ -717,7 +717,7 @@ function selectMode(mode, label, greenIndex, distanceMetres, costEuros) {
     banner.appendChild(startBtn);
     document.querySelector('.routes-list').appendChild(banner);
 
-    showToast(`${modeEmoji} ${label} selected — tap Start Journey`);
+    if (!window.matchMedia('(max-width: 768px)').matches) showToast(`${modeEmoji} ${label} selected — tap Start Journey`);
 }
 
 async function startJourney() {
@@ -962,7 +962,7 @@ function endJourney() {
         + '<div style="font-size:12px;margin-top:6px">Search a new route above</div>'
         + '</div>';
 
-    showToast('🏁 Journey ended — great trip!');
+    if (!window.matchMedia('(max-width: 768px)').matches) showToast('🏁 Journey ended — great trip!');
     loadEcoStats();
 }
 
@@ -1270,8 +1270,9 @@ function backToMap() { openMenu(); }
     if (!sheet || !handle) return;
 
     function isMobile() { return window.matchMedia('(max-width: 768px)').matches; }
-    function vh(p) { return Math.round(window.innerHeight * p / 100); }
-    function states() { return [110, vh(42), vh(85)]; }   // peek · half · full
+    var _pane = document.getElementById('pane-map');
+    function paneH() { return (_pane && _pane.clientHeight) ? _pane.clientHeight : window.innerHeight; }
+    function states() { var h = paneH(); return [110, Math.round(h * 0.45), Math.round(h * 0.94)]; }   // peek · half · full (capped to the map area)
     function clamp(h) { var s = states(); return Math.max(s[0], Math.min(s[s.length - 1], h)); }
     function pointY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
 
@@ -1324,4 +1325,11 @@ function backToMap() { openMenu(); }
 function closeMenuMap() {
     var n = document.querySelector('.sidebar-nav .nav-item[data-pane="map"]');
     if (n) n.click(); else closeMenu();
+}
+
+// ── Step 19: back arrow reveals the map behind the reopened menu ──
+function backToMap() {
+    var n = document.querySelector('.sidebar-nav .nav-item[data-pane="map"]');
+    if (n) n.click();   // switch to the map pane (also closes menu + sets data-pane=map)
+    openMenu();         // then reopen the menu over the map
 }

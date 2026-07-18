@@ -56,3 +56,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--display);
     .btn, .btn-ghost, .tab { min-height: 44px; }  /* touch targets */
     .name-row { flex-direction: column; }    /* stack Name + Surname */
 }
+
+/* ── Mobile: smaller, phone-sized login ── */
+@media (max-width: 768px) {
+    .container { max-width: 360px; }
+    .logo { font-size: 24px; }
+    .tagline { font-size: 10px; margin-bottom: 22px; }
+    .card { padding: 20px 16px; }
+    .tabs { margin-bottom: 18px; }
+    .tab { font-size: 10px; padding: 8px; }
+    .label { font-size: 9px; margin-bottom: 3px; }
+    .input { font-size: 14px; padding: 9px 12px; }
+    .btn { padding: 11px; font-size: 12px; }
+    .btn-ghost { font-size: 11px; padding: 9px; }
+    .msg, .note, .field-err { font-size: 10px; }
+    .email-sent-box .icon { font-size: 32px; }
+    .email-sent-box p { font-size: 11px; }
+}
