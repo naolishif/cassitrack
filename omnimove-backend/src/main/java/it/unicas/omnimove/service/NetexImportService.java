@@ -57,6 +57,9 @@ public class NetexImportService {
         XmlMapper xmlMapper = new XmlMapper(xmlFactory);
         xmlMapper.registerModule(new JavaTimeModule());
         xmlMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Tollera elementi/attributi NeTEx che non modelliamo (es. ValidityConditions,
+        // TypeOfFrameRef aggiunti per conformità): non far fallire l'import per questi.
+        xmlMapper.disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
         this.restClient = RestClient.builder()
                 .messageConverters(converters -> {
@@ -201,9 +204,13 @@ public class NetexImportService {
                 routeRepository.saveAll(routes);
             }
 
-            // 3e. Corse
-            if (serviceFrame.getServiceJourneys() != null) {
-                for (ServiceJourneyDTO journeyDto : serviceFrame.getServiceJourneys()) {
+            // 3e. Corse — ora nel TimetableFrame (standard NeTEx);
+            //     fallback al ServiceFrame per retro-compatibilità con pacchetti vecchi.
+            List<ServiceJourneyDTO> journeys = frames.getTimetableFrame() != null
+                    ? frames.getTimetableFrame().getServiceJourneys()
+                    : serviceFrame.getServiceJourneys();
+            if (journeys != null) {
+                for (ServiceJourneyDTO journeyDto : journeys) {
                     Trip trip = new Trip();
                     trip.setId(localId(journeyDto.getId())); // "CASSITRACK:ServiceJourney:LINEA_1_28800" → "LINEA_1_28800"
 

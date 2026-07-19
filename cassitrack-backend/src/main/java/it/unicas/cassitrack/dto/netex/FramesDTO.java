@@ -5,7 +5,7 @@ import lombok.Data;
 
 /**
  * Wrapper NeTEx per i frame eterogenei dentro CompositeFrame.
- * Ordine canonico NeTEx: ResourceFrame (risorse fisiche) → SiteFrame (fermate) → ServiceFrame (corse).
+ * Ordine: ResourceFrame (risorse) → SiteFrame (fermate) → ServiceFrame (rete) → TimetableFrame (corse).
  */
 @Data
 public class FramesDTO {
@@ -18,4 +18,7 @@ public class FramesDTO {
 
     @JacksonXmlProperty(localName = "ServiceFrame")
     private ServiceFrameDTO serviceFrame;
+
+    @JacksonXmlProperty(localName = "TimetableFrame")
+    private TimetableFrameDTO timetableFrame;
 }

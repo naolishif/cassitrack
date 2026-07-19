@@ -146,7 +146,11 @@ public class NetexController {
         serviceFrame.setScheduledStopPoints(netexSSPs);
         serviceFrame.setStopAssignments(netexAssignments);
         serviceFrame.setLines(netexLines);
-        serviceFrame.setServiceJourneys(netexJourneys);
+
+        // ── 2c. TIMETABLE FRAME (Corse) ─────────────────────────────────────
+        // In NeTEx le ServiceJourney vivono nel TimetableFrame, non nel ServiceFrame.
+        TimetableFrameDTO timetableFrame = new TimetableFrameDTO();
+        timetableFrame.setServiceJourneys(netexJourneys);
 
         // ── 3. RESOURCE FRAME (Veicoli) ─────────────────────────────────────
         List<Bus> dbBuses = busRepository.findAll();
@@ -168,9 +172,10 @@ public class NetexController {
 
         // ── 4. ASSEMBLAGGIO FINALE ───────────────────────────────────────────
         FramesDTO frames = new FramesDTO();
+        frames.setResourceFrame(resourceFrame);
         frames.setSiteFrame(siteFrame);
         frames.setServiceFrame(serviceFrame);
-        frames.setResourceFrame(resourceFrame);
+        frames.setTimetableFrame(timetableFrame);
 
         CompositeFrameDTO compositeFrame = new CompositeFrameDTO();
         compositeFrame.setFrames(frames);

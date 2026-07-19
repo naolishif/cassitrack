@@ -15,6 +15,6 @@ public class VehicleDTO {
     @JacksonXmlProperty(localName = "PrivateCode")
     private String privateCode;
 
-    @JacksonXmlProperty(localName = "extensions")
+    @JacksonXmlProperty(localName = "Extensions")
     private VehicleExtensionsDTO extensions;
 }

@@ -13,7 +13,7 @@ public class PublicationDeliveryDTO {
     private String xmlns = "http://www.netex.org.uk/netex";
 
     @JacksonXmlProperty(isAttribute = true, localName = "version")
-    private String version = "1.1";
+    private String version = "1.0";
 
     @JacksonXmlProperty(localName = "PublicationTimestamp")
     private String publicationTimestamp = Instant.now().toString();

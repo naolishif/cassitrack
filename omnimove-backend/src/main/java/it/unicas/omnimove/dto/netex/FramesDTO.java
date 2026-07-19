@@ -18,4 +18,7 @@ public class FramesDTO {
 
     @JacksonXmlProperty(localName = "ServiceFrame")
     private ServiceFrameDTO serviceFrame;
+
+    @JacksonXmlProperty(localName = "TimetableFrame")
+    private TimetableFrameDTO timetableFrame;
 }

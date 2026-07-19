@@ -1,11 +1,14 @@
 package it.unicas.cassitrack.dto.netex;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import lombok.Data;
 import java.util.List;
 
+// Ordine NeTEx nel ServiceFrame: lines PRIMA di scheduledStopPoints, poi stopAssignments.
 @Data
+@JsonPropertyOrder({ "lines", "scheduledStopPoints", "stopAssignments" })
 public class ServiceFrameDTO {
 
     @JacksonXmlProperty(isAttribute = true, localName = "id")
@@ -13,6 +16,10 @@ public class ServiceFrameDTO {
 
     @JacksonXmlProperty(isAttribute = true, localName = "version")
     private String version = "1";
+
+    @JacksonXmlElementWrapper(localName = "lines")
+    @JacksonXmlProperty(localName = "Line")
+    private List<LineDTO> lines;
 
     @JacksonXmlElementWrapper(localName = "scheduledStopPoints")
     @JacksonXmlProperty(localName = "ScheduledStopPoint")
@@ -22,11 +29,5 @@ public class ServiceFrameDTO {
     @JacksonXmlProperty(localName = "PassengerStopAssignment")
     private List<PassengerStopAssignmentDTO> stopAssignments;
 
-    @JacksonXmlElementWrapper(localName = "lines")
-    @JacksonXmlProperty(localName = "Line")
-    private List<LineDTO> lines;
-
-    @JacksonXmlElementWrapper(localName = "vehicleJourneys")
-    @JacksonXmlProperty(localName = "ServiceJourney")
-    private List<ServiceJourneyDTO> serviceJourneys;
+    // NB: le ServiceJourney sono state spostate nel TimetableFrame (standard NeTEx).
 }

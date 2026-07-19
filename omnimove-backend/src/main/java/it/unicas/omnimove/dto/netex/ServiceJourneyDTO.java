@@ -17,7 +17,7 @@ public class ServiceJourneyDTO {
     @JacksonXmlProperty(localName = "LineRef")
     private RefDTO lineRef;
 
-    @JacksonXmlProperty(localName = "extensions")
+    @JacksonXmlProperty(localName = "Extensions")
     private ServiceJourneyExtensionsDTO extensions;
 
     @JacksonXmlElementWrapper(localName = "calls")
