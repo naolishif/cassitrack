@@ -367,6 +367,21 @@ function handleSheetBackdrop(e) {
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStopSheet(); });
 
+// Ritardo nel popup fermata: real-time (Google on), retrospettivo C1 (off), o niente.
+function delayLine(a) {
+    if (!a.departed) return '';                       // non partito: solo orario
+    const m = a.delay_minutes;
+    if (a.real_time) {
+        if (m == null)  return `<span class="delay-chip d-live d-unknown">Live</span>`;
+        if (m <= 0)     return `<span class="delay-chip d-live d-ontime">On time (live)</span>`;
+        return `<span class="delay-chip d-live d-late">${m} min late (live)</span>`;
+    }
+    if (m == null) return '';                          // partito ma nessun arrivo misurato
+    const at = a.delay_stop_name ? ` at ${escHtml(a.delay_stop_name)}` : '';
+    if (m <= 0)   return `<span class="delay-chip d-hist d-ontime">Was on time${at}</span>`;
+    return `<span class="delay-chip d-hist d-late">Was ${m} min late${at}</span>`;
+}
+
 function renderArrivals(list, arrivals) {
     if (!arrivals.length) { list.innerHTML = ''; return; }
     const now = Date.now();
@@ -402,7 +417,7 @@ function renderArrivals(list, arrivals) {
                 <span class="arrival-eta ${etaClass}">${etaText}</span>
             </div>
             <div class="arrival-meta">
-                ${statusBadge}${crowdBadge}
+                ${statusBadge}${crowdBadge}${delayLine(a)}
                 <span class="arrival-times">Sched: ${schTime} · ETA: ${estTime}</span>
             </div>
         </div>`;
@@ -586,6 +601,9 @@ async function doSearch() {
         if (activeModes.length > 0) {
             payload.modes = [...activeModes];
         }
+        const departVal = document.getElementById('departTime')?.value;
+        if (departVal) payload.departure_time = departVal;
+
         const r = await apiFetch('/journeys/search', {
             method: 'POST',
             body: JSON.stringify(payload)
@@ -617,6 +635,7 @@ const MODE_BTNS  = {
     SCOOTER: { label:'Select Scooter', cls:'btn-purple' },
     WALK:    { label:'Start Walking',  cls:'btn-green'  },
 };
+
 const LINE_COLORS = { BUS:'#0f172a', BIKE:'#3b82f6', SCOOTER:'#7c3aed', WALK:'#10b981' };
 
 function greenColor(g) {
@@ -630,21 +649,30 @@ function renderRoutes(data) {
         document.querySelector('.weather-pill').textContent = data.weather_summary;
     }
     const list = document.querySelector('.routes-list');
+
+    // Avvisi della ricerca (orario spostato a domani, traffico off, dati non real-time…)
+    const noticeHtml = (Array.isArray(data.messages) && data.messages.length > 0)
+        ? data.messages.map(m => `<div class="search-notice">${escHtml(m)}</div>`).join('')
+        : '';
+
     if (!data.options || data.options.length === 0) {
-        list.innerHTML = '<div style="padding:20px;color:var(--text-soft);font-size:13px">No routes found.</div>';
+        list.innerHTML = noticeHtml + '<div style="padding:20px;color:var(--text-soft);font-size:13px">No routes found.</div>';
         return;
     }
 
     window._routeOptions = {};
     const orderedOptions = sortOptions(data.options);
 
-    list.innerHTML = orderedOptions.map(opt => {
+    list.innerHTML = noticeHtml + orderedOptions.map(opt => {
         window._routeOptions[opt.mode] = opt;
 
         const icon = MODE_ICONS[opt.mode] || '🚗';
         const btn  = MODE_BTNS[opt.mode]  || { label: 'Select', cls: 'btn-dark' };
         const cost = opt.cost_euros === 0 ? 'Free' : '€' + opt.cost_euros.toFixed(2);
         const co2  = opt.co2_grams > 0 ? Math.round(opt.co2_grams) + ' g' : '0 g';
+        const delayBadge = opt.delay_label
+            ? `<span class="status-badge delay-${(opt.delay_status||'unknown').toLowerCase()}">${escHtml(opt.delay_label)}</span>`
+            : '';
         const warn = opt.weather_warning
             ? `<span class="status-badge s-delay">${opt.weather_warning}</span>` : '';
         return `
@@ -655,6 +683,7 @@ function renderRoutes(data) {
     </div>
     <div class="status-row">
         ${warn || '<span class="status-badge s-ok">✓ Available</span>'}
+        ${delayBadge}
     </div>
     <div class="metrics-row">
         <div class="metric-box"><div class="metric-label">Cost</div><div class="metric-value">${cost}</div></div>
