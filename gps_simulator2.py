@@ -27,6 +27,33 @@ import paho.mqtt.client as mqtt
 import psycopg2
 import psycopg2.extras
 
+
+def _load_env_file(path):
+    """Minimal .env loader (no python-dotenv dependency needed).
+
+    Reads KEY=VALUE lines from `path` and sets them into os.environ,
+    WITHOUT overriding any variable already set in the real environment
+    (so `--db-*` CLI flags / real env vars still win).
+    """
+    if not os.path.isfile(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.split("#", 1)[0].strip()  # drop inline comments
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+# Auto-load cassitrack-backend/.env (same secrets docker-compose uses to
+# initialize Postgres) so this script's credentials always match the running
+# container without needing to export env vars by hand every time.
+_load_env_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "cassitrack-backend", ".env"))
+
 # ── Database connection — reads from env vars, falls back to local dev defaults ─
 DB_CONFIG = {
     "host":     os.environ.get("SPRING_DATASOURCE_HOST", "localhost"),
