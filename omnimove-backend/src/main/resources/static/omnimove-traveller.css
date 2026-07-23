@@ -1362,3 +1362,82 @@ body {
         line-height: 1;
     }
 }
+
+/* ── Step 22: center the filter chips on mobile ── */
+@media (max-width: 768px) {
+    .cats { justify-content: center; }
+}
+
+/* ── Step 23: full-width search + ☰ floating on map + chips span search width ── */
+.map-menu-fab { display: none; }
+
+@media (max-width: 768px) {
+    /* menu floats on the map now — hide the header hamburger */
+    .hamburger { display: none !important; }
+
+    /* search fills the row */
+    .topbar-search { width: 100%; }
+
+    /* floating menu button, top-left of the map */
+    .map-menu-fab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 12px; left: 12px;
+        width: 40px; height: 40px;
+        z-index: 500;
+        border: none;
+        border-radius: 10px;
+        background: var(--bg-white);
+        color: var(--text-dark);
+        font-size: 18px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+        cursor: pointer;
+    }
+
+    /* chips fill the same width as the search (segmented look) */
+    .cats .cat-chip {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* ── Step 24: autocomplete suggestion list (desktop + mobile) ── */
+.ac-list {
+    display: none;
+    position: fixed;
+    z-index: 1500;
+    background: var(--bg-white);
+    border: 1px solid var(--border-mid);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 4px;
+}
+.ac-item {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text-dark);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ac-item:hover { background: var(--bg-app); }
+
+/* ── Step 25: narrower search (more side margin) + sheet matched to it ── */
+@media (max-width: 768px) {
+    .topbar { padding-left: 16px; padding-right: 16px; }
+    .map-sidebar { left: 16px; right: 16px; width: auto; }
+}
+
+/* ── Step 26: Smart Routes sheet spans full width ── */
+@media (max-width: 768px) {
+    .map-sidebar { left: 0; right: 0; width: 100%; }
+}

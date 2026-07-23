@@ -84,14 +84,11 @@
         <div class="topbar-search">
             <div class="search-seg">
                 <span>📍</span>
-                <select id="originSelect" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;cursor:pointer;">
-                    <option value="GPS"> My Location</option>
-                </select>
+                <input id="originSelect" type="text" autocomplete="off" placeholder="Origin" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;"/>
             </div>
             <div class="search-seg">
                 <span>🏁</span>
-                <select id="destSelect" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;cursor:pointer;">
-                </select>
+                <input id="destSelect" type="text" autocomplete="off" placeholder="Destination" style="background:transparent;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text-dark);outline:none;width:100%;padding:10px 0;"/>
             </div>
             <button class="search-btn" onclick="swapStops()" style="background:var(--bg-app);color:var(--text-dark);border-left:1px solid var(--border-mid);padding:10px 14px;font-size:16px" title="Swap">⇄</button>
             <button class="search-btn" onclick="doSearch()">Search →</button>
@@ -114,6 +111,7 @@
         <!-- ── MAP PANE ── -->
         <div class="pane active" id="pane-map">
             <div id="map"></div>
+            <button class="map-menu-fab" onclick="openMenu()" aria-label="Open menu">☰</button>
             <div class="ai-fab" onclick="openAI()" title="Ask OmniAI">✦</div>
 
             <div class="map-sidebar">
@@ -496,6 +494,8 @@
         <div class="stop-sheet-list" id="stopSheetList"></div>
     </div>
 </div>
+
+<div class="ac-list" id="acList"></div>
 
 <script src="omnimove-traveller.js"></script>
 </body>

@@ -426,17 +426,9 @@ async function loadStops() {
         STOPS = {};
         stops.forEach(s => { STOPS[s.id] = { id: s.id, name: s.name, lat: s.lat, lon: s.lon }; });
 
-        const optionsHtml = stops
-            .map(s => `<option value="${s.id}">${s.name}</option>`)
-            .join('');
-
-        // Origin keeps "My Location" (GPS) first, then every stop
-        originSel.innerHTML = '<option value="GPS">📍 My Location</option>' + optionsHtml;
-        destSel.innerHTML   = optionsHtml;
-
-        // Sensible defaults: first stop as origin, a different one as destination
-        originSel.value = stops[0].id;
-        destSel.value   = stops.length > 1 ? stops[1].id : stops[0].id;
+        // Typable inputs: set sensible defaults (display name + hidden stop id)
+        setStop(originSel, stops[0].id);
+        setStop(destSel, stops.length > 1 ? stops[1].id : stops[0].id);
 
         renderStopMarkers();
 
@@ -482,35 +474,23 @@ function tryGetGPS() {
 }
 
 // ── GPS trigger when user switches to "My Location" ───────────────
-document.getElementById('originSelect').addEventListener('change', function () {
-    if (this.value === 'GPS') {
-        showToast('📡 Getting your location...');
-        tryGetGPS()
-            .then(pos => {
-                showToast('📍 Location detected!');
-                map.setView([pos.lat, pos.lon], 16);
-            })
-            .catch(() => {
-                showToast('GPS unavailable — select a stop', true);
-                const firstStop = Object.keys(STOPS)[0];
-                if (firstStop) this.value = firstStop;
-            });
-    }
-});
+// (origin GPS handling now lives in the autocomplete selection below)
 
 function swapStops() {
-    const originSel = document.getElementById('originSelect');
-    const destSel   = document.getElementById('destSelect');
-    const ov = originSel.value;
-    const dv = destSel.value;
-    if (ov !== 'GPS') destSel.value = ov;
-    originSel.value = dv;
+    const o = document.getElementById('originSelect');
+    const d = document.getElementById('destSelect');
+    const ov = o.value, oid = o.dataset.id;
+    o.value = d.value; o.dataset.id = d.dataset.id;
+    d.value = ov;      d.dataset.id = oid;
 }
 
 function getOrigin() {
-    const val = document.getElementById('originSelect').value;
-    if (val === 'GPS') {
-        if (!userLat) return null;
+    const el  = document.getElementById('originSelect');
+    const val = el.dataset.id;
+    // No origin picked (empty field) → default to My Location (GPS)
+    if (!el.value.trim() || !val || val === 'GPS') {
+        setStop(el, 'GPS');          // show "My Location" in the field, don't leave it empty
+        if (!userLat) return null;   // null → doSearch will request GPS
         return { name: 'My Location', lat: userLat, lon: userLon, isGPS: true };
     }
     return { ...STOPS[val], isGPS: false };
@@ -549,7 +529,8 @@ function sortOptions(options) {
 
 // ── Search ────────────────────────────────────────────────────────
 async function doSearch() {
-    const destId = document.getElementById('destSelect').value;
+    _acHide();   // close the suggestion list on search
+    const destId = document.getElementById('destSelect').dataset.id;
     const dest   = STOPS[destId];
     let origin   = getOrigin();
 
@@ -1333,3 +1314,89 @@ function backToMap() {
     if (n) n.click();   // switch to the map pane (also closes menu + sets data-pane=map)
     openMenu();         // then reopen the menu over the map
 }
+
+// ── Step 23: on mobile, move the zoom control to top-right (menu floats top-left) ──
+if (window.matchMedia('(max-width: 768px)').matches) {
+    try { map.zoomControl.setPosition('topright'); } catch (e) {}
+}
+
+// ── Step 24: typable search with autocomplete suggestions ──────────
+function setStop(el, id) {
+    if (!el) return;
+    if (id === 'GPS') { el.value = 'My Location'; el.dataset.id = 'GPS'; return; }
+    const s = STOPS[id];
+    if (s) { el.value = s.name; el.dataset.id = id; }
+}
+
+let _acFor = null;
+
+function _acItems(inputEl, q) {
+    q = (q || '').trim().toLowerCase();
+    const out = [];
+    if (inputEl.id === 'originSelect') {
+        if (!q || 'my location'.indexOf(q) === 0) out.push({ id: 'GPS', name: 'My Location' });
+    }
+    Object.values(STOPS).forEach(s => {
+        const n = (s.name || '').toLowerCase();
+        if (!q || n.startsWith(q)) out.push({ id: s.id, name: s.name });
+    });
+    // fall back to "contains" if nothing starts with the query
+    if (q && out.length === 0) {
+        Object.values(STOPS).forEach(s => {
+            if ((s.name || '').toLowerCase().includes(q)) out.push({ id: s.id, name: s.name });
+        });
+    }
+    return out.slice(0, 8);
+}
+
+function _acShow(inputEl) {
+    const acList = document.getElementById('acList');
+    if (!acList) return;
+    _acFor = inputEl;
+    const items = _acItems(inputEl, inputEl.value);
+    if (!items.length) { acList.style.display = 'none'; return; }
+    acList.innerHTML = items.map(it =>
+        `<div class="ac-item" data-id="${escAttr(it.id)}">${escHtml(it.name)}</div>`).join('');
+    const r = inputEl.getBoundingClientRect();
+    acList.style.left = r.left + 'px';
+    acList.style.top = (r.bottom + 4) + 'px';
+    acList.style.width = r.width + 'px';
+    acList.style.display = 'block';
+}
+
+function _acHide() {
+    const acList = document.getElementById('acList');
+    if (acList) acList.style.display = 'none';
+    _acFor = null;
+}
+
+function initAutocomplete() {
+    const acList = document.getElementById('acList');
+    if (!acList) return;
+    ['originSelect', 'destSelect'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('focus', () => { el.select(); _acShow(el); });
+        el.addEventListener('input', () => _acShow(el));
+        el.addEventListener('blur', () => setTimeout(_acHide, 150));
+    });
+    acList.addEventListener('mousedown', (e) => {
+        const item = e.target.closest('.ac-item');
+        if (!item || !_acFor) return;
+        e.preventDefault();
+        const id = item.dataset.id;
+        const target = _acFor;
+        if (id === 'GPS') {
+            setStop(target, 'GPS');
+            showToast('📡 Getting your location...');
+            tryGetGPS().then(pos => { showToast('📍 Location detected!'); map.setView([pos.lat, pos.lon], 16); })
+                       .catch(() => showToast('GPS unavailable — pick a stop', true));
+        } else {
+            setStop(target, id);
+        }
+        _acHide();
+    });
+    window.addEventListener('scroll', _acHide, true);
+    window.addEventListener('resize', _acHide);
+}
+initAutocomplete();

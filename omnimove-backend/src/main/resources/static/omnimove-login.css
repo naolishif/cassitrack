@@ -73,3 +73,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--display);
     .email-sent-box .icon { font-size: 32px; }
     .email-sent-box p { font-size: 11px; }
 }
+
+/* ── Mobile: compact, centered login/register (final) ── */
+@media (max-width: 768px) {
+    body { align-items: center; padding: 20px 16px; }   /* vertically centered, scrolls if tall */
+    .container { max-width: 330px; }
+    .logo { font-size: 22px; }
+    .tagline { font-size: 9px; margin-bottom: 16px; }
+    .card { padding: 18px 16px; }
+    .tabs { margin-bottom: 14px; }
+    .tab { font-size: 10px; padding: 7px; }
+    .form { gap: 10px; }
+    .label { font-size: 9px; margin-bottom: 2px; }
+    .input { font-size: 13px; padding: 8px 11px; }
+    .btn { padding: 10px; font-size: 12px; min-height: 40px; }
+    .btn-ghost { font-size: 11px; padding: 8px; }
+    .name-row { flex-direction: row; gap: 8px; }   /* keep Name + Surname side by side */
+    .msg, .note, .field-err { font-size: 10px; }
+    .email-sent-box .icon { font-size: 30px; }
+    .email-sent-box p { font-size: 11px; }
+}
