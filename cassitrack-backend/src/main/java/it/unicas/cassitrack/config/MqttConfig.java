@@ -2,8 +2,11 @@ package it.unicas.cassitrack.config;
 
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import javax.net.ssl.SSLSocketFactory;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
@@ -44,6 +47,22 @@ public class MqttConfig {
 
     @Value("${mqtt.topics.ble}")
     private String bleTopic;
+
+    // ── OBU broker (real ESP32 feed, e.g. ssl://devaidalab.unicas.it:8883) ──
+    @Value("${mqtt.obu.url:}")
+    private String obuBrokerUrl;
+
+    @Value("${mqtt.obu.client-id:cassitrack-obu-bridge}")
+    private String obuClientId;
+
+    @Value("${mqtt.obu.username:}")
+    private String obuUsername;
+
+    @Value("${mqtt.obu.password:}")
+    private String obuPassword;
+
+    @Value("${mqtt.obu.topic:cassitrack/obu/+/pos}")
+    private String obuTopic;
 
     /**
      * Factory that creates MQTT client connections.
@@ -95,6 +114,62 @@ public class MqttConfig {
         adapter.setCompletionTimeout(5000);
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);                 // QoS 1 = at least once delivery
+        adapter.setOutputChannel(mqttInputChannel());
+        return adapter;
+    }
+
+    // ── OBU broker path (second connection) ──────────────────────────
+    // The real ESP32 units publish to an EXTERNAL, TLS-secured broker with a
+    // different topic/schema. Rather than a separate bridge process, cassitrack
+    // opens a second inbound connection and feeds the SAME mqttInputChannel;
+    // MqttMessageHandler recognises the cassitrack/obu/... topic and translates
+    // the compact payload. Enabled only when mqtt.obu.url is set.
+
+    /**
+     * Dedicated client factory for the OBU broker. Adds a TLS socket factory
+     * automatically when the URL uses the ssl:// scheme (validates the broker
+     * certificate against the JVM default truststore — same trust anchors as
+     * the system CA bundle used by mosquitto_sub --capath /etc/ssl/certs).
+     */
+    @Bean
+    @ConditionalOnProperty(name = "mqtt.obu.enabled", havingValue = "true")
+    public MqttPahoClientFactory obuMqttClientFactory() {
+        DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setServerURIs(new String[]{obuBrokerUrl});
+        options.setConnectionTimeout(30);
+        options.setKeepAliveInterval(60);
+        options.setCleanSession(true);
+        options.setAutomaticReconnect(true);
+        if (obuUsername != null && !obuUsername.isBlank()) {
+            options.setUserName(obuUsername);
+            options.setPassword(obuPassword.toCharArray());
+        }
+        if (obuBrokerUrl != null && obuBrokerUrl.startsWith("ssl://")) {
+            options.setSocketFactory(SSLSocketFactory.getDefault());
+            options.setHttpsHostnameVerificationEnabled(true);
+        }
+        factory.setConnectionOptions(options);
+        return factory;
+    }
+
+    /**
+     * Inbound adapter subscribing to the OBU topic on the external broker.
+     * Pushes into the shared mqttInputChannel so the existing handler pipeline
+     * is reused unchanged.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "mqtt.obu.enabled", havingValue = "true")
+    public MqttPahoMessageDrivenChannelAdapter obuMqttInbound() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+            new MqttPahoMessageDrivenChannelAdapter(
+                obuClientId + "-inbound",
+                obuMqttClientFactory(),
+                obuTopic
+            );
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
         adapter.setOutputChannel(mqttInputChannel());
         return adapter;
     }

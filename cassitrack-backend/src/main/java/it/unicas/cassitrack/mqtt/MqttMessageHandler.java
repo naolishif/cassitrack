@@ -49,8 +49,31 @@ public class MqttMessageHandler implements MessageHandler {
 
         try {
             // ── Step 1: Parse ─────────────────────────────────────
-            MqttPositionPayload pos = objectMapper.readValue(payload, MqttPositionPayload.class);
+            // The real ESP32/OBU units publish a COMPACT schema on
+            // cassitrack/obu/{id}/pos ; the native/simulator path uses the
+            // verbose schema on cassitrack/{id}/position. Pick the right parser.
+            MqttPositionPayload pos = isObuTopic(topic)
+                    ? objectMapper.readValue(payload, it.unicas.cassitrack.dto.ObuPositionPayload.class).toMqttPositionPayload()
+                    : objectMapper.readValue(payload, MqttPositionPayload.class);
 
+            processPosition(pos, topic);
+
+        } catch (Exception e) {
+            log.error("Failed to process MQTT message from topic [{}]: {}", topic, e.getMessage(), e);
+        }
+    }
+
+    /** True for topics coming from the ESP32/OBU broker (cassitrack/obu/{id}/pos). */
+    private boolean isObuTopic(String topic) {
+        return topic != null && topic.contains("/obu/");
+    }
+
+    /**
+     * Downstream pipeline shared by both ingestion paths: validate → enrich
+     * from DB → compute adherence → cache → write to Influx.
+     */
+    private void processPosition(MqttPositionPayload pos, String topic) {
+        try {
             // ── Step 2: Validate ──────────────────────────────────
             if (!isValid(pos)) {
                 securityAuditService.mqttInvalidPayload(topic);
