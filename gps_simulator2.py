@@ -33,7 +33,7 @@ DB_CONFIG = {
     "port":     int(os.environ.get("SPRING_DATASOURCE_PORT", "5433")),
     "dbname":   os.environ.get("SPRING_DATASOURCE_DB",   "cassitrack"),
     "user":     os.environ.get("SPRING_DATASOURCE_USERNAME", "cassitrack"),
-    "password": os.environ.get("SPRING_DATASOURCE_PASSWORD", "cassitrack_dev"),
+    "password": os.environ.get("SPRING_DATASOURCE_PASSWORD", "EfGxhgKeK3J8kl7gtvW8mmgLLD7Xr7KAAGUjP1eDPfA="),
 }
 
 # ── Simulation constants ──────────────────────────────────────────
@@ -398,7 +398,7 @@ def main():
     parser.add_argument("--db-host",        default=DB_CONFIG["host"])
     parser.add_argument("--db-port",        type=int, default=DB_CONFIG["port"])
     parser.add_argument("--mqtt-username",  default=os.environ.get("MQTT_BUS_USERNAME", "cassitrack-bus"), help="MQTT broker username (set MQTT_USERNAME env var or leave blank for no auth)")
-    parser.add_argument("--mqtt-password",  default=os.environ.get("MQTT_BUS_PASSWORD", "bus-password"), help="MQTT broker password (set MQTT_PASSWORD env var or leave blank for no auth)")
+    parser.add_argument("--mqtt-password",  default=os.environ.get("MQTT_BUS_PASSWORD", "cassitrack-bus-dev"), help="MQTT broker password (set MQTT_PASSWORD env var or leave blank for no auth)")
     args = parser.parse_args()
 
     # ── Connect to PostgreSQL ─────────────────────────────────────
